@@ -293,6 +293,16 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 active_ws: List[WebSocket] = []
+car_ws: Optional[WebSocket] = None
+car_transform = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+car_state = {
+    "connected": False,
+    "last_seen": 0.0,
+    "odom_pose": None,
+    "map_pose": None,
+    "scan_points": [],
+    "path": [],
+}
 points_lock = threading.Lock()
 loop = None
 node_instance = None
@@ -1211,6 +1221,136 @@ async def broadcast(data: dict):
         except Exception:
             if ws in active_ws: active_ws.remove(ws)
 
+
+def _normalize_yaw(value: float) -> float:
+    return math.atan2(math.sin(value), math.cos(value))
+
+
+def _yaw_from_quaternion(orientation: dict) -> float:
+    x = float(orientation.get("x", 0.0))
+    y = float(orientation.get("y", 0.0))
+    z = float(orientation.get("z", 0.0))
+    w = float(orientation.get("w", 1.0))
+    return math.atan2(
+        2.0 * (w * z + x * y),
+        1.0 - 2.0 * (y * y + z * z),
+    )
+
+
+def _yaw_quaternion(yaw: float) -> dict:
+    return {
+        "x": 0.0, "y": 0.0,
+        "z": math.sin(yaw / 2.0),
+        "w": math.cos(yaw / 2.0),
+    }
+
+
+def _car_odom_pose_to_map(pose: dict) -> dict:
+    """T_map_odom * pose_odom, cu transformarea configurată din UI."""
+    x = float(pose["x"])
+    y = float(pose["y"])
+    yaw = float(pose.get("yaw", 0.0))
+    theta = car_transform["yaw"]
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    return {
+        "x": car_transform["x"] + cos_t * x - sin_t * y,
+        "y": car_transform["y"] + sin_t * x + cos_t * y,
+        "yaw": _normalize_yaw(theta + yaw),
+    }
+
+
+def _car_map_pose_to_odom(pose: dict) -> dict:
+    """Inversa T_map_odom, folosită înainte de publicarea unui goal al mașinii."""
+    dx = float(pose["x"]) - car_transform["x"]
+    dy = float(pose["y"]) - car_transform["y"]
+    theta = car_transform["yaw"]
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    return {
+        "x": cos_t * dx + sin_t * dy,
+        "y": -sin_t * dx + cos_t * dy,
+        "yaw": _normalize_yaw(float(pose.get("yaw", 0.0)) - theta),
+    }
+
+
+def _car_public_state(include_scan: bool = True, include_path: bool = True) -> dict:
+    state = {
+        "type": "car_state",
+        "connected": car_state["connected"],
+        "last_seen": car_state["last_seen"],
+        "pose": car_state["map_pose"],
+        "odom_pose": car_state["odom_pose"],
+        "transform": {
+            **car_transform,
+            "yaw_deg": math.degrees(car_transform["yaw"]),
+        },
+    }
+    if include_scan:
+        state["scan_points"] = car_state["scan_points"]
+    if include_path:
+        state["path"] = car_state["path"]
+    return state
+
+
+def _car_update_odom(data: dict) -> None:
+    position = data.get("position") or {}
+    orientation = data.get("orientation") or {}
+    pose = {
+        "x": float(position["x"]),
+        "y": float(position["y"]),
+        "yaw": _yaw_from_quaternion(orientation),
+    }
+    if not all(math.isfinite(value) for value in pose.values()):
+        raise ValueError("odometrie nefinita")
+    car_state["odom_pose"] = pose
+    car_state["map_pose"] = _car_odom_pose_to_map(pose)
+
+
+def _car_update_scan(data: dict) -> None:
+    odom_pose = car_state.get("odom_pose")
+    ranges = data.get("ranges")
+    if not odom_pose or not isinstance(ranges, list):
+        return
+    angle_min = float(data.get("angle_min", 0.0))
+    angle_increment = float(data.get("angle_increment", 0.0))
+    range_min = max(0.0, float(data.get("range_min", 0.0)))
+    range_max = float(data.get("range_max", 100.0))
+    step = max(1, math.ceil(len(ranges) / 1200))
+    cos_pose, sin_pose = math.cos(odom_pose["yaw"]), math.sin(odom_pose["yaw"])
+    points = []
+    for index in range(0, len(ranges), step):
+        distance = float(ranges[index])
+        if not math.isfinite(distance) or distance < range_min or distance > range_max:
+            continue
+        angle = angle_min + index * angle_increment
+        local_x = distance * math.cos(angle)
+        local_y = distance * math.sin(angle)
+        odom_x = odom_pose["x"] + cos_pose * local_x - sin_pose * local_y
+        odom_y = odom_pose["y"] + sin_pose * local_x + cos_pose * local_y
+        mapped = _car_odom_pose_to_map({"x": odom_x, "y": odom_y, "yaw": 0.0})
+        points.append({"x": mapped["x"], "y": mapped["y"]})
+    car_state["scan_points"] = points
+
+
+def _car_update_path(data: dict) -> None:
+    poses = data.get("poses")
+    if not isinstance(poses, list):
+        return
+    mapped_path = []
+    step = max(1, math.ceil(len(poses) / 2000))
+    for item in poses[::step]:
+        try:
+            position = item.get("position") or {}
+            odom_pose = {
+                "x": float(position["x"]),
+                "y": float(position["y"]),
+                "yaw": _yaw_from_quaternion(item.get("orientation") or {}),
+            }
+            mapped_path.append(_car_odom_pose_to_map(odom_pose))
+        except (KeyError, TypeError, ValueError):
+            continue
+    car_state["path"] = mapped_path
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
@@ -1226,6 +1366,7 @@ async def websocket_endpoint(ws: WebSocket):
             "map_filter": map_filter, "scan_paused": map_state["scan_paused"],
             "loaded_map_path": _resolve_map_path(loaded_map_path),
         }))
+        await ws.send_text(json.dumps(_car_public_state()))
         current_map = _resolve_map_path(loaded_map_path)
         if current_map:
             points = await asyncio.to_thread(slam_client.read_pcd_points, current_map)
@@ -1257,6 +1398,137 @@ async def websocket_endpoint(ws: WebSocket):
     finally:
         if ws in active_ws: active_ws.remove(ws)
         await release_teleop_owner(ws)
+
+
+@app.websocket("/ws/car")
+async def car_websocket_endpoint(ws: WebSocket):
+    """Canal dedicat bridge-ului ROS 2 al mașinii."""
+    global car_ws
+    await ws.accept()
+    if not _valid_control_token(ws.query_params.get("token")):
+        await ws.close(code=1008, reason="Token car bridge invalid")
+        return
+    previous = car_ws
+    car_ws = ws
+    if previous is not None and previous is not ws:
+        try:
+            await previous.close(code=1012, reason="Car bridge replaced")
+        except Exception:
+            pass
+    car_state["connected"] = True
+    car_state["last_seen"] = time.time()
+    await broadcast(_car_public_state())
+    try:
+        while True:
+            raw = await ws.receive_text()
+            try:
+                message = json.loads(raw)
+                topic = message.get("topic")
+                data = message.get("data") or {}
+                if topic == "/scan_odom":
+                    _car_update_odom(data)
+                    public_state = _car_public_state(False, False)
+                elif topic == "/scan":
+                    _car_update_scan(data)
+                    public_state = _car_public_state(True, False)
+                elif topic == "/path":
+                    _car_update_path(data)
+                    public_state = _car_public_state(False, True)
+                else:
+                    continue
+                car_state["last_seen"] = time.time()
+                public_state["last_seen"] = car_state["last_seen"]
+                await broadcast(public_state)
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                print(f"[car] mesaj invalid: {exc}")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if car_ws is ws:
+            car_ws = None
+            car_state["connected"] = False
+            await broadcast(_car_public_state())
+
+
+@app.get("/api/car/status")
+async def get_car_status():
+    return {"success": True, **_car_public_state()}
+
+
+@app.post("/api/car/transform")
+async def set_car_transform(request: Request):
+    body = await request.json()
+    try:
+        values = {
+            "x": float(body["x"]),
+            "y": float(body["y"]),
+            "yaw": math.radians(float(body.get("yaw_deg", 0.0))),
+        }
+    except (KeyError, TypeError, ValueError):
+        return JSONResponse(
+            {"success": False, "error": "Transformare invalidă"},
+            status_code=400,
+        )
+    if not all(math.isfinite(value) for value in values.values()):
+        return JSONResponse(
+            {"success": False, "error": "Transformarea trebuie să fie finită"},
+            status_code=400,
+        )
+    car_transform.update(values)
+    if car_state.get("odom_pose"):
+        car_state["map_pose"] = _car_odom_pose_to_map(car_state["odom_pose"])
+    public_state = _car_public_state(False, False)
+    await broadcast(public_state)
+    return {"success": True, **public_state}
+
+
+@app.post("/api/car/goal")
+async def send_car_goal(request: Request):
+    if car_ws is None or not car_state["connected"]:
+        return JSONResponse(
+            {"success": False, "error": "Mașina nu este conectată"},
+            status_code=409,
+        )
+    body = await request.json()
+    try:
+        map_goal = {
+            "x": float(body["x"]),
+            "y": float(body["y"]),
+            "yaw": math.radians(float(body.get("yaw_deg", 0.0))),
+        }
+    except (KeyError, TypeError, ValueError):
+        return JSONResponse(
+            {"success": False, "error": "Țintă invalidă"},
+            status_code=400,
+        )
+    if not all(math.isfinite(value) for value in map_goal.values()):
+        return JSONResponse(
+            {"success": False, "error": "Ținta trebuie să fie finită"},
+            status_code=400,
+        )
+    odom_goal = _car_map_pose_to_odom(map_goal)
+    payload = {
+        "type": "goal_pose",
+        "position": {"x": odom_goal["x"], "y": odom_goal["y"], "z": 0.0},
+        "orientation": _yaw_quaternion(odom_goal["yaw"]),
+    }
+    try:
+        await car_ws.send_text(json.dumps(payload))
+    except Exception as exc:
+        return JSONResponse(
+            {"success": False, "error": f"Trimiterea țintei a eșuat: {exc}"},
+            status_code=503,
+        )
+    await broadcast({
+        "type": "car_goal",
+        "map_goal": map_goal,
+        "odom_goal": odom_goal,
+    })
+    return {
+        "success": True,
+        "map_goal": map_goal,
+        "odom_goal": odom_goal,
+    }
 
 @app.post("/api/slam/clear")
 async def clear_map():

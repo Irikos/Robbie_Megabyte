@@ -156,6 +156,43 @@ def test_yolo_is_optional_lazy_and_streamed_with_existing_camera_payload():
     assert "ultralytics" in requirements
 
 
+def test_car_map_odom_transform_round_trip(monkeypatch):
+    import server
+
+    monkeypatch.setitem(server.car_transform, "x", 3.0)
+    monkeypatch.setitem(server.car_transform, "y", -2.0)
+    monkeypatch.setitem(server.car_transform, "yaw", math.pi / 2.0)
+    odom_pose = {"x": 1.25, "y": -0.4, "yaw": -0.3}
+
+    map_pose = server._car_odom_pose_to_map(odom_pose)
+    reconstructed = server._car_map_pose_to_odom(map_pose)
+
+    assert reconstructed["x"] == pytest.approx(odom_pose["x"])
+    assert reconstructed["y"] == pytest.approx(odom_pose["y"])
+    assert reconstructed["yaw"] == pytest.approx(odom_pose["yaw"])
+
+
+def test_car_bridge_and_dashboard_protocol_are_wired():
+    root = Path(__file__).parents[1]
+    server = (root / "server.py").read_text(encoding="utf-8")
+    bridge = (root / "ws_bridge.py").read_text(encoding="utf-8")
+    frontend = (root.parent / "frontend" / "index.html").read_text(
+        encoding="utf-8"
+    )
+
+    assert '@app.websocket("/ws/car")' in server
+    assert '@app.post("/api/car/transform")' in server
+    assert '@app.post("/api/car/goal")' in server
+    assert '"type": "goal_pose"' in server
+    assert "3003/ws/car" in bridge
+    assert 'id="car-tf-x"' in frontend
+    assert 'id="car-goal-x"' in frontend
+    assert "function updateCarState(message)" in frontend
+    assert 'id="car-pick-goal-btn"' in frontend
+    assert "function onCarGoalMove(event)" in frontend
+    assert "_carGoalDrag.yaw = Math.atan2(dy, dx)" in frontend
+
+
 def test_nav2_dense_straight_path_becomes_one_execution_segment():
     observer = Nav2ObserverPublisher.__new__(Nav2ObserverPublisher)
     observer.nav2_costmap = {

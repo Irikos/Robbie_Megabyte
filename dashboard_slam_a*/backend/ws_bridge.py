@@ -20,14 +20,18 @@ Dependency:
     pip install websockets --break-system-packages
 
 Run:
-    python3 ws_bridge_node.py
+    export G1_DASHBOARD_TOKEN='<token shown by start_dashboard.sh>'
+    export CAR_DASHBOARD_WS_URL='ws://192.168.0.116:3003/ws/car'
+    python3 ws_bridge.py
 """
 
 import asyncio
 import json
+import os
 import queue
 import threading
 import time
+from urllib.parse import quote
 
 import rclpy
 from rclpy.node import Node
@@ -39,7 +43,11 @@ from geometry_msgs.msg import PoseStamped
 import websockets
 
 # ---- Hardcoded config --------------------------------------------------
-WS_URL = "ws://192.168.0.116:3003"
+WS_URL = os.environ.get(
+    "CAR_DASHBOARD_WS_URL",
+    "ws://192.168.0.116:3003/ws/car",
+)
+WS_TOKEN = os.environ.get("G1_DASHBOARD_TOKEN", "")
 GOAL_POSE_TOPIC = "/goal_pose"
 RECONNECT_INTERVAL_SEC = 3.0
 # -------------------------------------------------------------------------
@@ -50,7 +58,7 @@ class WsBridgeNode(Node):
         super().__init__('ws_bridge_node')
 
         # Thread-safe queue: ROS callbacks -> asyncio ws loop
-        self._out_queue: "queue.Queue[str]" = queue.Queue()
+        self._out_queue: "queue.Queue[str]" = queue.Queue(maxsize=100)
 
         # Publisher for goal poses coming FROM the websocket server
         self._goal_pose_pub = self.create_publisher(PoseStamped, GOAL_POSE_TOPIC, 10)
@@ -112,7 +120,18 @@ class WsBridgeNode(Node):
                 'stamp': time.time(),
                 'data': data,
             }
-            self._out_queue.put(json.dumps(payload, default=str))
+            serialized = json.dumps(payload, default=str)
+            try:
+                self._out_queue.put_nowait(serialized)
+            except queue.Full:
+                try:
+                    self._out_queue.get_nowait()
+                except queue.Empty:
+                    pass
+                try:
+                    self._out_queue.put_nowait(serialized)
+                except queue.Full:
+                    pass
         except Exception as exc:
             self.get_logger().error(f'Failed to serialize message on {topic_name}: {exc}')
 
@@ -124,7 +143,12 @@ class WsBridgeNode(Node):
     async def _ws_main(self):
         while rclpy.ok():
             try:
-                async with websockets.connect(WS_URL) as ws:
+                separator = '&' if '?' in WS_URL else '?'
+                authenticated_url = (
+                    f"{WS_URL}{separator}token={quote(WS_TOKEN)}"
+                    if WS_TOKEN else WS_URL
+                )
+                async with websockets.connect(authenticated_url) as ws:
                     self.get_logger().info(f'Connected to WS server at {WS_URL}')
                     await asyncio.gather(self._ws_sender(ws), self._ws_receiver(ws))
             except Exception as exc:

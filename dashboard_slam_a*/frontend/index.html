@@ -86,6 +86,13 @@
       padding:6px 9px; border-radius:6px; background:rgba(2,6,23,0.82);
       color:#cbd5e1; font-size:0.72rem; text-align:center;
     }
+    .car-agent-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; }
+    .car-agent-grid input {
+      width:100%; box-sizing:border-box; padding:6px; border-radius:4px;
+      border:1px solid var(--border); background:#0f172a; color:white;
+      font-size:0.72rem;
+    }
+    .car-agent-note { font-size:0.66rem; color:var(--text-secondary); line-height:1.35; }
 
     .map-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .map-filter-control { display:flex; flex-direction:column; gap:3px; min-width:0; }
@@ -173,6 +180,34 @@
         <button class="btn btn-full" onclick="downloadNavigationFlightLog()" style="background:#475569;color:white;">⇩ Descarcă jurnalul cursei</button>
         <div id="nav-result" style="font-size:0.69rem; color:var(--text-secondary); white-space:pre-wrap; line-height:1.35;">Stare: idle</div>
         <pre id="nav-diagnostics" style="display:none; margin-top:6px; max-height:220px; overflow:auto; padding:6px; border:1px solid var(--border); border-radius:4px; background:#020617; color:#cbd5e1; font-size:0.66rem; white-space:pre-wrap;"></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>RC Car · LiDAR</h2></div>
+      <div class="card-body" style="display:flex; flex-direction:column; gap:7px;">
+        <div id="car-agent-status" style="font-size:0.68rem; padding:6px; border:1px solid var(--border); border-radius:4px; color:#f59e0b; background:#07101f;">
+          Mașină deconectată
+        </div>
+        <div id="car-agent-pose" class="car-agent-note">Poziție hartă: —</div>
+        <div class="car-agent-note">
+          Transformare: originea <code>odom_car</code> exprimată în cadrul hărții.
+        </div>
+        <div class="car-agent-grid">
+          <input id="car-tf-x" type="number" step="0.01" value="0" placeholder="TF X (m)" title="X al originii odom_car în hartă" />
+          <input id="car-tf-y" type="number" step="0.01" value="0" placeholder="TF Y (m)" title="Y al originii odom_car în hartă" />
+          <input id="car-tf-yaw" type="number" step="1" value="0" placeholder="TF yaw (°)" title="Yaw odom_car față de hartă" />
+        </div>
+        <button class="btn btn-full" onclick="saveCarTransform()" style="background:#0e7490; color:white;">Aplică transformarea map → odom_car</button>
+        <div class="car-agent-note">Țintă pentru mașină, introdusă în coordonatele hărții:</div>
+        <div class="car-agent-grid">
+          <input id="car-goal-x" type="number" step="0.1" placeholder="Goal X (m)" />
+          <input id="car-goal-y" type="number" step="0.1" placeholder="Goal Y (m)" />
+          <input id="car-goal-yaw" type="number" step="5" value="0" placeholder="Yaw (°)" />
+        </div>
+        <button id="car-pick-goal-btn" class="btn btn-full" onclick="toggleCarGoalTool()" style="background:#2563eb; color:white;">⌖ Alege poziția și trage orientarea</button>
+        <button class="btn btn-full" onclick="sendCarGoal()" style="background:#7c3aed; color:white;">🚗 Trimite goal pose</button>
+        <div id="car-agent-result" class="car-agent-note">Aștept bridge-ul mașinii.</div>
       </div>
     </div>
 
@@ -468,6 +503,8 @@ const S = {
   headingArrow: null, poseArrow: null, goalMarker: null,
   routeLine: null, routePoints: null,
   dynamicCostmapMesh: null,
+  carGroup: null, carScanMesh: null, carPathLine: null,
+  carGoalMarker: null, carGoalArrow: null,
   loadedMapMesh: null,
   rawSlamPoints: [], rawLoadedMapPoints: [],
   visibleSlamPoints: 0, visibleLoadedMapPoints: 0,
@@ -552,6 +589,7 @@ let mapDisplaySuppressed = true;
 sessionStorage.setItem(MAP_DISPLAY_STORAGE_KEY, '1');
 let costmapView = {data: null, zoom: 1};
 let latestPoseSource = null;
+let carTransformInitialized = false;
 const COSTMAP_DEFAULTS = {resolution:0.08,minPoints:3,minZ:0.15,maxZ:1.85,radius:0.25,
   comfortRadius:0.65,clearanceWeight:6.0,floorTolerance:0.08,levelFloor:true};
 
@@ -629,6 +667,111 @@ function headingVector(yaw) {
   return new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)).normalize();
 }
 
+function finiteCarInputs(ids) {
+  const values = ids.map(id => Number(document.getElementById(id).value));
+  if (!values.every(Number.isFinite)) throw new Error('Completează toate valorile cu numere finite.');
+  return values;
+}
+
+function updateCarState(message) {
+  const status = document.getElementById('car-agent-status');
+  status.textContent = message.connected ? '● Mașină conectată' : '● Mașină deconectată';
+  status.style.color = message.connected ? '#4ade80' : '#f59e0b';
+  if (!carTransformInitialized && message.transform) {
+    document.getElementById('car-tf-x').value = Number(message.transform.x || 0).toFixed(2);
+    document.getElementById('car-tf-y').value = Number(message.transform.y || 0).toFixed(2);
+    document.getElementById('car-tf-yaw').value = Number(message.transform.yaw_deg || 0).toFixed(1);
+    carTransformInitialized = true;
+  }
+  const pose = message.pose;
+  if (pose && [pose.x, pose.y, pose.yaw].every(Number.isFinite)) {
+    document.getElementById('car-agent-pose').textContent =
+      `Poziție hartă: X=${pose.x.toFixed(2)} m · Y=${pose.y.toFixed(2)} m · yaw=${(pose.yaw * 180 / Math.PI).toFixed(1)}°`;
+    if (S.carGroup) {
+      const position = worldToThree(pose.x, pose.y);
+      S.carGroup.position.set(position.tx, 0.10, position.tz);
+      S.carGroup.rotation.y = yawToThreeRotation(pose.yaw);
+      S.carGroup.visible = true;
+    }
+  }
+  if (S.carScanMesh && Array.isArray(message.scan_points)) {
+    const positions = [];
+    message.scan_points.forEach(point => {
+      if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
+        const mapped = worldToThree(point.x, point.y);
+        positions.push(mapped.tx, 0.08, mapped.tz);
+      }
+    });
+    S.carScanMesh.geometry.setAttribute(
+      'position', new THREE.Float32BufferAttribute(positions, 3)
+    );
+    S.carScanMesh.geometry.computeBoundingSphere();
+  }
+  if (S.carPathLine && Array.isArray(message.path)) {
+    const positions = [];
+    message.path.forEach(point => {
+      if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
+        const mapped = worldToThree(point.x, point.y);
+        positions.push(mapped.tx, 0.06, mapped.tz);
+      }
+    });
+    S.carPathLine.geometry.setAttribute(
+      'position', new THREE.Float32BufferAttribute(positions, 3)
+    );
+    S.carPathLine.visible = positions.length >= 6;
+  }
+}
+
+async function refreshCarStatus() {
+  try {
+    const response = await fetch(API_BASE + '/api/car/status');
+    const data = await response.json();
+    if (data.success) updateCarState(data);
+  } catch (_) {}
+}
+
+async function saveCarTransform() {
+  const result = document.getElementById('car-agent-result');
+  try {
+    const [x, y, yaw_deg] = finiteCarInputs(['car-tf-x', 'car-tf-y', 'car-tf-yaw']);
+    const response = await fetch(API_BASE + '/api/car/transform', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({x, y, yaw_deg}),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Transformare respinsă');
+    updateCarState(data);
+    result.textContent = 'Transformarea map → odom_car a fost aplicată.';
+  } catch (error) {
+    result.textContent = `Eroare transformare: ${error.message || error}`;
+  }
+}
+
+async function sendCarGoal() {
+  const result = document.getElementById('car-agent-result');
+  try {
+    const [x, y, yaw_deg] = finiteCarInputs(['car-goal-x', 'car-goal-y', 'car-goal-yaw']);
+    const response = await fetch(API_BASE + '/api/car/goal', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({x, y, yaw_deg}),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Goal respins');
+    renderCarGoal({x, y, yaw: yaw_deg * Math.PI / 180});
+    result.textContent =
+      `Goal trimis · odom_car X=${data.odom_goal.x.toFixed(2)}, Y=${data.odom_goal.y.toFixed(2)}, yaw=${(data.odom_goal.yaw * 180 / Math.PI).toFixed(1)}°`;
+  } catch (error) {
+    result.textContent = `Eroare goal: ${error.message || error}`;
+  }
+}
+
+function renderCarGoal(goal) {
+  if (!S.carGoalMarker || !goal) return;
+  const position = worldToThree(goal.x, goal.y);
+  S.carGoalMarker.position.set(position.tx, 0.05, position.tz);
+  S.carGoalMarker.visible = true;
+}
+
 /** Singurul loc din care se mișcă/rotește marcatorul robotului. */
 function applyRobotPose(x, y, yaw) {
   if (!S.robotGroup) return;
@@ -704,6 +847,10 @@ function initWS() {
         Array.isArray(msg.yolo_detections) ? msg.yolo_detections : []
       );
       renderRealSensePoints(msg.points);
+    } else if (msg.type === 'car_state') {
+      updateCarState(msg);
+    } else if (msg.type === 'car_goal') {
+      renderCarGoal(msg.map_goal);
     } else if (msg.type === 'map_reset') {
       S.rawSlamPoints = [];
       S.visibleSlamPoints = 0;
@@ -1323,6 +1470,58 @@ function init3D() {
   S.cameraPointsMesh.visible = mapViewFilters.cameraVisible;
   S.scene.add(S.cameraPointsMesh);
 
+  // Al doilea agent: mașina RC, scanul LiDAR și traseul ei în cadrul hărții.
+  S.carGroup = new THREE.Group();
+  const carBody = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.16, 0.68),
+    new THREE.MeshStandardMaterial({color:0x06b6d4, roughness:0.55})
+  );
+  carBody.position.y = 0.13;
+  S.carGroup.add(carBody);
+  const carFront = new THREE.Mesh(
+    new THREE.ConeGeometry(0.11, 0.24, 12),
+    new THREE.MeshStandardMaterial({color:0xf8fafc})
+  );
+  carFront.rotation.x = -Math.PI / 2;
+  carFront.position.set(0, 0.16, -0.43);
+  S.carGroup.add(carFront);
+  [[-0.24,-0.22],[0.24,-0.22],[-0.24,0.22],[0.24,0.22]].forEach(([x,z]) => {
+    const wheel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.10, 0.10, 0.08, 12),
+      new THREE.MeshStandardMaterial({color:0x111827})
+    );
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, 0.10, z);
+    S.carGroup.add(wheel);
+  });
+  S.carGroup.visible = false;
+  S.scene.add(S.carGroup);
+
+  S.carScanMesh = new THREE.Points(
+    new THREE.BufferGeometry(),
+    new THREE.PointsMaterial({color:0x22d3ee, size:0.075, sizeAttenuation:true})
+  );
+  S.scene.add(S.carScanMesh);
+  S.carPathLine = new THREE.Line(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({color:0x38bdf8})
+  );
+  S.carPathLine.visible = false;
+  S.scene.add(S.carPathLine);
+  S.carGoalMarker = new THREE.Mesh(
+    new THREE.RingGeometry(0.18, 0.29, 28),
+    new THREE.MeshBasicMaterial({color:0xa855f7, side:THREE.DoubleSide})
+  );
+  S.carGoalMarker.rotation.x = -Math.PI / 2;
+  S.carGoalMarker.visible = false;
+  S.scene.add(S.carGoalMarker);
+  S.carGoalArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0.06, 0),
+    1.0, 0xa855f7, 0.28, 0.18
+  );
+  S.carGoalArrow.visible = false;
+  S.scene.add(S.carGoalArrow);
+
   // CONSTRUIRE ANSAMBLU ROBOT
   S.robotGroup = new THREE.Group();
   S.robotFallback = buildFallbackG1();
@@ -1895,11 +2094,14 @@ window.addEventListener('keydown', event => {
 // ── Unealta de poziție + orientare (stil "2D Pose Estimate" din RViz) ────
 let _poseTool = false;
 let _goalTool = false;
+let _carGoalTool = false;
 let _drag = null;                 // { x, y, yaw } în coordonate LUME
+let _carGoalDrag = null;
 const DRAG_MIN_DIST = 0.15;       // m sub care nu considerăm că s-a tras
 
 function togglePoseTool(force) {
   if (force !== false && _goalTool) toggleGoalTool(false);
+  if (force !== false && _carGoalTool) toggleCarGoalTool(false);
   _poseTool = (force === undefined) ? !_poseTool : force;
   const btn = document.getElementById('init-pose-btn');
   const canvas = document.getElementById('canvas-3d');
@@ -1930,6 +2132,7 @@ function toggleGoalTool(force) {
   const canvas = document.getElementById('canvas-3d');
   if (_goalTool) {
     togglePoseTool(false);
+    toggleCarGoalTool(false);
     button.textContent = '✅ Click pe punctul B (Esc anulează)';
     button.style.background = '#dc2626';
     canvas.style.cursor = 'crosshair';
@@ -1940,6 +2143,89 @@ function toggleGoalTool(force) {
     canvas.style.cursor = '';
     canvas.removeEventListener('pointerdown', onGoalPick);
   }
+}
+
+function toggleCarGoalTool(force) {
+  _carGoalTool = (force === undefined) ? !_carGoalTool : force;
+  const button = document.getElementById('car-pick-goal-btn');
+  const canvas = document.getElementById('canvas-3d');
+  if (_carGoalTool) {
+    togglePoseTool(false);
+    toggleGoalTool(false);
+    button.textContent = '✅ Click + drag pentru orientare (Esc anulează)';
+    button.style.background = '#dc2626';
+    canvas.style.cursor = 'crosshair';
+    canvas.addEventListener('pointerdown', onCarGoalDown);
+    canvas.addEventListener('pointermove', onCarGoalMove);
+    canvas.addEventListener('pointerup', onCarGoalUp);
+    window.addEventListener('pointerup', onCarGoalUp);
+  } else {
+    button.textContent = '⌖ Alege poziția și trage orientarea';
+    button.style.background = '#2563eb';
+    canvas.style.cursor = '';
+    canvas.removeEventListener('pointerdown', onCarGoalDown);
+    canvas.removeEventListener('pointermove', onCarGoalMove);
+    canvas.removeEventListener('pointerup', onCarGoalUp);
+    window.removeEventListener('pointerup', onCarGoalUp);
+    endCarGoalDrag();
+  }
+}
+
+function onCarGoalDown(event) {
+  if (event.button !== 0) return;
+  const point = pickGround(event);
+  if (!point) return;
+  event.preventDefault();
+  if (S.controls) S.controls.enabled = false;
+  const currentYaw = Number(document.getElementById('car-goal-yaw').value || 0);
+  _carGoalDrag = {
+    x: point.x, y: point.y,
+    yaw: Number.isFinite(currentYaw) ? currentYaw * Math.PI / 180 : 0,
+  };
+  renderCarGoal(_carGoalDrag);
+  drawCarGoalArrow(_carGoalDrag, 0.6);
+}
+
+function onCarGoalMove(event) {
+  if (!_carGoalDrag) return;
+  const point = pickGround(event);
+  if (!point) return;
+  const dx = point.x - _carGoalDrag.x;
+  const dy = point.y - _carGoalDrag.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance >= DRAG_MIN_DIST) _carGoalDrag.yaw = Math.atan2(dy, dx);
+  drawCarGoalArrow(_carGoalDrag, Math.max(0.6, distance));
+  document.getElementById('car-agent-result').textContent =
+    `Goal hartă X=${_carGoalDrag.x.toFixed(2)}, Y=${_carGoalDrag.y.toFixed(2)}, yaw=${(_carGoalDrag.yaw * 180 / Math.PI).toFixed(1)}° — eliberează pentru confirmare`;
+}
+
+function onCarGoalUp() {
+  if (!_carGoalDrag) return;
+  const goal = {..._carGoalDrag};
+  document.getElementById('car-goal-x').value = goal.x.toFixed(2);
+  document.getElementById('car-goal-y').value = goal.y.toFixed(2);
+  document.getElementById('car-goal-yaw').value =
+    (goal.yaw * 180 / Math.PI).toFixed(1);
+  renderCarGoal(goal);
+  endCarGoalDrag();
+  toggleCarGoalTool(false);
+  document.getElementById('car-agent-result').textContent =
+    'Goal selectat. Apasă „Trimite goal pose” pentru a porni mașina.';
+}
+
+function endCarGoalDrag() {
+  _carGoalDrag = null;
+  if (S.carGoalArrow) S.carGoalArrow.visible = false;
+  if (S.controls) S.controls.enabled = true;
+}
+
+function drawCarGoalArrow(goal, length) {
+  if (!S.carGoalArrow) return;
+  const position = worldToThree(goal.x, goal.y);
+  S.carGoalArrow.position.set(position.tx, 0.06, position.tz);
+  S.carGoalArrow.setDirection(headingVector(goal.yaw));
+  S.carGoalArrow.setLength(length, 0.28, 0.18);
+  S.carGoalArrow.visible = true;
 }
 
 function onGoalPick(event) {
@@ -2272,6 +2558,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'escape' && _poseTool) { togglePoseTool(false); return; }
   if (k === 'escape' && _goalTool) { toggleGoalTool(false); return; }
+  if (k === 'escape' && _carGoalTool) { toggleCarGoalTool(false); return; }
   if (!TELEOP_KEYS.includes(k)) return;
   // Nu interceptăm dacă utilizatorul SCRIE într-un câmp de text.
   // Atenție: slider-ele (input type="range") păstrează focusul după click,
@@ -2483,7 +2770,7 @@ resetMapViewFilters(false);
 document.getElementById('nav-driver').value = 'legacy';
 document.getElementById('nav-executor').value = 'native_1102';
 setTimeout(() => { init3D(); updateMapViewFilters(); }, 100);
-initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness(); refreshYoloStatus();
+initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness(); refreshYoloStatus(); refreshCarStatus();
 setInterval(refreshNavigationSensorReadiness, 1000);
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.getElementById('camera-modal').classList.contains('open')) {
