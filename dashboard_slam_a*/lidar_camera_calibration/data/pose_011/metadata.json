@@ -1,0 +1,122 @@
+{
+  "board": {
+    "dictionary": "DICT_5X5_100",
+    "marker_length_m": 0.042,
+    "square_length_m": 0.06,
+    "squares_x": 6,
+    "squares_y": 4
+  },
+  "camera": {
+    "captured_unix_ns": 1787563668560215629,
+    "cx": 326.84619140625,
+    "cy": 236.9107208251953,
+    "depth_aligned_to_color": true,
+    "depth_scale_m": 0.0010000000474974513,
+    "distortion": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "distortion_model": "inverse_brown_conrady",
+    "frame_number": 1988,
+    "fx": 604.4609985351562,
+    "fy": 604.3694458007812,
+    "height": 480,
+    "realsense_timestamp_ms": 1787563668513.4707,
+    "width": 640
+  },
+  "charuco": {
+    "corner_count": 10,
+    "corner_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      7,
+      8,
+      9,
+      13,
+      14
+    ],
+    "corners_px": [
+      [
+        99.1839828491211,
+        71.68387603759766
+      ],
+      [
+        127.80726623535156,
+        82.84288787841797
+      ],
+      [
+        157.08938598632812,
+        95.1492919921875
+      ],
+      [
+        188.48001098632812,
+        106.82579803466797
+      ],
+      [
+        220.08505249023438,
+        119.63665008544922
+      ],
+      [
+        162.93006896972656,
+        57.91447067260742
+      ],
+      [
+        194.6874237060547,
+        69.935302734375
+      ],
+      [
+        227.01805114746094,
+        82.09629821777344
+      ],
+      [
+        200.5711669921875,
+        30.551189422607422
+      ],
+      [
+        234.03170776367188,
+        42.99359893798828
+      ]
+    ]
+  },
+  "lidar": {
+    "message_count": 5,
+    "messages": [
+      {
+        "frame_id": "livox_frame",
+        "point_count": 12970,
+        "stamp_nanosec": 473276723,
+        "stamp_sec": 1787563668
+      },
+      {
+        "frame_id": "livox_frame",
+        "point_count": 12686,
+        "stamp_nanosec": 574334141,
+        "stamp_sec": 1787563668
+      },
+      {
+        "frame_id": "livox_frame",
+        "point_count": 12717,
+        "stamp_nanosec": 673358966,
+        "stamp_sec": 1787563668
+      },
+      {
+        "frame_id": "livox_frame",
+        "point_count": 13015,
+        "stamp_nanosec": 773358069,
+        "stamp_sec": 1787563668
+      },
+      {
+        "frame_id": "livox_frame",
+        "point_count": 12755,
+        "stamp_nanosec": 874257337,
+        "stamp_sec": 1787563668
+      }
+    ]
+  }
+}

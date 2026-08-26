@@ -1,0 +1,4 @@
+# rclpy and sensor_msgs are supplied by /opt/ros/humble.
+# Use the Unitree/JetPack-compatible pyrealsense2 installation.
+numpy
+opencv-contrib-python

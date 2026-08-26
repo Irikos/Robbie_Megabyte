@@ -93,6 +93,12 @@
       font-size:0.72rem;
     }
     .car-agent-note { font-size:0.66rem; color:var(--text-secondary); line-height:1.35; }
+    .semantic-chair-status {
+      position:absolute; top:12px; left:12px; z-index:90;
+      padding:5px 9px; border:1px solid rgba(168,85,247,0.5);
+      border-radius:6px; background:rgba(2,6,23,0.82);
+      color:#d8b4fe; font-size:0.7rem; pointer-events:none;
+    }
 
     .map-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .map-filter-control { display:flex; flex-direction:column; gap:3px; min-width:0; }
@@ -385,6 +391,7 @@
     
     <div class="viewport-container">
       <div id="view-3d" style="width:100%; height:100%"><canvas id="canvas-3d"></canvas></div>
+      <div id="semantic-chair-status" class="semantic-chair-status">🪑 0 obiecte semantice</div>
       
       <div class="pip-video-feed">
         <img id="live-video-feed" src="" style="display:none;">
@@ -504,7 +511,7 @@ const S = {
   routeLine: null, routePoints: null,
   dynamicCostmapMesh: null,
   carGroup: null, carScanMesh: null, carPathLine: null,
-  carGoalMarker: null, carGoalArrow: null,
+  carGoalMarker: null, carGoalArrow: null, semanticChairGroup: null,
   loadedMapMesh: null,
   rawSlamPoints: [], rawLoadedMapPoints: [],
   visibleSlamPoints: 0, visibleLoadedMapPoints: 0,
@@ -590,6 +597,7 @@ sessionStorage.setItem(MAP_DISPLAY_STORAGE_KEY, '1');
 let costmapView = {data: null, zoom: 1};
 let latestPoseSource = null;
 let carTransformInitialized = false;
+let latestSemanticChairMessage = null;
 const COSTMAP_DEFAULTS = {resolution:0.08,minPoints:3,minZ:0.15,maxZ:1.85,radius:0.25,
   comfortRadius:0.65,clearanceWeight:6.0,floorTolerance:0.08,levelFloor:true};
 
@@ -772,6 +780,107 @@ function renderCarGoal(goal) {
   S.carGoalMarker.visible = true;
 }
 
+function semanticLabelSprite(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const context = canvas.getContext('2d');
+  context.fillStyle = 'rgba(30, 10, 55, 0.90)';
+  context.strokeStyle = '#c084fc';
+  context.lineWidth = 3;
+  context.fillRect(3, 3, 250, 58);
+  context.strokeRect(3, 3, 250, 58);
+  context.fillStyle = '#ffffff';
+  context.font = 'bold 27px Inter, sans-serif';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, 128, 33);
+  const texture = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map:texture, transparent:true, depthTest:false,
+  }));
+  sprite.scale.set(1.25, 0.31, 1);
+  sprite.renderOrder = 20;
+  return sprite;
+}
+
+function clearSemanticChairScene() {
+  if (!S.semanticChairGroup) return;
+  S.semanticChairGroup.traverse(object => {
+    if (object.geometry) object.geometry.dispose();
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.filter(Boolean).forEach(material => {
+      if (material.map) material.map.dispose();
+      material.dispose();
+    });
+  });
+  S.semanticChairGroup.clear();
+}
+
+function renderSemanticChairs(message) {
+  latestSemanticChairMessage = message;
+  const status = document.getElementById('semantic-chair-status');
+  if (!message.calibration_available) {
+    status.textContent = `⚠ Calibrare indisponibilă: ${message.calibration_error || 'necunoscut'}`;
+    status.style.color = '#fbbf24';
+    clearSemanticChairScene();
+    return;
+  }
+  const objects = Array.isArray(message.objects) ? message.objects : [];
+  status.textContent = `🪑 ${objects.length} ${objects.length === 1 ? 'scaun semantic' : 'scaune semantice'}`;
+  status.style.color = '#d8b4fe';
+  if (!S.semanticChairGroup) return;
+  clearSemanticChairScene();
+
+  objects.forEach(object => {
+    const points = Array.isArray(object.points) ? object.points : [];
+    const positions = [];
+    const colors = [];
+    points.forEach(point => {
+      if (![point.x, point.y, point.z].every(Number.isFinite)) return;
+      const mapped = worldToThree(point.x, point.y);
+      positions.push(mapped.tx, point.z, mapped.tz);
+      colors.push(
+        Number(point.r || 180) / 255,
+        Number(point.g || 180) / 255,
+        Number(point.b || 180) / 255
+      );
+    });
+    if (positions.length) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      const cloud = new THREE.Points(
+        geometry,
+        new THREE.PointsMaterial({
+          size:0.045, vertexColors:true, sizeAttenuation:true,
+        })
+      );
+      S.semanticChairGroup.add(cloud);
+    }
+
+    const minimum = object.bounds?.min;
+    const maximum = object.bounds?.max;
+    if (!minimum || !maximum) return;
+    const sizeX = Math.max(0.08, maximum.x - minimum.x);
+    const sizeY = Math.max(0.08, maximum.y - minimum.y);
+    const sizeZ = Math.max(0.08, maximum.z - minimum.z);
+    const centerX = (minimum.x + maximum.x) / 2;
+    const centerY = (minimum.y + maximum.y) / 2;
+    const centerZ = (minimum.z + maximum.z) / 2;
+    const mappedCenter = worldToThree(centerX, centerY);
+    const box = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(sizeX, sizeZ, sizeY)),
+      new THREE.LineBasicMaterial({color:0xc084fc})
+    );
+    box.position.set(mappedCenter.tx, centerZ, mappedCenter.tz);
+    S.semanticChairGroup.add(box);
+    const label = semanticLabelSprite(object.name || `chair ${object.id}`);
+    label.position.set(mappedCenter.tx, maximum.z + 0.28, mappedCenter.tz);
+    S.semanticChairGroup.add(label);
+  });
+}
+
 /** Singurul loc din care se mișcă/rotește marcatorul robotului. */
 function applyRobotPose(x, y, yaw) {
   if (!S.robotGroup) return;
@@ -851,6 +960,8 @@ function initWS() {
       updateCarState(msg);
     } else if (msg.type === 'car_goal') {
       renderCarGoal(msg.map_goal);
+    } else if (msg.type === 'semantic_chairs') {
+      renderSemanticChairs(msg);
     } else if (msg.type === 'map_reset') {
       S.rawSlamPoints = [];
       S.visibleSlamPoints = 0;
@@ -1521,6 +1632,9 @@ function init3D() {
   );
   S.carGoalArrow.visible = false;
   S.scene.add(S.carGoalArrow);
+  S.semanticChairGroup = new THREE.Group();
+  S.scene.add(S.semanticChairGroup);
+  if (latestSemanticChairMessage) renderSemanticChairs(latestSemanticChairMessage);
 
   // CONSTRUIRE ANSAMBLU ROBOT
   S.robotGroup = new THREE.Group();

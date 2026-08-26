@@ -1,0 +1,17 @@
+{
+  "accepted_colored_observations": 2961,
+  "allow_missing_depth": false,
+  "coordinate_frame": "livox_frame",
+  "depth_absolute_tolerance_m": 0.08,
+  "depth_consistent": 2961,
+  "depth_relative_tolerance": 0.03,
+  "extrinsic": "data/lidar_to_camera.yaml",
+  "in_front_of_camera": 31647,
+  "input_points": 63661,
+  "inside_image": 3827,
+  "mean_observations_per_voxel": 1.2160164271047227,
+  "output_voxels": 2435,
+  "pose": "pose_013",
+  "valid_depth": 3770,
+  "voxel_size_m": 0.01
+}

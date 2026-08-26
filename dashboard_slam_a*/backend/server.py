@@ -59,8 +59,15 @@ from autonomous_navigation import (
 )
 from nav2_observer import Nav2ObserverPublisher
 from local_lidar_localization import LocalLidarLocalizer
+from semantic_chair_mapper import (
+    LidarCameraCalibration,
+    SemanticChairTracker,
+    canonical_chair_label,
+    extract_livox_points,
+)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+CALIBRATION_DIR = Path(__file__).parent.parent / "lidar_camera_calibration"
 POINTS_PER_SCAN = 7000
 MAX_VOXELS_BEFORE_DOWNSAMPLE = 250000
 # Nav2 calculeaza o raza inscrisa de aproximativ 0.206 m pentru amprenta G1.
@@ -303,6 +310,20 @@ car_state = {
     "scan_points": [],
     "path": [],
 }
+semantic_chair_tracker = SemanticChairTracker(
+    confirmations=3, merge_distance_m=0.70, voxel_size_m=0.025
+)
+semantic_chair_lock = threading.Lock()
+semantic_chair_map_path: Optional[str] = None
+semantic_chair_last_process = 0.0
+try:
+    lidar_camera_calibration = LidarCameraCalibration.load(CALIBRATION_DIR)
+    semantic_calibration_error = ""
+    print(f"[semantic] calibrare LiDAR–cameră încărcată din {CALIBRATION_DIR}")
+except Exception as exc:
+    lidar_camera_calibration = None
+    semantic_calibration_error = str(exc)
+    print(f"[semantic] calibrare indisponibilă: {exc}")
 points_lock = threading.Lock()
 loop = None
 node_instance = None
@@ -600,6 +621,115 @@ def _transform_livox_points_to_map(points: List[dict], pose: dict,
             "z": floor_z + (base_z - ground_base_z),
         })
     return transformed
+
+
+def _transform_semantic_livox_points_to_map(
+    points: List[dict], pose: dict, floor_plane: Optional[dict]
+) -> List[dict]:
+    """Transformă punctele RGB calibrate camera→livox în cadrul hărții."""
+    base_points, estimated_ground = _livox_points_to_base(points)
+    if not base_points:
+        return []
+    ground_base_z = float(
+        getattr(node_instance, "last_raw_lidar_ground_base_z", estimated_ground)
+        if node_instance is not None else estimated_ground
+    )
+    yaw = float(pose.get("yaw", 0.0))
+    cosine, sine = math.cos(yaw), math.sin(yaw)
+    pose_x = float(pose.get("x", 0.0))
+    pose_y = float(pose.get("y", 0.0))
+    transformed = []
+    for source, (base_x, base_y, base_z) in zip(points, base_points):
+        world_x = pose_x + cosine * base_x - sine * base_y
+        world_y = pose_y + sine * base_x + cosine * base_y
+        floor_z = 0.0
+        if floor_plane:
+            floor_z = (
+                float(floor_plane.get("a", 0.0)) * world_x
+                + float(floor_plane.get("b", 0.0)) * world_y
+                + float(floor_plane.get("c", 0.0))
+            )
+        relative_z = base_z - ground_base_z
+        if not 0.06 <= relative_z <= 2.20:
+            continue
+        transformed.append({
+            "x": world_x,
+            "y": world_y,
+            "z": floor_z + relative_z,
+            "r": int(source.get("r", 180)),
+            "g": int(source.get("g", 180)),
+            "b": int(source.get("b", 180)),
+        })
+    return transformed
+
+
+def _semantic_chair_payload() -> dict:
+    with semantic_chair_lock:
+        objects = semantic_chair_tracker.snapshot()
+        map_path = semantic_chair_map_path
+    return {
+        "type": "semantic_chairs",
+        "objects": objects,
+        "count": len(objects),
+        "map_path": map_path,
+        "calibration_available": lidar_camera_calibration is not None,
+        "calibration_error": semantic_calibration_error,
+    }
+
+
+def _reset_semantic_chairs(map_path: Optional[str] = None) -> dict:
+    global semantic_chair_map_path
+    with semantic_chair_lock:
+        semantic_chair_tracker.reset()
+        semantic_chair_map_path = map_path
+    return _semantic_chair_payload()
+
+
+def _process_semantic_chairs(
+    depth_img: np.ndarray, color_img: np.ndarray, detections: List[dict]
+) -> Optional[dict]:
+    """Procesează cel mult 4 Hz și numai cu hartă/localizare active."""
+    global semantic_chair_last_process, semantic_chair_map_path
+    if lidar_camera_calibration is None:
+        return None
+    current_map = _resolve_map_path(loaded_map_path)
+    if not current_map:
+        return None
+    now = time.monotonic()
+    if now - semantic_chair_last_process < 0.25:
+        return None
+    semantic_chair_last_process = now
+    if not (_localization_fresh(3.0) or _native_localization_fresh(3.0)):
+        return None
+
+    relevant = [
+        detection for detection in detections
+        if canonical_chair_label(detection.get("label", ""))
+        and float(detection.get("confidence", 0.0)) >= 0.35
+    ]
+    if not relevant:
+        return None
+    pose = dict(map_state.get("pose") or {})
+    floor_plane = obstacle_guard.floor_plane()
+    changed = False
+    with semantic_chair_lock:
+        if semantic_chair_map_path != current_map:
+            semantic_chair_tracker.reset()
+            semantic_chair_map_path = current_map
+        for detection in relevant:
+            livox_points = extract_livox_points(
+                depth_img, color_img, detection, lidar_camera_calibration
+            )
+            map_points = _transform_semantic_livox_points_to_map(
+                livox_points, pose, floor_plane
+            )
+            if semantic_chair_tracker.observe(
+                map_points,
+                float(detection.get("confidence", 0.0)),
+                observed_at=now,
+            ):
+                changed = True
+    return _semantic_chair_payload() if changed else None
 
 if ROS2_AVAILABLE:
     class DualLidarSLAMSubscriber(Node):
@@ -1197,11 +1327,22 @@ def camera_receiver_thread():
                 # Oglindim imaginea pe orizontală înainte de trimitere folosind OpenCV
                 color_img_flipped = cv2.flip(color_img, 1)
                 yolo_detections = []
+                semantic_payload = None
                 if _yolo_enabled and _YOLO_AVAILABLE:
                     color_img_flipped, yolo_detections = _run_yolo(color_img_flipped)
+                    try:
+                        semantic_payload = _process_semantic_chairs(
+                            depth_img, color_img, yolo_detections
+                        )
+                    except Exception as exc:
+                        print(f"[semantic] eroare procesare: {exc}")
                 _, color_bytes_flipped = cv2.imencode(".jpg", color_img_flipped, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
                 encoded_video = base64.b64encode(color_bytes_flipped.tobytes()).decode('utf-8')
 
+                if loop and semantic_payload is not None:
+                    asyncio.run_coroutine_threadsafe(
+                        broadcast(semantic_payload), loop
+                    )
                 if loop and cam_points:
                     asyncio.run_coroutine_threadsafe(
                         broadcast({
@@ -1367,6 +1508,7 @@ async def websocket_endpoint(ws: WebSocket):
             "loaded_map_path": _resolve_map_path(loaded_map_path),
         }))
         await ws.send_text(json.dumps(_car_public_state()))
+        await ws.send_text(json.dumps(_semantic_chair_payload()))
         current_map = _resolve_map_path(loaded_map_path)
         if current_map:
             points = await asyncio.to_thread(slam_client.read_pcd_points, current_map)
@@ -1817,6 +1959,7 @@ async def load_robot_map(body: dict = Body({})):
         await broadcast({"type": "map_reset"})
         await broadcast({"type": "loaded_map_cleared"})
         loaded_map_path = filepath
+        await broadcast(_reset_semantic_chairs(filepath))
         # Păstrăm suficientă densitate pentru vizualizarea de tip Unitree.
         # Filtrul de densitate din frontend poate reduce ulterior fără a reciti PCD-ul.
         step = max(1, len(pts) // 100000)
@@ -1870,6 +2013,7 @@ async def unload_robot_map():
     previous_path = _resolve_map_path(loaded_map_path)
     pending_nav_previews = {}
     loaded_map_path = None
+    await broadcast(_reset_semantic_chairs())
     local_lidar_localizer.clear()
     _set_slam_mode("idle")
     await broadcast({"type": "loaded_map_cleared", "previous_path": previous_path})
@@ -4144,6 +4288,18 @@ async def get_yolo_status():
         "model": YOLO_MODEL_SIZE,
         "model_loaded": _yolo_model is not None,
     }
+
+
+@app.get("/api/semantic/chairs")
+async def get_semantic_chairs():
+    return {"success": True, **_semantic_chair_payload()}
+
+
+@app.delete("/api/semantic/chairs")
+async def clear_semantic_chairs():
+    payload = _reset_semantic_chairs(_resolve_map_path(loaded_map_path))
+    await broadcast(payload)
+    return {"success": True, **payload}
 
 @app.get("/")
 async def get_dashboard(): return FileResponse(str(FRONTEND_DIR / "index.html"))
