@@ -799,7 +799,7 @@ function semanticLabelSprite(text) {
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map:texture, transparent:true, depthTest:false,
   }));
-  sprite.scale.set(1.25, 0.31, 1);
+  sprite.scale.set(0.78, 0.20, 1);
   sprite.renderOrder = 20;
   return sprite;
 }
@@ -853,7 +853,8 @@ function renderSemanticChairs(message) {
       const cloud = new THREE.Points(
         geometry,
         new THREE.PointsMaterial({
-          size:0.045, vertexColors:true, sizeAttenuation:true,
+          size:0.028, vertexColors:true, sizeAttenuation:true,
+          transparent:true, opacity:0.88,
         })
       );
       S.semanticChairGroup.add(cloud);
@@ -869,14 +870,23 @@ function renderSemanticChairs(message) {
     const centerY = (minimum.y + maximum.y) / 2;
     const centerZ = (minimum.z + maximum.z) / 2;
     const mappedCenter = worldToThree(centerX, centerY);
+    const volume = new THREE.Mesh(
+      new THREE.BoxGeometry(sizeX, sizeZ, sizeY),
+      new THREE.MeshBasicMaterial({
+        color:0xa855f7, transparent:true, opacity:0.06,
+        depthWrite:false, side:THREE.DoubleSide,
+      })
+    );
+    volume.position.set(mappedCenter.tx, centerZ, mappedCenter.tz);
+    S.semanticChairGroup.add(volume);
     const box = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(sizeX, sizeZ, sizeY)),
-      new THREE.LineBasicMaterial({color:0xc084fc})
+      new THREE.LineBasicMaterial({color:0xc084fc, transparent:true, opacity:0.90})
     );
     box.position.set(mappedCenter.tx, centerZ, mappedCenter.tz);
     S.semanticChairGroup.add(box);
     const label = semanticLabelSprite(object.name || `chair ${object.id}`);
-    label.position.set(mappedCenter.tx, maximum.z + 0.28, mappedCenter.tz);
+    label.position.set(mappedCenter.tx, maximum.z + 0.18, mappedCenter.tz);
     S.semanticChairGroup.add(label);
   });
 }

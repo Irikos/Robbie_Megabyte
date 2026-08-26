@@ -14,6 +14,7 @@ from semantic_chair_mapper import (
     LidarCameraCalibration,
     SemanticChairTracker,
     canonical_chair_label,
+    deduplicate_chair_detections,
     extract_livox_points,
 )
 
@@ -41,6 +42,21 @@ def test_toilet_and_chair_are_both_canonical_chairs():
     assert canonical_chair_label("chair") == "chair"
     assert canonical_chair_label("toilet") == "chair"
     assert canonical_chair_label("person") is None
+
+
+def test_overlapping_chair_and_toilet_boxes_are_one_detection():
+    detections = [
+        {"label": "chair", "confidence": 0.72, "x1": 10, "y1": 12, "x2": 110, "y2": 150},
+        {"label": "toilet", "confidence": 0.86, "x1": 14, "y1": 15, "x2": 108, "y2": 147},
+        {"label": "chair", "confidence": 0.68, "x1": 210, "y1": 20, "x2": 300, "y2": 155},
+        {"label": "person", "confidence": 0.99, "x1": 0, "y1": 0, "x2": 50, "y2": 50},
+    ]
+
+    kept = deduplicate_chair_detections(detections)
+
+    assert len(kept) == 2
+    assert kept[0]["label"] == "toilet"
+    assert kept[1]["x1"] == 210
 
 
 def test_flipped_yolo_box_is_unflipped_before_depth_extraction():
@@ -105,12 +121,30 @@ def test_tracker_confirms_three_frames_deduplicates_and_numbers_stably():
     assert [item["name"] for item in objects] == ["chair 1", "chair 2"]
 
 
+def test_confirmed_chair_expires_30_seconds_after_last_observation():
+    tracker = SemanticChairTracker(
+        confirmations=3,
+        merge_distance_m=0.70,
+        lifespan_s=30.0,
+    )
+    tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.0)
+    tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.2)
+    tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.4)
+
+    assert tracker.expire(observed_at=40.4) is False
+    assert len(tracker.snapshot()) == 1
+    assert tracker.expire(observed_at=40.401) is True
+    assert tracker.snapshot() == []
+
+
 def test_server_and_frontend_wire_semantic_chairs():
     server = (BACKEND / "server.py").read_text(encoding="utf-8")
     frontend = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
 
     assert "def _process_semantic_chairs(" in server
-    assert "canonical_chair_label" in server
+    assert "deduplicate_chair_detections" in server
+    assert "semantic_chair_aging_loop" in server
+    assert "lifespan_s=30.0" in server
     assert '@app.get("/api/semantic/chairs")' in server
     assert "function renderSemanticChairs(message)" in frontend
     assert "semanticLabelSprite" in frontend

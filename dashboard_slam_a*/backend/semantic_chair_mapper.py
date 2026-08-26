@@ -79,6 +79,48 @@ def canonical_chair_label(label: str) -> Optional[str]:
     return "chair" if str(label).strip().lower() in {"chair", "toilet"} else None
 
 
+def deduplicate_chair_detections(
+    detections: Iterable[dict],
+    minimum_confidence: float = 0.35,
+    iou_threshold: float = 0.35,
+) -> list[dict]:
+    """Class-independent NMS so chair+toilet boxes become one chair."""
+    candidates = [
+        detection for detection in detections
+        if canonical_chair_label(detection.get("label", ""))
+        and float(detection.get("confidence", 0.0)) >= minimum_confidence
+    ]
+    candidates.sort(
+        key=lambda detection: float(detection.get("confidence", 0.0)),
+        reverse=True,
+    )
+    kept = []
+    for candidate in candidates:
+        x1 = float(candidate.get("x1", 0.0))
+        y1 = float(candidate.get("y1", 0.0))
+        x2 = float(candidate.get("x2", 0.0))
+        y2 = float(candidate.get("y2", 0.0))
+        area = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        overlaps = False
+        for previous in kept:
+            px1 = float(previous.get("x1", 0.0))
+            py1 = float(previous.get("y1", 0.0))
+            px2 = float(previous.get("x2", 0.0))
+            py2 = float(previous.get("y2", 0.0))
+            intersection = (
+                max(0.0, min(x2, px2) - max(x1, px1))
+                * max(0.0, min(y2, py2) - max(y1, py1))
+            )
+            previous_area = max(0.0, px2 - px1) * max(0.0, py2 - py1)
+            union = area + previous_area - intersection
+            if union > 0.0 and intersection / union >= iou_threshold:
+                overlaps = True
+                break
+        if not overlaps:
+            kept.append(candidate)
+    return kept
+
+
 def extract_livox_points(
     depth_img: np.ndarray,
     color_img: np.ndarray,
@@ -176,16 +218,32 @@ class SemanticChairTracker:
         confirmations: int = 3,
         merge_distance_m: float = 0.70,
         voxel_size_m: float = 0.025,
+        lifespan_s: float = 30.0,
+        max_voxels: int = 10000,
     ):
         self.confirmations = max(1, int(confirmations))
         self.merge_distance_m = float(merge_distance_m)
         self.voxel_size_m = float(voxel_size_m)
+        self.lifespan_s = max(1.0, float(lifespan_s))
+        self.max_voxels = max(100, int(max_voxels))
         self._tracks: list[dict] = []
         self._next_id = 1
 
     def reset(self) -> None:
         self._tracks = []
         self._next_id = 1
+
+    def expire(self, observed_at: Optional[float] = None) -> bool:
+        """Remove candidates after 2 s and confirmed chairs after lifespan_s."""
+        now = float(time.monotonic() if observed_at is None else observed_at)
+        previous_count = len(self._tracks)
+        self._tracks = [
+            track for track in self._tracks
+            if now - track["last_seen"] <= (
+                self.lifespan_s if track["id"] is not None else 2.0
+            )
+        ]
+        return len(self._tracks) != previous_count
 
     def observe(
         self,
@@ -208,12 +266,7 @@ class SemanticChairTracker:
             return False
         center = np.median(xyz, axis=0)
 
-        # Unconfirmed detections disappear quickly. Confirmed chairs persist
-        # for the lifetime of the loaded map.
-        self._tracks = [
-            track for track in self._tracks
-            if track["id"] is not None or now - track["last_seen"] <= 2.0
-        ]
+        self.expire(now)
         track = None
         best_distance = math.inf
         for candidate in self._tracks:
@@ -246,7 +299,7 @@ class SemanticChairTracker:
                 round(float(point["y"]) / self.voxel_size_m),
                 round(float(point["z"]) / self.voxel_size_m),
             )
-            if key not in track["voxels"] and len(track["voxels"]) < 6000:
+            if key not in track["voxels"] and len(track["voxels"]) < self.max_voxels:
                 track["voxels"][key] = {
                     "x": round(float(point["x"]), 4),
                     "y": round(float(point["y"]), 4),
@@ -283,6 +336,11 @@ class SemanticChairTracker:
                 "label": "chair",
                 "confidence": round(float(track["confidence"]), 3),
                 "observations": int(track["hits"]),
+                "age_s": round(max(0.0, time.monotonic() - track["last_seen"]), 2),
+                "expires_in_s": round(max(
+                    0.0,
+                    self.lifespan_s - (time.monotonic() - track["last_seen"]),
+                ), 2),
                 "center": {
                     "x": round(float(track["center"][0]), 4),
                     "y": round(float(track["center"][1]), 4),

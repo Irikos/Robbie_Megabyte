@@ -62,7 +62,7 @@ from local_lidar_localization import LocalLidarLocalizer
 from semantic_chair_mapper import (
     LidarCameraCalibration,
     SemanticChairTracker,
-    canonical_chair_label,
+    deduplicate_chair_detections,
     extract_livox_points,
 )
 
@@ -311,7 +311,8 @@ car_state = {
     "path": [],
 }
 semantic_chair_tracker = SemanticChairTracker(
-    confirmations=3, merge_distance_m=0.70, voxel_size_m=0.025
+    confirmations=3, merge_distance_m=0.70, voxel_size_m=0.025,
+    lifespan_s=30.0, max_voxels=10000,
 )
 semantic_chair_lock = threading.Lock()
 semantic_chair_map_path: Optional[str] = None
@@ -529,6 +530,16 @@ async def map_broadcast_loop():
         await broadcast({"type": "map_points", "points": all_pts})
 
 
+async def semantic_chair_aging_loop():
+    """Expire semantic objects even when YOLO or the camera stops sending."""
+    while True:
+        await asyncio.sleep(1.0)
+        with semantic_chair_lock:
+            changed = semantic_chair_tracker.expire()
+        if changed:
+            await broadcast(_semantic_chair_payload())
+
+
 def _livox_points_to_base(points: List[dict]) -> tuple:
     """Întoarce punctele în base_link și cota locală estimată a podelei."""
     if not points:
@@ -702,11 +713,11 @@ def _process_semantic_chairs(
     if not (_localization_fresh(3.0) or _native_localization_fresh(3.0)):
         return None
 
-    relevant = [
-        detection for detection in detections
-        if canonical_chair_label(detection.get("label", ""))
-        and float(detection.get("confidence", 0.0)) >= 0.35
-    ]
+    relevant = deduplicate_chair_detections(
+        detections,
+        minimum_confidence=0.35,
+        iou_threshold=0.35,
+    )
     if not relevant:
         return None
     pose = dict(map_state.get("pose") or {})
@@ -4313,6 +4324,7 @@ async def startup_event():
     threading.Thread(target=camera_receiver_thread, daemon=True).start()
     asyncio.create_task(map_broadcast_loop())
     asyncio.create_task(teleop_watchdog_loop())
+    asyncio.create_task(semantic_chair_aging_loop())
 
 
 @app.on_event("shutdown")
