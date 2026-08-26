@@ -133,6 +133,29 @@ def test_camera_receiver_retries_port_during_dashboard_restart():
     assert "portul 5005 este temporar indisponibil" in source
 
 
+def test_yolo_is_optional_lazy_and_streamed_with_existing_camera_payload():
+    root = Path(__file__).parents[1]
+    server = (root / "server.py").read_text(encoding="utf-8")
+    frontend = (root.parent / "frontend" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    requirements = (root / "requirements.txt").read_text(encoding="utf-8")
+
+    assert "from ultralytics import YOLO as _YOLO" in server
+    assert 'YOLO_MODEL_SIZE = "yolov8s"' in server
+    assert "def _get_yolo_model" in server
+    assert "if _yolo_enabled and _YOLO_AVAILABLE" in server
+    assert '"yolo_detections": yolo_detections' in server
+    assert '@app.post("/api/yolo/toggle")' in server
+    assert '@app.get("/api/yolo/status")' in server
+    assert "function toggleYolo()" in frontend
+    assert "msg.yolo_detections" in frontend
+    assert 'id="camera-modal"' in frontend
+    assert "function openCameraModal()" in frontend
+    assert "let mapDisplaySuppressed = true;" in frontend
+    assert "ultralytics" in requirements
+
+
 def test_nav2_dense_straight_path_becomes_one_execution_segment():
     observer = Nav2ObserverPublisher.__new__(Nav2ObserverPublisher)
     observer.nav2_costmap = {

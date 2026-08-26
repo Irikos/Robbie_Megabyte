@@ -23,6 +23,14 @@ import cv2
 from pathlib import Path
 from typing import List, Optional
 
+# YOLO este opțional și se încarcă leneș la prima activare.
+try:
+    from ultralytics import YOLO as _YOLO
+    _YOLO_AVAILABLE = True
+except ImportError:
+    _YOLO_AVAILABLE = False
+    print("[yolo] ultralytics nu este instalat — detecție dezactivată")
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -1021,6 +1029,76 @@ def _recv_exact(conn, n):
         buf += chunk
     return buf
 
+
+_yolo_lock = threading.Lock()
+_yolo_model = None
+_yolo_enabled = False
+YOLO_MODEL_SIZE = "yolov8s"
+YOLO_CONFIDENCE = 0.20
+_YOLO_PALETTE = [
+    (0, 220, 255), (255, 80, 0), (0, 255, 100), (200, 0, 255),
+    (255, 200, 0), (0, 150, 255), (255, 0, 150), (0, 255, 220),
+]
+
+
+def _get_yolo_model():
+    """Returnează modelul, încărcându-l o singură dată la prima activare."""
+    global _yolo_model
+    if not _YOLO_AVAILABLE:
+        return None
+    with _yolo_lock:
+        if _yolo_model is None:
+            try:
+                print(f"[yolo] Încarc {YOLO_MODEL_SIZE} ...")
+                _yolo_model = _YOLO(f"{YOLO_MODEL_SIZE}.pt")
+                print(f"[yolo] Model {YOLO_MODEL_SIZE} încărcat.")
+            except Exception as exc:
+                print(f"[yolo] Eroare la încărcare: {exc}")
+                return None
+    return _yolo_model
+
+
+def _run_yolo(img_bgr):
+    """Adnotează cadrul BGR și returnează detecțiile serializabile JSON."""
+    model = _get_yolo_model()
+    if model is None:
+        return img_bgr, []
+    try:
+        result = model(
+            img_bgr, verbose=False, conf=YOLO_CONFIDENCE, imgsz=640,
+        )[0]
+        detections = []
+        annotated = img_bgr.copy()
+        names = result.names
+        for box in result.boxes:
+            cls_id = int(box.cls[0])
+            confidence = float(box.conf[0])
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            label = names.get(cls_id, str(cls_id))
+            color = _YOLO_PALETTE[cls_id % len(_YOLO_PALETTE)]
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+            text = f"{label} {confidence:.0%}"
+            (text_w, text_h), _ = cv2.getTextSize(
+                text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+            )
+            cv2.rectangle(
+                annotated, (x1, max(0, y1 - text_h - 6)),
+                (x1 + text_w + 4, y1), color, -1,
+            )
+            cv2.putText(
+                annotated, text, (x1 + 2, max(text_h, y1 - 4)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1,
+                cv2.LINE_AA,
+            )
+            detections.append({
+                "label": label, "confidence": round(confidence, 3),
+                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            })
+        return annotated, detections
+    except Exception as exc:
+        print(f"[yolo] eroare inferență: {exc}")
+        return img_bgr, []
+
 def camera_receiver_thread():
     global loop
     server_sock = None
@@ -1108,12 +1186,20 @@ def camera_receiver_thread():
                 # REPARARE OGLINDIRE LIVE 2D FEED:
                 # Oglindim imaginea pe orizontală înainte de trimitere folosind OpenCV
                 color_img_flipped = cv2.flip(color_img, 1)
+                yolo_detections = []
+                if _yolo_enabled and _YOLO_AVAILABLE:
+                    color_img_flipped, yolo_detections = _run_yolo(color_img_flipped)
                 _, color_bytes_flipped = cv2.imencode(".jpg", color_img_flipped, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
                 encoded_video = base64.b64encode(color_bytes_flipped.tobytes()).decode('utf-8')
 
                 if loop and cam_points:
                     asyncio.run_coroutine_threadsafe(
-                        broadcast({"type": "camera_3d_data", "points": cam_points, "video_b64": encoded_video}), loop
+                        broadcast({
+                            "type": "camera_3d_data", "points": cam_points,
+                            "video_b64": encoded_video,
+                            "yolo_detections": yolo_detections,
+                            "yolo_enabled": _yolo_enabled,
+                        }), loop
                     )
         except Exception as e:
             time.sleep(1)
@@ -3754,6 +3840,38 @@ async def get_robot_fsm_id():
     """Diagnostic: citește starea FSM curentă a robotului (util ca să
     vezi dacă tranzițiile Damp/stand_up/Start chiar au avut efect)."""
     return await asyncio.to_thread(sport_client.get_fsm_id)
+
+
+@app.post("/api/yolo/toggle")
+async def toggle_yolo(request: Request):
+    """Pornește/oprește inferența fără a opri fluxul RealSense."""
+    global _yolo_enabled
+    if not _YOLO_AVAILABLE:
+        return JSONResponse(
+            {"success": False, "enabled": False,
+             "error": "ultralytics nu este instalat"},
+            status_code=503,
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    _yolo_enabled = bool(body.get("enabled", not _yolo_enabled))
+    print(f"[yolo] {'PORNIT' if _yolo_enabled else 'OPRIT'} de utilizator")
+    return {
+        "success": True, "enabled": _yolo_enabled,
+        "model": YOLO_MODEL_SIZE,
+    }
+
+
+@app.get("/api/yolo/status")
+async def get_yolo_status():
+    return {
+        "available": _YOLO_AVAILABLE,
+        "enabled": _yolo_enabled,
+        "model": YOLO_MODEL_SIZE,
+        "model_loaded": _yolo_model is not None,
+    }
 
 @app.get("/")
 async def get_dashboard(): return FileResponse(str(FRONTEND_DIR / "index.html"))

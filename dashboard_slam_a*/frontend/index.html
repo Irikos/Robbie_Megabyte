@@ -33,6 +33,59 @@
     }
     
     .pip-video-feed img { width: 100%; height: 100%; object-fit: cover; }
+    .pip-yolo-controls {
+      position:absolute; top:5px; left:5px; right:5px; z-index:2;
+      display:flex; align-items:center; justify-content:space-between; gap:5px;
+      pointer-events:none;
+    }
+    .pip-yolo-status, .pip-yolo-button, .pip-yolo-detections {
+      background:rgba(2,6,23,0.82); border:1px solid rgba(148,163,184,0.35);
+      color:#cbd5e1; border-radius:5px; font-size:0.62rem;
+    }
+    .pip-yolo-status { padding:3px 5px; }
+    .pip-yolo-status.active { color:#f87171; border-color:rgba(239,68,68,0.55); }
+    .pip-yolo-button { padding:3px 6px; cursor:pointer; pointer-events:auto; }
+    .pip-yolo-button.active { color:#fecaca; background:rgba(127,29,29,0.88); }
+    .pip-yolo-button:disabled { opacity:0.55; cursor:wait; }
+    .pip-expand-button {
+      padding:3px 6px; cursor:pointer; pointer-events:auto;
+      background:rgba(2,6,23,0.82); border:1px solid rgba(148,163,184,0.35);
+      color:#e2e8f0; border-radius:5px; font-size:0.62rem;
+    }
+    .pip-yolo-detections {
+      position:absolute; left:5px; right:5px; bottom:5px; z-index:2;
+      padding:3px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      pointer-events:none;
+    }
+    .camera-modal {
+      position:fixed; inset:0; z-index:1050; display:none;
+      align-items:center; justify-content:center; padding:18px;
+      background:rgba(2,6,23,0.94); backdrop-filter:blur(6px);
+    }
+    .camera-modal.open { display:flex; }
+    .camera-dialog {
+      width:min(1280px, 97vw); height:min(900px, 94vh);
+      display:flex; flex-direction:column; overflow:hidden;
+      border:1px solid #334155; border-radius:12px; background:#020617;
+      box-shadow:0 30px 80px rgba(0,0,0,0.7);
+    }
+    .camera-header {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 14px; background:#0b1220; border-bottom:1px solid #1e293b;
+    }
+    .camera-header-left { display:flex; align-items:center; gap:8px; }
+    .camera-title { color:white; font-size:0.88rem; font-weight:700; }
+    .camera-body {
+      flex:1; min-height:0; display:flex; align-items:center; justify-content:center;
+      position:relative; background:#000;
+    }
+    #camera-modal-feed { max-width:100%; max-height:100%; object-fit:contain; }
+    #camera-modal-placeholder { color:#64748b; text-align:center; }
+    #camera-modal-detections {
+      position:absolute; left:12px; right:12px; bottom:12px;
+      padding:6px 9px; border-radius:6px; background:rgba(2,6,23,0.82);
+      color:#cbd5e1; font-size:0.72rem; text-align:center;
+    }
 
     .map-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .map-filter-control { display:flex; flex-direction:column; gap:3px; min-width:0; }
@@ -301,12 +354,38 @@
       <div class="pip-video-feed">
         <img id="live-video-feed" src="" style="display:none;">
         <div id="video-placeholder" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; color:var(--text-secondary); text-align:center; padding:10px;">Aștept RealSense (5005)</div>
+        <div class="pip-yolo-controls">
+          <span id="pip-yolo-status" class="pip-yolo-status">YOLO oprit</span>
+          <button id="pip-yolo-button" class="pip-yolo-button" onclick="toggleYolo()">Pornește YOLO</button>
+          <button class="pip-expand-button" onclick="openCameraModal()" title="Cameră fullscreen">⛶</button>
+        </div>
+        <div id="pip-yolo-detections" class="pip-yolo-detections">Nicio detecție</div>
       </div>
 
       <div class="map-overlay-info" style="bottom: 20px; left: 20px;">Rotește: Click Stânga | Pan: Click Dreapta | Zoom: Scroll</div>
     </div>
   </main>
 
+</div>
+
+<div id="camera-modal" class="camera-modal" onclick="if(event.target===this) closeCameraModal()">
+  <div class="camera-dialog">
+    <div class="camera-header">
+      <div class="camera-header-left">
+        <span class="camera-title">📹 RealSense Live Feed</span>
+        <span id="camera-modal-yolo-status" class="pip-yolo-status">YOLO oprit</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button id="camera-modal-yolo-button" class="pip-yolo-button" onclick="toggleYolo()">Pornește YOLO</button>
+        <button class="btn" onclick="closeCameraModal()" style="background:#334155;color:white;">✕ Închide</button>
+      </div>
+    </div>
+    <div class="camera-body">
+      <img id="camera-modal-feed" src="" style="display:none;" alt="RealSense live feed">
+      <div id="camera-modal-placeholder">Aștept conexiunea camerei RealSense...</div>
+      <div id="camera-modal-detections">Nicio detecție</div>
+    </div>
+  </div>
 </div>
 
 <div id="costmap-modal" class="costmap-modal" onclick="if(event.target===this) closeCostmap2D()">
@@ -394,8 +473,83 @@ const S = {
   visibleSlamPoints: 0, visibleLoadedMapPoints: 0,
   floorPlane: null, floorPlaneSignature: null, floorPlaneSource: null
 };
+let yoloEnabled = false;
+let yoloTogglePending = false;
+
+function updateYoloUI(enabled, detections = []) {
+  yoloEnabled = Boolean(enabled);
+  const status = document.getElementById('pip-yolo-status');
+  const button = document.getElementById('pip-yolo-button');
+  const list = document.getElementById('pip-yolo-detections');
+  const modalStatus = document.getElementById('camera-modal-yolo-status');
+  const modalButton = document.getElementById('camera-modal-yolo-button');
+  const modalList = document.getElementById('camera-modal-detections');
+  const detectionText = detections.length
+    ? detections.map(item => `${item.label} ${Math.round(item.confidence * 100)}%`).join(' · ')
+    : (yoloEnabled ? 'Nicio detecție' : 'YOLO este oprit');
+  [status, modalStatus].forEach(element => {
+    if (!element) return;
+    element.classList.toggle('active', yoloEnabled);
+    element.textContent = yoloEnabled ? `YOLO activ · ${detections.length}` : 'YOLO oprit';
+  });
+  [button, modalButton].forEach(element => {
+    if (!element || yoloTogglePending) return;
+    element.classList.toggle('active', yoloEnabled);
+    element.textContent = yoloEnabled ? 'Oprește YOLO' : 'Pornește YOLO';
+  });
+  if (list) list.textContent = detectionText;
+  if (modalList) modalList.textContent = detectionText;
+}
+
+function openCameraModal() {
+  document.getElementById('camera-modal').classList.add('open');
+}
+
+function closeCameraModal() {
+  document.getElementById('camera-modal').classList.remove('open');
+}
+
+async function refreshYoloStatus() {
+  try {
+    const response = await fetch(API_BASE + '/api/yolo/status');
+    const data = await response.json();
+    updateYoloUI(Boolean(data.enabled), []);
+  } catch (_) {
+    updateYoloUI(false, []);
+  }
+}
+
+async function toggleYolo() {
+  if (yoloTogglePending) return;
+  yoloTogglePending = true;
+  const buttons = [
+    document.getElementById('pip-yolo-button'),
+    document.getElementById('camera-modal-yolo-button'),
+  ].filter(Boolean);
+  buttons.forEach(button => {
+    button.disabled = true;
+    button.textContent = 'Se procesează...';
+  });
+  try {
+    const response = await fetch(API_BASE + '/api/yolo/toggle', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({enabled: !yoloEnabled}),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Eroare YOLO');
+    yoloEnabled = Boolean(data.enabled);
+  } catch (error) {
+    window.alert(`Eroare YOLO: ${error.message || error}`);
+  } finally {
+    yoloTogglePending = false;
+    buttons.forEach(button => { button.disabled = false; });
+    updateYoloUI(yoloEnabled, []);
+  }
+}
 const MAP_DISPLAY_STORAGE_KEY = 'g1_map_display_suppressed';
-let mapDisplaySuppressed = sessionStorage.getItem(MAP_DISPLAY_STORAGE_KEY) === '1';
+// Harta 3D pornește ascunsă și se afișează numai la cererea operatorului.
+let mapDisplaySuppressed = true;
+sessionStorage.setItem(MAP_DISPLAY_STORAGE_KEY, '1');
 let costmapView = {data: null, zoom: 1};
 let latestPoseSource = null;
 const COSTMAP_DEFAULTS = {resolution:0.08,minPoints:3,minZ:0.15,maxZ:1.85,radius:0.25,
@@ -537,10 +691,18 @@ function initWS() {
       renderSlamCloud(msg.points);
     } else if (msg.type === 'camera_3d_data') {
       if (msg.video_b64) {
-        document.getElementById('live-video-feed').src = 'data:image/jpeg;base64,' + msg.video_b64;
+        const cameraSrc = 'data:image/jpeg;base64,' + msg.video_b64;
+        document.getElementById('live-video-feed').src = cameraSrc;
         document.getElementById('live-video-feed').style.display = 'block';
         document.getElementById('video-placeholder').style.display = 'none';
+        document.getElementById('camera-modal-feed').src = cameraSrc;
+        document.getElementById('camera-modal-feed').style.display = 'block';
+        document.getElementById('camera-modal-placeholder').style.display = 'none';
       }
+      updateYoloUI(
+        Boolean(msg.yolo_enabled),
+        Array.isArray(msg.yolo_detections) ? msg.yolo_detections : []
+      );
       renderRealSensePoints(msg.points);
     } else if (msg.type === 'map_reset') {
       S.rawSlamPoints = [];
@@ -2321,8 +2483,13 @@ resetMapViewFilters(false);
 document.getElementById('nav-driver').value = 'legacy';
 document.getElementById('nav-executor').value = 'native_1102';
 setTimeout(() => { init3D(); updateMapViewFilters(); }, 100);
-initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness();
+initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness(); refreshYoloStatus();
 setInterval(refreshNavigationSensorReadiness, 1000);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('camera-modal').classList.contains('open')) {
+    closeCameraModal();
+  }
+});
 </script>
 </body>
 </html>
