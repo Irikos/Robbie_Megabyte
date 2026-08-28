@@ -10,6 +10,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <style>
     .layout-monolith { display: flex; width: 100vw; height: 100vh; overflow: hidden; background: #050810; }
@@ -510,7 +511,8 @@ const S = {
   headingArrow: null, poseArrow: null, goalMarker: null,
   routeLine: null, routePoints: null,
   dynamicCostmapMesh: null,
-  carGroup: null, carScanMesh: null, carPathLine: null,
+  carGroup: null, carVisual: null, carFallback: null,
+  carScanMesh: null, carPathLine: null,
   carGoalMarker: null, carGoalArrow: null, semanticChairGroup: null,
   loadedMapMesh: null,
   rawSlamPoints: [], rawLoadedMapPoints: [],
@@ -1558,6 +1560,87 @@ async function loadG1RobotModel() {
   if (S.robotFallback) S.robotFallback.visible = false;
 }
 
+function buildFallbackCar() {
+  const group = new THREE.Group();
+  const carBody = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.16, 0.68),
+    new THREE.MeshStandardMaterial({color:0x06b6d4, roughness:0.55})
+  );
+  carBody.position.y = 0.13;
+  group.add(carBody);
+  const carFront = new THREE.Mesh(
+    new THREE.ConeGeometry(0.11, 0.24, 12),
+    new THREE.MeshStandardMaterial({color:0xf8fafc})
+  );
+  carFront.rotation.x = -Math.PI / 2;
+  carFront.position.set(0, 0.16, -0.43);
+  group.add(carFront);
+  [[-0.24,-0.22],[0.24,-0.22],[-0.24,0.22],[0.24,0.22]].forEach(([x,z]) => {
+    const wheel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.10, 0.10, 0.08, 12),
+      new THREE.MeshStandardMaterial({color:0x111827})
+    );
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, 0.10, z);
+    group.add(wheel);
+  });
+  return group;
+}
+
+function loadCarModel() {
+  if (typeof THREE.GLTFLoader !== 'function') {
+    return Promise.reject(new Error('GLTFLoader indisponibil'));
+  }
+  return new Promise((resolve, reject) => {
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      '/static/assets/g1/25042_Perseverance.glb',
+      gltf => {
+        const model = gltf.scene;
+        if (!model) {
+          reject(new Error('Fișierul GLB nu conține o scenă'));
+          return;
+        }
+
+        // Modelul Perseverance are partea din față spre +Z, în timp ce
+        // marcatorul mașinii din dashboard înaintează spre -Z.
+        model.rotation.y = Math.PI;
+        model.updateMatrixWorld(true);
+        let bounds = new THREE.Box3().setFromObject(model);
+        const dimensions = bounds.getSize(new THREE.Vector3());
+        const sourceLength = Math.max(dimensions.x, dimensions.z);
+        if (!Number.isFinite(sourceLength) || sourceLength <= 0) {
+          reject(new Error('Dimensiunile modelului GLB sunt invalide'));
+          return;
+        }
+
+        // Păstrăm aceeași amprentă de 0,68 m ca marcatorul RC anterior.
+        model.scale.setScalar(0.68 / sourceLength);
+        model.updateMatrixWorld(true);
+        bounds = new THREE.Box3().setFromObject(model);
+        const center = bounds.getCenter(new THREE.Vector3());
+        model.position.x -= center.x;
+        model.position.y -= bounds.min.y;
+        model.position.z -= center.z;
+        model.name = 'RC car Perseverance GLB';
+        model.traverse(object => {
+          if (object.isMesh) {
+            object.frustumCulled = true;
+            if (object.material) object.material.needsUpdate = true;
+          }
+        });
+
+        S.carVisual = model;
+        S.carGroup.add(model);
+        if (S.carFallback) S.carFallback.visible = false;
+        resolve(model);
+      },
+      undefined,
+      reject
+    );
+  });
+}
+
 function init3D() {
   const container = document.getElementById('canvas-3d');
   const area = document.getElementById('view-3d');
@@ -1593,30 +1676,13 @@ function init3D() {
 
   // Al doilea agent: mașina RC, scanul LiDAR și traseul ei în cadrul hărții.
   S.carGroup = new THREE.Group();
-  const carBody = new THREE.Mesh(
-    new THREE.BoxGeometry(0.42, 0.16, 0.68),
-    new THREE.MeshStandardMaterial({color:0x06b6d4, roughness:0.55})
-  );
-  carBody.position.y = 0.13;
-  S.carGroup.add(carBody);
-  const carFront = new THREE.Mesh(
-    new THREE.ConeGeometry(0.11, 0.24, 12),
-    new THREE.MeshStandardMaterial({color:0xf8fafc})
-  );
-  carFront.rotation.x = -Math.PI / 2;
-  carFront.position.set(0, 0.16, -0.43);
-  S.carGroup.add(carFront);
-  [[-0.24,-0.22],[0.24,-0.22],[-0.24,0.22],[0.24,0.22]].forEach(([x,z]) => {
-    const wheel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.10, 0.10, 0.08, 12),
-      new THREE.MeshStandardMaterial({color:0x111827})
-    );
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(x, 0.10, z);
-    S.carGroup.add(wheel);
-  });
+  S.carFallback = buildFallbackCar();
+  S.carGroup.add(S.carFallback);
   S.carGroup.visible = false;
   S.scene.add(S.carGroup);
+  loadCarModel().catch(error => console.warn(
+    'Modelul GLB al mașinii nu s-a încărcat; folosesc fallback-ul:', error
+  ));
 
   S.carScanMesh = new THREE.Points(
     new THREE.BufferGeometry(),

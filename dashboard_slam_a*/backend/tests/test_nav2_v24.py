@@ -191,6 +191,9 @@ def test_car_bridge_and_dashboard_protocol_are_wired():
     assert 'id="car-pick-goal-btn"' in frontend
     assert "function onCarGoalMove(event)" in frontend
     assert "_carGoalDrag.yaw = Math.atan2(dy, dx)" in frontend
+    assert "THREE.GLTFLoader" in frontend
+    assert "/static/assets/g1/25042_Perseverance.glb" in frontend
+    assert (root.parent / "frontend" / "assets" / "g1" / "25042_Perseverance.glb").is_file()
 
 
 def test_nav2_dense_straight_path_becomes_one_execution_segment():
