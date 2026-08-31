@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+paramiko
+asyncio-mqtt
+websockets
+aiofiles
+python-multipart
+ultralytics
