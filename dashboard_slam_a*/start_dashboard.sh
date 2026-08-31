@@ -15,10 +15,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 
 # Un singur proces poate administra Mid360, camera și API-urile SLAM.
-DASHBOARD_LOCK_FILE="/tmp/g1_dashboard_v24.lock"
+DASHBOARD_LOCK_FILE="/tmp/g1_dashboard_astar_v1.lock"
 exec 9>"$DASHBOARD_LOCK_FILE"
 if ! flock -n 9; then
-    echo "[ERROR] Dashboardul v24 rulează deja (lock: $DASHBOARD_LOCK_FILE)."
+    echo "[ERROR] Dashboardul A* v1 rulează deja (lock: $DASHBOARD_LOCK_FILE)."
     echo "        Oprește instanța existentă cu Ctrl+C, apoi pornește din nou."
     exit 1
 fi
@@ -77,6 +77,8 @@ export CYCLONEDDS_URI=/home/unitree/cyclonedds.xml
 
 echo "======================================"
 echo " G1 Robot Dashboard - Pornire"
+echo " Variantă: dashboard_g1_a*_v3 (YOLO semantic 3D)"
+echo " Sursă: $SCRIPT_DIR"
 echo "======================================"
 
 # Nu pornim aparent o versiune nouă peste un uvicorn vechi. În acest caz
@@ -107,7 +109,9 @@ fi
 # restart invalida sessionStorage-ul browserului și toate controalele păreau
 # inactive deși backendul funcționa.
 if [ -z "${G1_DASHBOARD_TOKEN:-}" ]; then
-    TOKEN_FILE="$SCRIPT_DIR/.dashboard_token"
+    # Fișier dedicat A* v1: dashboardurile din alte directoare nu trebuie să
+    # împartă accidental aceeași credențială în browser.
+    TOKEN_FILE="$SCRIPT_DIR/.dashboard_token_astar_v1"
     if [ -r "$TOKEN_FILE" ]; then
         G1_DASHBOARD_TOKEN=$(head -n 1 "$TOKEN_FILE")
     else
@@ -136,24 +140,32 @@ cd "$BACKEND_DIR"
 MID360_RESTORE_SOURCE="$BACKEND_DIR/tools/restore_mid360_native.cpp"
 MID360_RESTORE_DIR="/tmp/g1_dashboard_v24_mid360"
 MID360_RESTORE_BIN="$MID360_RESTORE_DIR/restore_mid360_native"
-if [ "$ENABLE_NATIVE_SLAM_REPAIR" == "1" ]; then
-    if [ ! -f "$MID360_RESTORE_SOURCE" ]; then
-        echo "[ERROR] Lipsește utilitarul Mid360: $MID360_RESTORE_SOURCE"
-        exit 1
-    fi
+# Pregătim utilitarul și la pornirea normală. Nu modifică senzorul acum, dar
+# permite backendului să facă o singură recuperare controlată dacă 1804 nu
+# primește deloc feedback (situația lăsată frecvent de o sesiune Nav2).
+if [ -f "$MID360_RESTORE_SOURCE" ]; then
     mkdir -p "$MID360_RESTORE_DIR"
     if [ ! -x "$MID360_RESTORE_BIN" ] \
             || [ "$MID360_RESTORE_SOURCE" -nt "$MID360_RESTORE_BIN" ]; then
-        if ! command -v g++ >/dev/null 2>&1; then
-            echo "[ERROR] g++ lipsește; restaurarea LiDAR/IMU nu poate fi construită."
-            exit 1
+        if command -v g++ >/dev/null 2>&1; then
+            if ! g++ -std=c++11 -pthread -I/home/unitree/Livox-SDK2/include \
+                "$MID360_RESTORE_SOURCE" \
+                /home/unitree/Livox-SDK2/build/sdk_core/liblivox_lidar_sdk_static.a \
+                -o "$MID360_RESTORE_BIN"; then
+                echo "  ! Utilitarul Mid360 nu a putut fi compilat; dashboardul pornește, dar recuperarea automată nu va fi disponibilă"
+            fi
+        else
+            echo "  ! g++ lipsește; recuperarea automată Mid360 nu poate fi pregătită"
         fi
-        g++ -std=c++11 -pthread -I/home/unitree/Livox-SDK2/include \
-            "$MID360_RESTORE_SOURCE" \
-            /home/unitree/Livox-SDK2/build/sdk_core/liblivox_lidar_sdk_static.a \
-            -o "$MID360_RESTORE_BIN"
     fi
+fi
+if [ -x "$MID360_RESTORE_BIN" ]; then
     export G1_MID360_RESTORE_BIN="$MID360_RESTORE_BIN"
+fi
+if [ "$ENABLE_NATIVE_SLAM_REPAIR" == "1" ] \
+        && [ ! -x "$MID360_RESTORE_BIN" ]; then
+    echo "[ERROR] Reparația nativă a fost cerută, dar utilitarul Mid360 lipsește."
+    exit 1
 fi
 
 echo "[2/3] Dependente OK"
@@ -278,4 +290,10 @@ echo "======================================"
 
 # Pornește serverul blocant fără exec, astfel încât trap-ul să poată opri
 # bridge-ul opțional la ieșire.
+# Numele acestei versiuni conține literal `*`. Executorul implicit folosit de
+# asyncio.to_thread se poate bloca atunci când procesul are acel director ca
+# working directory. Modulul rămâne cel din A* v1 prin PYTHONPATH, dar cwd-ul
+# procesului este o cale sigură, fără globuri.
+export PYTHONPATH="$BACKEND_DIR${PYTHONPATH:+:$PYTHONPATH}"
+cd /home/unitree
 "$DASHBOARD_PYTHON" -m uvicorn server:app --host 0.0.0.0 --port 3003 --ws wsproto

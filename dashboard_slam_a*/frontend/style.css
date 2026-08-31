@@ -527,6 +527,59 @@ select.input { cursor: pointer; }
 .legend-dot.points { background: var(--accent); }
 .legend-dot.map-pts { background: #22d3ee; }
 
+/* Live obstacle overlay displayed directly over the 3D world viewer. */
+.obstacle-legend {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 120;
+  width: max-content;
+  max-width: min(260px, calc(100% - 40px));
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.30);
+  border-radius: 9px;
+  background: rgba(7, 12, 24, 0.88);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+  color: #dbeafe;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  pointer-events: none;
+  user-select: none;
+  backdrop-filter: blur(7px);
+}
+.obstacle-legend-title {
+  margin-bottom: 7px;
+  color: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.obstacle-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  white-space: nowrap;
+}
+.obstacle-legend-swatch {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 3px;
+  box-shadow: 0 0 7px currentColor;
+}
+.obstacle-legend-swatch.detected { color: #ff2d2d; background: #ff2d2d; }
+.obstacle-legend-swatch.blocked  { color: #ff8a00; background: #ff8a00; }
+.obstacle-legend-swatch.comfort  { color: #ffd60a; background: #ffd60a; }
+.obstacle-legend-swatch.camera   { color: #c026d3; background: #c026d3; }
+.obstacle-legend-swatch.unknown  { color: #94a3b8; background: #94a3b8; }
+
+@media (max-width: 760px) {
+  .obstacle-legend { top: 10px; right: 10px; padding: 8px 10px; }
+  .obstacle-legend-item { white-space: normal; }
+}
+
 /* Nav side panel */
 .nav-side-panel { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .goal-form { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }

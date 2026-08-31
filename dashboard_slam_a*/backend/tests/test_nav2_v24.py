@@ -334,13 +334,16 @@ def test_frontend_defaults_to_deadline_astar_and_native_executor():
     assert 'id="nav-executor"' in source
     assert 'value="native_1102" selected' in source
     assert 'value="legacy" selected' in source
-    assert 'value="local_velocity"' not in source
+    assert 'value="local_velocity"' in source
     assert 'value="nav2"' not in source
     assert "executor:data.executor" in source
     assert "sensors.lidar_source" in source
     assert "|| 'native_1102'" in source
-    assert "local_only: false" in source
-    assert "force_native: true" in source
+    assert "const useLocalController = executorSelect.value === 'local_velocity'" in source
+    assert "local_only: useLocalController" in source
+    assert "force_native: !useLocalController" in source
+    assert "executorSelect.value = 'local_velocity'" in source
+    assert "Apasă „Reverifică localizarea aleasă”" in source
     assert "data.executor_override.reason" in source
     assert "goal_adjustment_m" in source
     assert "mișcare blocată până la RUN" in source
@@ -349,6 +352,67 @@ def test_frontend_defaults_to_deadline_astar_and_native_executor():
     assert "radius:0.25" in source
     assert "minPoints:3" in source
     assert "backend HTTP ${response.status}" in source
+    assert "data.recommended_executor === 'local_velocity'" in source
+    assert "Controller local sigur a fost selectat" in source
+
+
+def test_robot_status_identifies_v3_and_semantic_yolo(monkeypatch):
+    import asyncio
+    import server
+
+    monkeypatch.setattr(
+        server.sport_client,
+        "get_status",
+        lambda: {"robot_reachable": True, "sdk_available": True},
+    )
+
+    result = asyncio.run(server.robot_status())
+
+    assert result["sdk_available"] is True
+    assert result["dashboard_variant"] == "dashboard_g1_a*_v3"
+    assert result["local_controller_ui"] is True
+    assert result["semantic_yolo_3d"] is True
+    assert result["native_1804_is_separate_from_loco_sdk"] is True
+
+
+def test_native_preview_recommends_explicit_local_controller_when_ready(
+        monkeypatch, tmp_path):
+    import asyncio
+    import server
+
+    pcd = tmp_path / "navigation.pcd"
+    pcd.write_text("# .PCD v0.7\nDATA ascii\n", encoding="utf-8")
+    previous_path = server.loaded_map_path
+    previous_mode = server.map_state["slam_mode"]
+    previous_source = server.map_state.get("pose_source")
+    try:
+        server.loaded_map_path = str(pcd)
+        server.map_state["slam_mode"] = "localization"
+        server.map_state["pose_source"] = "local_lidar_icp"
+        monkeypatch.setattr(server, "_any_navigation_active", lambda: False)
+        monkeypatch.setattr(server, "_native_localization_fresh", lambda: False)
+        monkeypatch.setattr(server, "_localization_fresh", lambda: True)
+        monkeypatch.setattr(
+            server.local_lidar_localizer,
+            "status",
+            lambda *args, **kwargs: {"ready": True, "inliers": 240},
+        )
+
+        result = asyncio.run(server._preview_navigation({
+            "x": 1.0,
+            "y": 2.0,
+            "executor": "native_1102",
+        }))
+
+        assert result["success"] is False
+        assert result["recommended_executor"] == "local_velocity"
+        assert result["local_controller_ready"] is True
+        assert result["diagnostics"]["native_1102_pose_ready"] is False
+        assert result["diagnostics"]["local_pose_source"] == "local_lidar_icp"
+    finally:
+        server.loaded_map_path = previous_path
+        server.map_state["slam_mode"] = previous_mode
+        server.map_state["pose_source"] = previous_source
 
 
 def test_costmap_endpoint_returns_structured_result(monkeypatch, tmp_path):
@@ -443,7 +507,7 @@ def test_nav2_runtime_uses_selected_hard_radius_not_astar_comfort(monkeypatch):
 def test_dashboard_start_persists_token_and_reserves_mid360_for_native_slam():
     source = (BACKEND.parent / "start_dashboard.sh").read_text(encoding="utf-8")
 
-    assert 'TOKEN_FILE="$SCRIPT_DIR/.dashboard_token"' in source
+    assert 'TOKEN_FILE="$SCRIPT_DIR/.dashboard_token_astar_v1"' in source
     assert 'umask 077' in source
     assert 'head -n 1 "$TOKEN_FILE"' in source
     assert "[l]ivox_ros_driver2_node" in source
@@ -452,6 +516,15 @@ def test_dashboard_start_persists_token_and_reserves_mid360_for_native_slam():
     assert "192.168.123.161" in source
     assert "--restart-slam" in source
     assert "ros2 run livox_ros_driver2" not in source
+
+
+def test_astar_v1_launcher_uses_safe_cwd_and_its_own_token():
+    source = (BACKEND.parent / "start_dashboard.sh").read_text(encoding="utf-8")
+
+    assert ".dashboard_token_astar_v1" in source
+    assert "/tmp/g1_dashboard_astar_v1.lock" in source
+    assert 'export PYTHONPATH="$BACKEND_DIR${PYTHONPATH:+:$PYTHONPATH}"' in source
+    assert "cd /home/unitree" in source
 
     nav2_start = (BACKEND / "nav2" / "start_nav2_observer.sh").read_text(
         encoding="utf-8"
@@ -1128,6 +1201,107 @@ def test_1804_recovers_missing_lidar_imu_once_then_retries(monkeypatch, tmp_path
     assert [attempt["accepted"] for attempt in result["attempts"]] == [False, True]
 
 
+def test_1804_accepts_fresh_same_map_pos_info_when_response_is_missing(
+        monkeypatch, tmp_path):
+    import asyncio
+    import server
+
+    pcd = tmp_path / "harta_pos_info.pcd"
+    pcd.write_text("# .PCD v0.7\nDATA ascii\n", encoding="utf-8")
+    native = "/home/unitree/.slam_save_harta_pos_info_123.pcd"
+    recoveries = []
+
+    monkeypatch.setitem(server.NATIVE_SLAM_MAP_PATHS, pcd.name, native)
+    monkeypatch.setattr(
+        server.slam_client, "set_initial_pose", lambda *_args: {"success": True},
+    )
+    monkeypatch.setattr(server, "slam_runtime_info", {"error_code": 0})
+
+    async def no_response(*_args, **_kwargs):
+        monkeypatch.setattr(server, "slam_pose_info", {
+            "received_at": server.time.monotonic(),
+            "current_pose": {"x": 1.08, "y": 2.04, "yaw": 0.32},
+            "map_address": native,
+            "pcd_name": pcd.name,
+        })
+        return None
+
+    async def must_not_recover():
+        recoveries.append(True)
+        return {"success": True}
+
+    async def direct_to_thread(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(server, "_wait_slam_feedback", no_response)
+    monkeypatch.setattr(server, "_recover_native_lidar_imu", must_not_recover)
+    monkeypatch.setattr(server.asyncio, "to_thread", direct_to_thread)
+    monkeypatch.setattr(server, "_remember_native_slam_map", lambda *_args: None)
+
+    result = asyncio.run(
+        server._initialize_native_pose_1804(str(pcd), 1.0, 2.0, 0.30)
+    )
+
+    assert result["success"] is True
+    assert result["attempts"][0]["feedback"] is False
+    assert result["attempts"][0]["pose_confirmation"]["source"] == (
+        "/slam_info pos_info"
+    )
+    assert recoveries == []
+
+
+def test_1804_missing_response_triggers_one_native_sensor_recovery(
+        monkeypatch, tmp_path):
+    import asyncio
+    import server
+
+    pcd = tmp_path / "harta_no_response.pcd"
+    pcd.write_text("# .PCD v0.7\nDATA ascii\n", encoding="utf-8")
+    calls = []
+    feedbacks = iter([
+        None,
+        {
+            "status_code": 0,
+            "payload": {"succeed": True, "errorCode": 0},
+        },
+    ])
+    recoveries = []
+
+    monkeypatch.delitem(server.NATIVE_SLAM_MAP_PATHS, pcd.name, raising=False)
+    monkeypatch.setattr(server, "slam_pose_info", {
+        "received_at": 0.0, "current_pose": {}, "map_address": "",
+    })
+    monkeypatch.setattr(server, "slam_runtime_info", {"error_code": 0})
+    monkeypatch.setattr(
+        server.slam_client, "set_initial_pose",
+        lambda *_args: calls.append(_args[-1]) or {"success": True},
+    )
+
+    async def next_feedback(*_args, **_kwargs):
+        return next(feedbacks)
+
+    async def recovered():
+        recoveries.append(True)
+        return {"success": True}
+
+    async def direct_to_thread(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(server, "_wait_slam_feedback", next_feedback)
+    monkeypatch.setattr(server, "_recover_native_lidar_imu", recovered)
+    monkeypatch.setattr(server.asyncio, "to_thread", direct_to_thread)
+    monkeypatch.setattr(server, "_remember_native_slam_map", lambda *_args: None)
+
+    result = asyncio.run(
+        server._initialize_native_pose_1804(str(pcd), 1.0, 2.0, 0.3)
+    )
+
+    assert result["success"] is True
+    assert calls == [str(pcd), str(pcd)]
+    assert recoveries == [True]
+    assert [attempt["accepted"] for attempt in result["attempts"]] == [False, True]
+
+
 def test_1804_explains_missing_native_copy_without_deleting_local_pcd(monkeypatch, tmp_path):
     import asyncio
     import server
@@ -1291,6 +1465,261 @@ def test_native_1102_readiness_never_uses_ros_odom_as_substitute(monkeypatch):
     monkeypatch.setitem(server.map_state, "slam_mode", "localization")
 
     assert server._native_localization_fresh() is False
+
+
+def test_native_localization_survives_transient_not_init_ctrl_info(monkeypatch):
+    """Un ctrl_info oscilant nu anulează un pos_info nativ recent."""
+    import server
+
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": server.time.monotonic(),
+        "current_pose": {"x": 1.12, "y": 0.36, "q_w": 1.0, "q_z": 0.0},
+        "controller": "not init",
+        "message_type": "ctrl_info",
+        "error_code": 0,
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+
+    assert server._native_localization_fresh() is True
+
+
+def test_native_localization_still_rejects_stale_pos_info(monkeypatch):
+    import server
+
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": server.time.monotonic() - 2.1,
+        "current_pose": {"x": 1.12, "y": 0.36, "q_w": 1.0, "q_z": 0.0},
+        "controller": "pregătit",
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+
+    assert server._native_localization_fresh() is False
+
+
+def test_native_following_bridges_short_pos_info_gap_with_relocation(monkeypatch):
+    import server
+
+    now_mono = server.time.monotonic()
+    now_wall = server.time.time()
+
+    class RelocationNode:
+        active_odom_source = "relocation"
+        last_primary_odom_time = now_wall
+
+    monkeypatch.setattr(server, "node_instance", RelocationNode())
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": now_mono - 3.0,
+        "received_at": now_mono,
+        "current_pose": {"x": 1.0, "y": 2.0, "q_w": 1.0, "q_z": 0.0},
+        "machine_state": "FOLLOWING",
+        "controller": "not init",
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+    monkeypatch.setitem(server.map_state, "pose_updated_at", now_wall)
+    monkeypatch.setitem(server.map_state, "pose", {"x": 1.4, "y": 2.2, "yaw": 0.3})
+
+    assert server._native_localization_fresh() is True
+    assert server._native_pose() == {"x": 1.4, "y": 2.2, "yaw": 0.3}
+
+
+def test_native_pose_prefers_fresh_pos_info_over_relocation_yaw(monkeypatch):
+    import server
+
+    now_mono = server.time.monotonic()
+    now_wall = server.time.time()
+
+    class RelocationNode:
+        active_odom_source = "relocation"
+        last_primary_odom_time = now_wall
+
+    monkeypatch.setattr(server, "node_instance", RelocationNode())
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": now_mono,
+        "received_at": now_mono,
+        "current_pose": {"x": 1.0, "y": 2.0, "yaw": -0.7},
+        "machine_state": "FOLLOWING",
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+    monkeypatch.setitem(server.map_state, "pose_updated_at", now_wall)
+    monkeypatch.setitem(
+        server.map_state, "pose", {"x": 1.4, "y": 2.2, "yaw": 0.9}
+    )
+
+    assert server._native_pose() == {"x": 1.0, "y": 2.0, "yaw": -0.7}
+
+
+def test_native_relocation_bridge_survives_pos_info_gap_after_failed_route(
+        monkeypatch, tmp_path):
+    import server
+
+    local_map = tmp_path / "bridge_map.pcd"
+    local_map.write_text("VERSION .7\n", encoding="utf-8")
+    now_mono = server.time.monotonic()
+    now_wall = server.time.time()
+
+    class RelocationNode:
+        active_odom_source = "relocation"
+        last_primary_odom_time = now_wall
+
+    monkeypatch.setattr(server, "node_instance", RelocationNode())
+    monkeypatch.setattr(server, "loaded_map_path", str(local_map))
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": now_mono - 20.0,
+        "received_at": now_mono,
+        "current_pose": {"x": 6.61, "y": 2.24, "yaw": -2.84},
+        "map_address": "/home/unitree/.slam_save_bridge_map_123.pcd",
+        "machine_state": "FOLLOWING",
+        "controller": "not init",
+        "error_code": 0,
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+    monkeypatch.setitem(server.map_state, "pose_updated_at", now_wall)
+    monkeypatch.setitem(
+        server.map_state, "pose", {"x": 6.62, "y": 2.23, "yaw": -2.83}
+    )
+
+    assert server._native_localization_fresh() is True
+    assert server._native_pose() == {"x": 6.62, "y": 2.23, "yaw": -2.83}
+
+
+def test_active_1102_task_tolerates_firmware_pos_info_pause_without_odom(monkeypatch):
+    import server
+
+    now_mono = server.time.monotonic()
+
+    class RunningTask:
+        @staticmethod
+        def done():
+            return False
+
+    class Navigator:
+        task = RunningTask()
+
+    monkeypatch.setattr(server, "node_instance", None)
+    monkeypatch.setattr(server, "native_waypoint_navigator", Navigator())
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": now_mono - 5.0,
+        "received_at": now_mono,
+        "current_pose": {"x": 1.21, "y": 0.54, "q_w": 1.0, "q_z": 0.0},
+        "machine_state": "FINISHED",
+        "controller": "not init",
+        "error_code": 0,
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+
+    assert server._native_localization_fresh() is True
+    assert server._native_pose()["x"] == pytest.approx(1.21)
+
+
+def test_active_1102_uses_fresh_anchored_pelvis_during_long_pos_gap(
+        monkeypatch, tmp_path):
+    import server
+
+    local_map = tmp_path / "pelvis_bridge.pcd"
+    local_map.write_text("VERSION .7\n", encoding="utf-8")
+    now_mono = server.time.monotonic()
+    now_wall = server.time.time()
+
+    class RunningTask:
+        @staticmethod
+        def done():
+            return False
+
+    class Navigator:
+        task = RunningTask()
+
+    class AnchoredNode:
+        has_pelvis_offset = True
+        active_odom_source = None
+        last_primary_odom_time = 0.0
+
+    monkeypatch.setattr(server, "node_instance", AnchoredNode())
+    monkeypatch.setattr(server, "native_waypoint_navigator", Navigator())
+    monkeypatch.setattr(server, "loaded_map_path", str(local_map))
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": now_mono - 25.0,
+        "received_at": now_mono,
+        "current_pose": {"x": 4.2, "y": 1.1, "yaw": 0.2},
+        "map_address": "/home/unitree/.slam_save_pelvis_bridge_123.pcd",
+        "machine_state": "ADJUSTMENT",
+        "error_code": 0,
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+    monkeypatch.setitem(server.map_state, "pose_source", "anchored_pelvis")
+    monkeypatch.setitem(server.map_state, "pose_updated_at", now_wall)
+    monkeypatch.setitem(
+        server.map_state, "pose", {"x": 4.85, "y": 1.32, "yaw": 0.28}
+    )
+
+    assert server._native_localization_fresh() is True
+    assert server._native_pose() == {"x": 4.85, "y": 1.32, "yaw": 0.28}
+
+
+def test_anchored_pelvis_cannot_bootstrap_native_1102(monkeypatch, tmp_path):
+    import server
+
+    local_map = tmp_path / "no_bootstrap.pcd"
+    local_map.write_text("VERSION .7\n", encoding="utf-8")
+
+    class AnchoredNode:
+        has_pelvis_offset = True
+        active_odom_source = None
+        last_primary_odom_time = 0.0
+
+    monkeypatch.setattr(server, "node_instance", AnchoredNode())
+    monkeypatch.setattr(server, "native_waypoint_navigator", None)
+    monkeypatch.setattr(server, "loaded_map_path", str(local_map))
+    monkeypatch.setattr(server, "slam_runtime_info", {
+        "pose_received_at": 0.0,
+        "received_at": server.time.monotonic(),
+        "current_pose": {},
+        "map_address": "",
+        "machine_state": "READY",
+        "error_code": 0,
+    })
+    monkeypatch.setitem(server.map_state, "slam_mode", "localization")
+    monkeypatch.setitem(server.map_state, "pose_source", "anchored_pelvis")
+    monkeypatch.setitem(server.map_state, "pose_updated_at", server.time.time())
+    monkeypatch.setitem(
+        server.map_state, "pose", {"x": 1.0, "y": 2.0, "yaw": 0.0}
+    )
+
+    assert server._native_localization_fresh() is False
+
+
+def test_native_finished_is_correlated_with_current_dense_waypoint(monkeypatch):
+    import server
+
+    now = server.time.monotonic()
+    monkeypatch.setattr(server, "slam_last_completion", {
+        "received_at": now,
+        "machine_state": "FINISHED",
+        "arrived": True,
+        "current_pose": {"x": 0.25, "y": 0.21},
+    })
+
+    assert server._native_waypoint_completed(0.66, 0.27, now - 1.0) is True
+    assert server._native_waypoint_completed(0.66, 0.27, now + 1.0) is False
+    assert server._native_waypoint_completed(1.20, 0.27, now - 1.0) is False
+
+
+def test_frontend_map_clear_and_token_are_scoped_to_v24():
+    source = (BACKEND.parent / "frontend" / "index.html").read_text(encoding="utf-8")
+
+    assert "g1_dashboard_v24_token:${window.location.host}${window.location.pathname}" in source
+    assert "g1_dashboard_v24_map_hidden:${window.location.host}${window.location.pathname}" in source
+    assert "mesh.geometry = new THREE.BufferGeometry()" in source
+    assert "!mapDisplaySuppressed && mapViewFilters.loadedVisible" in source
+
+
+def test_map_load_replaces_view_atomically_without_clear_first():
+    source = (BACKEND / "server.py").read_text(encoding="utf-8")
+    load_section = source[source.index("async def load_robot_map"):source.index(
+        "async def unload_robot_map"
+    )]
+
+    assert '"replace": True' in load_section
+    assert 'broadcast({"type": "loaded_map_cleared"})' not in load_section
 
 
 def test_v24_defaults_to_current_harta_03aug():

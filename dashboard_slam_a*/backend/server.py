@@ -23,6 +23,15 @@ import cv2
 from pathlib import Path
 from typing import List, Optional
 
+# Detecția semantică este opțională la pornire; modelul se încarcă numai când
+# operatorul pornește YOLO din viewer.
+try:
+    from ultralytics import YOLO as _YOLO
+    _YOLO_AVAILABLE = True
+except ImportError:
+    _YOLO_AVAILABLE = False
+    print("[semantic] ultralytics nu este instalat — YOLO rămâne dezactivat")
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -51,8 +60,15 @@ from autonomous_navigation import (
 )
 from nav2_observer import Nav2ObserverPublisher
 from local_lidar_localization import LocalLidarLocalizer
+from semantic_object_mapper import (
+    LidarCameraCalibration,
+    SemanticObjectTracker,
+    deduplicate_object_detections,
+    extract_livox_points,
+)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+CALIBRATION_DIR = Path(__file__).parent.parent / "lidar_camera_calibration"
 POINTS_PER_SCAN = 7000
 MAX_VOXELS_BEFORE_DOWNSAMPLE = 250000
 # Nav2 calculeaza o raza inscrisa de aproximativ 0.206 m pentru amprenta G1.
@@ -285,6 +301,24 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 active_ws: List[WebSocket] = []
+semantic_object_tracker = SemanticObjectTracker(
+    confirmations=3,
+    merge_distance_m=0.70,
+    voxel_size_m=0.025,
+    lifespan_s=10.0,
+    max_voxels=10000,
+)
+semantic_object_lock = threading.Lock()
+semantic_object_map_path: Optional[str] = None
+semantic_object_last_process = 0.0
+try:
+    lidar_camera_calibration = LidarCameraCalibration.load(CALIBRATION_DIR)
+    semantic_calibration_error = ""
+    print(f"[semantic] calibrare LiDAR–cameră încărcată din {CALIBRATION_DIR}")
+except Exception as exc:
+    lidar_camera_calibration = None
+    semantic_calibration_error = str(exc)
+    print(f"[semantic] calibrare indisponibilă: {exc}")
 points_lock = threading.Lock()
 loop = None
 node_instance = None
@@ -316,6 +350,20 @@ slam_api_feedback = {}
 # FINISHED/arrived trebuie păstrat separat: următorul pos_info poate
 # suprascrie imediat ctrl_info între două segmente A*.
 slam_last_completion = {}
+NATIVE_POS_INFO_MAX_AGE = 2.0
+# În FOLLOWING/ROTATION firmware-ul Mid360 poate întrerupe temporar pos_info,
+# deși relocation odom și ctrl_info continuă. Folosim această punte numai după
+# ce aceeași sesiune a avut deja o poziție nativă validă.
+# În jurnalele reale pos_info a lipsit 10–11 s în FOLLOWING, în timp ce
+# ctrl_info, LiDAR-ul și controllerul nativ au rămas active. Puntea este doar
+# pentru o cursă 1102 deja activă; la pornire rămân valabile verificările hărții.
+NATIVE_ACTIVE_ODOM_BRIDGE_MAX_AGE = 45.0
+NATIVE_ACTIVE_UNVERIFIED_GRACE_MAX_AGE = 15.0
+# Odometria pelvisului este continuă chiar când firmware-ul 1102 întrerupe
+# temporar pos_info. Nu o folosim pentru inițializare și nici nelimitat: este
+# doar o punte recentă, în cadrul unei curse native deja validate pe aceeași
+# hartă.
+NATIVE_ANCHORED_ODOM_MAX_AGE = 0.60
 
 map_state = {
     "pose": {"x": 0.0, "y": 0.0, "yaw": 0.0},
@@ -324,6 +372,10 @@ map_state = {
     "scan_paused": False,
     "slam_active": False,
     "slam_mode": "idle",
+    # O singură sursă are voie să actualizeze map→robot în localizare.
+    # Fără acest marcaj, odometria SLAM nativă poate suprascrie ancora
+    # pelvis+ICP aleasă explicit de operator.
+    "localization_controller": "none",
     "last_refinement": None,
     "local_localization": {},
 }
@@ -473,6 +525,8 @@ async def release_teleop_owner(ws: WebSocket) -> None:
 def _set_slam_mode(mode: str) -> None:
     map_state["slam_mode"] = mode
     map_state["slam_active"] = mode in {"mapping", "localization"}
+    if mode != "localization":
+        map_state["localization_controller"] = "none"
     if node_instance and hasattr(node_instance, "set_slam_mode"):
         node_instance.set_slam_mode(mode)
 
@@ -488,6 +542,16 @@ async def map_broadcast_loop():
         with points_lock:
             all_pts = accumulator_3d.get_filtered_points(map_filter["min_hits"])
         await broadcast({"type": "map_points", "points": all_pts})
+
+
+async def semantic_object_aging_loop():
+    """Expire objects and remove their footprints from autonomy in lockstep."""
+    while True:
+        await asyncio.sleep(1.0)
+        with semantic_object_lock:
+            changed = semantic_object_tracker.expire()
+        if changed:
+            await broadcast(_semantic_object_payload())
 
 
 def _livox_points_to_base(points: List[dict]) -> tuple:
@@ -583,6 +647,142 @@ def _transform_livox_points_to_map(points: List[dict], pose: dict,
         })
     return transformed
 
+
+def _transform_semantic_livox_points_to_map(
+    points: List[dict], pose: dict, floor_plane: Optional[dict]
+) -> List[dict]:
+    """Transformă reconstrucția RGB camera→Livox în cadrul hărții active."""
+    base_points, estimated_ground = _livox_points_to_base(points)
+    if not base_points:
+        return []
+    ground_base_z = float(
+        getattr(node_instance, "last_raw_lidar_ground_base_z", estimated_ground)
+        if node_instance is not None else estimated_ground
+    )
+    yaw = float(pose.get("yaw", 0.0))
+    cosine, sine = math.cos(yaw), math.sin(yaw)
+    pose_x = float(pose.get("x", 0.0))
+    pose_y = float(pose.get("y", 0.0))
+    transformed = []
+    for source, (base_x, base_y, base_z) in zip(points, base_points):
+        world_x = pose_x + cosine * base_x - sine * base_y
+        world_y = pose_y + sine * base_x + cosine * base_y
+        floor_z = 0.0
+        if floor_plane:
+            floor_z = (
+                float(floor_plane.get("a", 0.0)) * world_x
+                + float(floor_plane.get("b", 0.0)) * world_y
+                + float(floor_plane.get("c", 0.0))
+            )
+        relative_z = base_z - ground_base_z
+        if not 0.06 <= relative_z <= 2.20:
+            continue
+        transformed.append({
+            "x": world_x,
+            "y": world_y,
+            "z": floor_z + relative_z,
+            "r": int(source.get("r", 180)),
+            "g": int(source.get("g", 180)),
+            "b": int(source.get("b", 180)),
+        })
+    return transformed
+
+
+def _semantic_object_payload() -> dict:
+    """One snapshot feeds both the 3D viewer and the navigation obstacle guard."""
+    with semantic_object_lock:
+        objects = semantic_object_tracker.snapshot()
+        map_path = semantic_object_map_path
+    obstacle_guard.update_semantic_objects(objects)
+    return {
+        "type": "semantic_objects",
+        "objects": objects,
+        "count": len(objects),
+        "lifespan_s": semantic_object_tracker.lifespan_s,
+        "map_path": map_path,
+        "calibration_available": lidar_camera_calibration is not None,
+        "calibration_error": semantic_calibration_error,
+        "raw_lidar_age_s": round(max(0.0, time.monotonic() - float(getattr(node_instance, "last_semantic_raw_lidar_time", 0.0))), 2) if node_instance else None,
+    }
+
+
+def _reset_semantic_objects(map_path: Optional[str] = None) -> dict:
+    global semantic_object_map_path
+    with semantic_object_lock:
+        semantic_object_tracker.reset()
+        semantic_object_map_path = map_path
+    return _semantic_object_payload()
+
+
+def _semantic_lidar_map_snapshot(pose: dict, floor_plane: Optional[dict]) -> List[dict]:
+    """Recent raw Livox geometry in the same ``map`` frame as the PCD.
+
+    This intentionally remains separate from the global SLAM point cloud.  In
+    localization mode the latter can be static/stale, while this snapshot is
+    what confirms that a YOLO object is physically present *now*.
+    """
+    if node_instance is None:
+        return []
+    observed_at = float(getattr(node_instance, "last_semantic_raw_lidar_time", 0.0))
+    if observed_at <= 0.0 or time.monotonic() - observed_at > 0.8:
+        return []
+    raw_points = list(getattr(node_instance, "last_semantic_raw_lidar_points", []) or [])
+    if len(raw_points) < 50:
+        return []
+    return _transform_livox_points_to_map(raw_points, pose, floor_plane)
+
+
+def _process_semantic_objects(
+    depth_img: np.ndarray, color_img: np.ndarray, detections: List[dict]
+) -> Optional[dict]:
+    """Build confirmed chair geometry at most 4 Hz while localization is valid."""
+    global semantic_object_last_process, semantic_object_map_path
+    if lidar_camera_calibration is None:
+        return None
+    current_map = _resolve_map_path(loaded_map_path)
+    if not current_map:
+        return None
+    now = time.monotonic()
+    if now - semantic_object_last_process < 0.25:
+        return None
+    semantic_object_last_process = now
+    if not (_localization_fresh(3.0) or _native_localization_fresh(3.0)):
+        return None
+
+    relevant = deduplicate_object_detections(
+        detections, minimum_confidence=0.35, iou_threshold=0.35
+    )
+    if not relevant:
+        return None
+    pose = dict(map_state.get("pose") or {})
+    floor_plane = obstacle_guard.floor_plane()
+    observations = []
+    with semantic_object_lock:
+        if semantic_object_map_path != current_map:
+            semantic_object_tracker.reset()
+            semantic_object_map_path = current_map
+        for detection in relevant:
+            livox_points = extract_livox_points(
+                depth_img, color_img, detection, lidar_camera_calibration
+            )
+            map_points = _transform_semantic_livox_points_to_map(
+                livox_points, pose, floor_plane
+            )
+            if len(map_points) >= 20:
+                observations.append({
+                    "points": map_points,
+                    "confidence": float(detection.get("confidence", 0.0)),
+                })
+        # The LiDAR snapshot has the same map transform and is used only as
+        # physical support/ray-clearing evidence; labels still come from YOLO.
+        changed = semantic_object_tracker.update_frame(
+            observations,
+            _semantic_lidar_map_snapshot(pose, floor_plane),
+            pose,
+            observed_at=now,
+        )
+    return _semantic_object_payload() if changed else None
+
 if ROS2_AVAILABLE:
     class DualLidarSLAMSubscriber(Node):
         def __init__(self):
@@ -623,6 +823,11 @@ if ROS2_AVAILABLE:
             self.last_raw_lidar_frame_points = 0
             self.last_raw_lidar_obstacle_points = 0
             self.last_raw_lidar_ground_base_z = -0.75
+            # Semantic YOLO needs a recent raw scan even while the global SLAM
+            # cloud is fresh.  Keep a bounded snapshot; do not duplicate it in
+            # the static map or costmap.
+            self.last_semantic_raw_lidar_points = []
+            self.last_semantic_raw_lidar_time = 0.0
             self.nav2_observer = None
 
             # Profilul de deadline este A* + 1102 și nu inițializează deloc
@@ -699,8 +904,10 @@ if ROS2_AVAILABLE:
                     pos_x = float(slam_pose_info["current_pose"]["x"])
                     pos_y = float(slam_pose_info["current_pose"]["y"])
                     pos_yaw = _pose_yaw(slam_pose_info["current_pose"])
-                    self._process_odom_coords(pos_x, pos_y, pos_yaw, "/slam_info pos_info")
-                    if self.nav2_observer:
+                    if map_state.get("localization_controller") != "local_lidar":
+                        self._process_odom_coords(pos_x, pos_y, pos_yaw, "/slam_info pos_info")
+                    if (self.nav2_observer
+                            and map_state.get("localization_controller") != "local_lidar"):
                         self.nav2_observer.update_global_pose(
                             {
                                 "x": pos_x,
@@ -832,6 +1039,14 @@ if ROS2_AVAILABLE:
         def primary_odom_callback(self, msg, mode: str, source: str):
             if map_state.get("slam_mode") != mode:
                 return
+            # În profilul local, /initialpose + pelvis + ICP sunt singura
+            # referință map. Odometria din SLAM poate rămâne activă pe vechea
+            # sesiune/hartă și nu are voie să mute ancora aleasă manual.
+            if (
+                mode == "localization"
+                and map_state.get("localization_controller") == "local_lidar"
+            ):
+                return
             if source == "relocation" and self.nav2_observer:
                 self.nav2_observer.update_global_odometry(msg)
             now = time.time()
@@ -865,13 +1080,23 @@ if ROS2_AVAILABLE:
 
         def raw_lidar_callback(self, msg):
             """Fallback sigur LiDAR când serviciul 1804 nu emite cloud global."""
-            if time.time() - self.last_primary_cloud_time <= 0.50:
+            primary_cloud_fresh = time.time() - self.last_primary_cloud_time <= 0.50
+            semantic_now = time.monotonic()
+            if primary_cloud_fresh and semantic_now - self.last_semantic_raw_lidar_time < 0.20:
                 return
             if not _pointcloud_has_geometry(msg):
                 return
             points = self._extract_points_from_cloud(msg)
             if len(points) < 100:
                 return
+            semantic_step = max(1, len(points) // 3500)
+            self.last_semantic_raw_lidar_points = points[::semantic_step]
+            self.last_semantic_raw_lidar_time = semantic_now
+            # Ground reference must update with the semantic snapshot too.
+            # Otherwise RGB-D geometry drifts vertically below the loaded map
+            # whenever the global SLAM cloud becomes the primary source.
+            _, semantic_ground_base_z = _livox_points_to_base(points)
+            self.last_raw_lidar_ground_base_z = semantic_ground_base_z
             self.last_raw_lidar_frame_time = time.monotonic()
             self.last_raw_lidar_frame_points = len(points)
             pose = dict(map_state["pose"])
@@ -883,26 +1108,38 @@ if ROS2_AVAILABLE:
                 if 0.12 <= z - ground_base_z <= 1.85
             ]
             self.last_raw_lidar_obstacle_points = len(base_obstacles)
-            floor_plane = obstacle_guard.floor_plane()
-            transformed = _transform_livox_points_to_map(
-                points, pose, floor_plane
+            local_icp_active = bool(
+                map_state.get("slam_mode") == "localization"
+                and self.has_pelvis_offset
             )
-            if transformed:
-                obstacle_guard.update_lidar_points(
-                    transformed,
-                    pose,
-                    source="/utlidar/cloud_livox_mid360 -> map",
+            # Când SLAM publică deja harta, nu injectăm același scan brut încă
+            # o dată în costmap. Pentru localizare însă scanul brut rămâne
+            # obligatoriu: acesta este inputul ICP, nu cloudul SLAM static.
+            if primary_cloud_fresh and not local_icp_active:
+                return
+            floor_plane = obstacle_guard.floor_plane()
+            if not primary_cloud_fresh:
+                transformed = _transform_livox_points_to_map(
+                    points, pose, floor_plane
                 )
+                if transformed:
+                    obstacle_guard.update_lidar_points(
+                        transformed,
+                        pose,
+                        source="/utlidar/cloud_livox_mid360 -> map",
+                    )
             now = time.monotonic()
-            if (map_state.get("slam_mode") != "localization"
-                    or not self.has_pelvis_offset
+            if (not local_icp_active
                     or len(base_obstacles) < 35
                     or now - self.last_local_lidar_attempt < 0.25):
                 return
             self.last_local_lidar_attempt = now
             result = local_lidar_localizer.match(base_obstacles, pose)
             map_state["local_localization"] = local_lidar_localizer.status()
-            if result.get("ok"):
+            # Primele două cadre ICP pot potrivi o suprafață repetitivă (masă,
+            # dulap, perete). Păstrăm poziția indicată de operator până la trei
+            # potriviri consecutive; abia atunci corecția devine map→odom.
+            if result.get("ok") and result.get("ready"):
                 self.apply_local_lidar_pose(result["pose"])
             if loop:
                 asyncio.run_coroutine_threadsafe(
@@ -1021,6 +1258,88 @@ def _recv_exact(conn, n):
         buf += chunk
     return buf
 
+
+_yolo_lock = threading.Lock()
+_yolo_model = None
+_yolo_enabled = False
+YOLO_MODEL_SIZE = "yolov8s"
+YOLO_CONFIDENCE = 0.20
+_YOLO_PALETTE = [
+    (0, 220, 255), (255, 80, 0), (0, 255, 100), (200, 0, 255),
+    (255, 200, 0), (0, 150, 255), (255, 0, 150), (0, 255, 220),
+]
+
+
+def _yolo_model_path() -> str:
+    """Preferă modelul versiunii curente, apoi modelul comun deja calibrat."""
+    configured = os.environ.get("G1_YOLO_MODEL", "").strip()
+    candidates = [
+        configured,
+        str(Path(__file__).with_name(f"{YOLO_MODEL_SIZE}.pt")),
+        f"/home/unitree/dashboard_g1_test/backend/{YOLO_MODEL_SIZE}.pt",
+        f"{YOLO_MODEL_SIZE}.pt",
+    ]
+    return next((path for path in candidates if path and os.path.isfile(path)), candidates[-1])
+
+
+def _get_yolo_model():
+    global _yolo_model
+    if not _YOLO_AVAILABLE:
+        return None
+    with _yolo_lock:
+        if _yolo_model is None:
+            try:
+                model_path = _yolo_model_path()
+                print(f"[semantic] încarc modelul YOLO din {model_path}")
+                _yolo_model = _YOLO(model_path)
+            except Exception as exc:
+                print(f"[semantic] modelul YOLO nu a putut fi încărcat: {exc}")
+                return None
+    return _yolo_model
+
+
+def _run_yolo(img_bgr):
+    """Annotate the mirrored frame and return JSON-safe detections."""
+    model = _get_yolo_model()
+    if model is None:
+        return img_bgr, []
+    try:
+        result = model(
+            img_bgr, verbose=False, conf=YOLO_CONFIDENCE, imgsz=640
+        )[0]
+        detections = []
+        annotated = img_bgr.copy()
+        names = result.names
+        for box in result.boxes:
+            class_id = int(box.cls[0])
+            confidence = float(box.conf[0])
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            label = names.get(class_id, str(class_id))
+            color = _YOLO_PALETTE[class_id % len(_YOLO_PALETTE)]
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+            caption = f"{label} {confidence:.0%}"
+            (text_width, text_height), _ = cv2.getTextSize(
+                caption, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+            )
+            cv2.rectangle(
+                annotated, (x1, max(0, y1 - text_height - 6)),
+                (x1 + text_width + 4, y1), color, -1,
+            )
+            cv2.putText(
+                annotated, caption, (x1 + 2, max(text_height, y1 - 4)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1,
+                cv2.LINE_AA,
+            )
+            detections.append({
+                "label": label,
+                "confidence": round(confidence, 3),
+                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            })
+        return annotated, detections
+    except Exception as exc:
+        print(f"[semantic] eroare inferență YOLO: {exc}")
+        return img_bgr, []
+
 def camera_receiver_thread():
     global loop
     server_sock = None
@@ -1108,12 +1427,32 @@ def camera_receiver_thread():
                 # REPARARE OGLINDIRE LIVE 2D FEED:
                 # Oglindim imaginea pe orizontală înainte de trimitere folosind OpenCV
                 color_img_flipped = cv2.flip(color_img, 1)
+                yolo_detections = []
+                semantic_payload = None
+                if _yolo_enabled and _YOLO_AVAILABLE:
+                    color_img_flipped, yolo_detections = _run_yolo(color_img_flipped)
+                    try:
+                        semantic_payload = _process_semantic_objects(
+                            depth_img, color_img, yolo_detections
+                        )
+                    except Exception as exc:
+                        print(f"[semantic] eroare reconstrucție 3D: {exc}")
                 _, color_bytes_flipped = cv2.imencode(".jpg", color_img_flipped, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
                 encoded_video = base64.b64encode(color_bytes_flipped.tobytes()).decode('utf-8')
 
+                if loop and semantic_payload is not None:
+                    asyncio.run_coroutine_threadsafe(
+                        broadcast(semantic_payload), loop
+                    )
                 if loop and cam_points:
                     asyncio.run_coroutine_threadsafe(
-                        broadcast({"type": "camera_3d_data", "points": cam_points, "video_b64": encoded_video}), loop
+                        broadcast({
+                            "type": "camera_3d_data",
+                            "points": cam_points,
+                            "video_b64": encoded_video,
+                            "yolo_detections": yolo_detections,
+                            "yolo_enabled": _yolo_enabled,
+                        }), loop
                     )
         except Exception as e:
             time.sleep(1)
@@ -1140,6 +1479,7 @@ async def websocket_endpoint(ws: WebSocket):
             "map_filter": map_filter, "scan_paused": map_state["scan_paused"],
             "loaded_map_path": _resolve_map_path(loaded_map_path),
         }))
+        await ws.send_text(json.dumps(_semantic_object_payload()))
         current_map = _resolve_map_path(loaded_map_path)
         if current_map:
             points = await asyncio.to_thread(slam_client.read_pcd_points, current_map)
@@ -1457,13 +1797,19 @@ async def load_robot_map(body: dict = Body({})):
         with points_lock:
             accumulator_3d.reset()
         await broadcast({"type": "map_reset"})
-        await broadcast({"type": "loaded_map_cleared"})
         loaded_map_path = filepath
+        await broadcast(_reset_semantic_objects(filepath))
         # Păstrăm suficientă densitate pentru vizualizarea de tip Unitree.
         # Filtrul de densitate din frontend poate reduce ulterior fără a reciti PCD-ul.
         step = max(1, len(pts) // 100000)
         pts_sub = pts[::step]
-        await broadcast({"type": "loaded_map_points", "points": pts_sub, "path": filepath})
+        # Înlocuire atomică în viewer: nu trimitem `loaded_map_cleared` înaintea
+        # payloadului mare. Dacă WebSocketul întârzie/repornește, harta veche
+        # rămâne vizibilă până când geometria nouă a ajuns complet.
+        await broadcast({
+            "type": "loaded_map_points", "points": pts_sub,
+            "path": filepath, "replace": True,
+        })
         observer = _get_nav2_observer()
         if observer is not None and nav2_planner is not None:
             try:
@@ -1512,6 +1858,7 @@ async def unload_robot_map():
     previous_path = _resolve_map_path(loaded_map_path)
     pending_nav_previews = {}
     loaded_map_path = None
+    await broadcast(_reset_semantic_objects())
     local_lidar_localizer.clear()
     _set_slam_mode("idle")
     await broadcast({"type": "loaded_map_cleared", "previous_path": previous_path})
@@ -1541,21 +1888,124 @@ def _localization_fresh(max_age: float = 2.0) -> bool:
     )
 
 
-def _native_localization_fresh(max_age: float = 2.0) -> bool:
-    """`pos_info` nativ recent, singura dovadă suficientă pentru API 1102.
+def _relocation_odom_fresh() -> bool:
+    """Odometrie relocation recentă, ancorată în frame-ul hărții native."""
+    if not node_instance or map_state.get("slam_mode") != "localization":
+        return False
+    odom_age = time.time() - float(
+        getattr(node_instance, "last_primary_odom_time", 0.0) or 0.0
+    )
+    return bool(
+        getattr(node_instance, "active_odom_source", None) == "relocation"
+        and odom_age < 1.0
+        and time.time() - float(map_state.get("pose_updated_at", 0.0)) < 1.0
+    )
 
-    Odometria relocation sau ancora pelvis pot alimenta viewerul și TF-ul
-    Nav2, dar nu dovedesc că planificatorul intern Unitree are currentPose.
+
+def _anchored_pelvis_odom_fresh() -> bool:
+    """Poziție pelvis recentă, transformată în harta sesiunii curente."""
+    if not node_instance or map_state.get("slam_mode") != "localization":
+        return False
+    return bool(
+        getattr(node_instance, "has_pelvis_offset", False)
+        and map_state.get("pose_source") in {
+            "anchored_pelvis", "local_lidar_icp",
+        }
+        and _pose_xy(map_state.get("pose"))
+        and time.time() - float(map_state.get("pose_updated_at", 0.0) or 0.0)
+            < NATIVE_ANCHORED_ODOM_MAX_AGE
+    )
+
+
+def _native_runtime_same_map() -> bool:
+    runtime_address = str(slam_runtime_info.get("map_address") or "").strip()
+    active_map = _resolve_map_path(loaded_map_path)
+    return bool(
+        runtime_address and active_map
+        and runtime_address in _native_slam_map_candidates(active_map)
+    )
+
+
+def _native_active_pose_grace_fresh() -> bool:
+    """Tolerează pos_info lipsă folosind numai odometrie map recentă."""
+    if map_state.get("slam_mode") != "localization":
+        return False
+    native_age = time.monotonic() - float(
+        slam_runtime_info.get("pose_received_at", 0.0) or 0.0
+    )
+    telemetry_age = time.monotonic() - float(
+        slam_runtime_info.get("received_at", 0.0) or 0.0
+    )
+    machine_state = str(
+        slam_runtime_info.get("machine_state") or ""
+    ).strip().lower()
+    navigator_task = getattr(native_waypoint_navigator, "task", None)
+    navigator_active = bool(navigator_task and not navigator_task.done())
+    return bool(
+        _pose_xy(slam_runtime_info.get("current_pose"))
+        and NATIVE_POS_INFO_MAX_AGE <= native_age < NATIVE_ACTIVE_ODOM_BRIDGE_MAX_AGE
+        and telemetry_age < 1.0
+        and int(slam_runtime_info.get("error_code", 0) or 0) == 0
+        and machine_state in {
+            "ready", "following", "rotation", "adjustment", "finished",
+        }
+        and (
+            (
+                native_age < NATIVE_ACTIVE_UNVERIFIED_GRACE_MAX_AGE
+                and (navigator_active or _relocation_odom_fresh())
+            )
+            or (
+                navigator_active
+                and _native_runtime_same_map()
+                and (_relocation_odom_fresh() or _anchored_pelvis_odom_fresh())
+            )
+        )
+    )
+
+
+def _native_localization_fresh(max_age: float = NATIVE_POS_INFO_MAX_AGE) -> bool:
+    """Dovadă de pose coerentă pentru o comandă API 1102.
+
+    Preferăm întotdeauna ``pos_info``. Firmware-ul îl întrerupe însă tocmai
+    după unele FINISHED/FAILED, deși relocation continuă pe aceeași hartă și
+    ``ctrl_info`` rămâne sănătos. În acel caz permitem o punte controlată;
+    acceptarea efectivă a noii rute rămâne decisă de răspunsul API 1102.
     """
     if map_state.get("slam_mode") != "localization":
         return False
     info_age = time.monotonic() - float(slam_runtime_info.get("pose_received_at", 0.0))
-    controller = str(slam_runtime_info.get("controller") or "").strip().lower()
-    if controller == "not init":
-        return False
-    return bool(
+    # `ctrl_info` and `pos_info` are independent streams.  On the Unitree
+    # firmware `ctrl_info` briefly reports ``not init`` between otherwise
+    # valid `pos_info` packets (including while the same map and pose keep
+    # updating).  Treating that controller label as loss of localization made
+    # an active A* run fail on a single transient packet.  The authoritative
+    # localization health signal is a recent native `pos_info`; readiness of
+    # API 1102 is verified separately by the response to the command itself.
+    native_fresh = bool(
         info_age < max_age
         and _pose_xy(slam_runtime_info.get("current_pose"))
+    )
+    telemetry_age = time.monotonic() - float(
+        slam_runtime_info.get("received_at", 0.0) or 0.0
+    )
+    machine_state = str(
+        slam_runtime_info.get("machine_state") or ""
+    ).strip().lower()
+    same_map = _native_runtime_same_map()
+    relocation_bridge = bool(
+        _pose_xy(slam_runtime_info.get("current_pose"))
+        and _relocation_odom_fresh()
+        and telemetry_age < 2.0
+        and int(slam_runtime_info.get("error_code", 0) or 0) == 0
+        and machine_state in {
+            "ready", "following", "rotation", "adjustment", "finished",
+        }
+        and same_map
+    )
+    return (
+        native_fresh
+        or relocation_bridge
+        or _native_active_pose_grace_fresh()
     )
 
 
@@ -1581,7 +2031,7 @@ def _configure_local_lidar_map(map_path: str) -> dict:
         resolution=0.10,
         robot_radius=0.25,
         min_obstacle_points=2,
-        comfort_radius=0.65,
+        comfort_radius=0.85,
         clearance_weight=6.0,
     )
     planner.load(
@@ -1721,6 +2171,43 @@ async def _recover_native_lidar_imu() -> dict:
     }
 
 
+def _native_pose_confirms_1804(
+        addresses: List[str], x: float, y: float, yaw: float,
+        sent_at: float,
+) -> Optional[dict]:
+    """Confirmă 1804 prin pos_info când firmware-ul omite response-ul API.
+
+    Publisherul singur nu este dovadă. Acceptăm numai o poziție nativă nouă,
+    pe una dintre adresele aceleiași hărți și suficient de aproape de ancora
+    indicată de operator; astfel nu pornim 1102 într-o cameră greșită.
+    """
+    received_at = float(slam_pose_info.get("received_at", 0.0) or 0.0)
+    pose = dict(slam_pose_info.get("current_pose") or {})
+    address = str(slam_pose_info.get("map_address") or "").strip()
+    position = _pose_xy(pose)
+    if (
+        received_at < sent_at
+        or address not in addresses
+        or not position
+        or int(slam_runtime_info.get("error_code", 0) or 0) != 0
+    ):
+        return None
+    position_error = math.hypot(position[0] - float(x), position[1] - float(y))
+    yaw_error = abs(
+        (_pose_yaw(pose) - float(yaw) + math.pi) % (2.0 * math.pi) - math.pi
+    )
+    if position_error > 1.25 or yaw_error > math.radians(55.0):
+        return None
+    return {
+        "source": "/slam_info pos_info",
+        "received_at": received_at,
+        "address": address,
+        "pose": pose,
+        "position_error_m": round(position_error, 3),
+        "yaw_error_deg": round(math.degrees(yaw_error), 1),
+    }
+
+
 async def _initialize_native_pose_1804(
     map_name: str, x: float, y: float, yaw: float
 ) -> dict:
@@ -1815,10 +2302,19 @@ async def _initialize_native_pose_1804(
                 else None
             )
             payload = (feedback or {}).get("payload") or {}
-            accepted = bool(publisher_result.get("success")) and _slam_feedback_success(feedback)
+            pose_confirmation = _native_pose_confirms_1804(
+                addresses, pose_x, pose_y, pose_yaw, sent_at,
+            )
+            accepted = bool(publisher_result.get("success")) and bool(
+                _slam_feedback_success(feedback) or pose_confirmation
+            )
             detail = (
                 payload.get("info")
                 or publisher_result.get("error")
+                or (
+                    "1804 confirmat prin pos_info nativ"
+                    if pose_confirmation else ""
+                )
                 or ("fără feedback 1804 în 8s" if feedback is None else "1804 respins")
             )
             attempt = {
@@ -1827,6 +2323,7 @@ async def _initialize_native_pose_1804(
                 "pose": {"x": pose_x, "y": pose_y, "yaw": pose_yaw},
                 "published": bool(publisher_result.get("success")),
                 "feedback": bool(feedback),
+                "pose_confirmation": pose_confirmation,
                 "accepted": accepted,
                 "detail": detail,
             }
@@ -1849,7 +2346,10 @@ async def _initialize_native_pose_1804(
                     "registry_warning": registry_warning,
                 }
 
-            missing_sensors = "lack of lidar or imu data" in str(detail).lower()
+            missing_sensors = bool(
+                feedback is None
+                or "lack of lidar or imu data" in str(detail).lower()
+            )
             if missing_sensors and sensor_recovery is None:
                 sensor_recovery = await _recover_native_lidar_imu()
                 attempt["sensor_recovery"] = sensor_recovery
@@ -1957,6 +2457,7 @@ async def relocalize(body: dict = Body({})):
                 "local_localization": local_lidar_localizer.status(),
             }
         _set_slam_mode("localization")
+        map_state["localization_controller"] = "local_lidar"
         lidar_wait_started = time.monotonic()
         for _ in range(32):
             await asyncio.sleep(0.125)
@@ -2090,6 +2591,7 @@ async def relocalize(body: dict = Body({})):
             if local_attempted:
                 local_lidar_localizer.reset(pose_to_use)
             _set_slam_mode("localization")
+            map_state["localization_controller"] = "local_lidar"
             if local_attempted:
                 for _ in range(32):
                     await asyncio.sleep(0.125)
@@ -2142,6 +2644,7 @@ async def relocalize(body: dict = Body({})):
         }
 
     _set_slam_mode("localization")
+    map_state["localization_controller"] = "native"
 
     # Confirmăm convergența: fără odometrie de localizare, repoziționarea nu a prins.
     refinement_result = None
@@ -2183,7 +2686,9 @@ async def relocalize(body: dict = Body({})):
 async def start_relocation():
     """Repornește localizarea pe harta deja încărcată."""
     result = await asyncio.to_thread(slam_client.start_relocation)
-    if result.get("success"): _set_slam_mode("localization")
+    if result.get("success"):
+        _set_slam_mode("localization")
+        map_state["localization_controller"] = "native"
     return result
 
 @app.post("/api/slam/set_initial_pose")
@@ -2211,7 +2716,14 @@ async def robot_status():
     """Diagnostic rapid: sdk_available=False inseamna ca SDK-ul (G1LocoClient)
     nu s-a instantiat la pornirea serverului - verifica log-ul consolei
     (unde ruleaza uvicorn) pentru eroarea exacta de import/Init()."""
-    return await asyncio.to_thread(sport_client.get_status)
+    status = await asyncio.to_thread(sport_client.get_status)
+    return {
+        **status,
+        "dashboard_variant": "dashboard_g1_a*_v3",
+        "local_controller_ui": True,
+        "semantic_yolo_3d": True,
+        "native_1804_is_separate_from_loco_sdk": True,
+    }
 
 def _fsm_confirmation_error(body: dict) -> Optional[dict]:
     """Blochează orice schimbare FSM fără confirmarea textuală exactă `ok`."""
@@ -2291,12 +2803,48 @@ def _get_autonomous_navigator() -> AutonomousNavigator:
 def _native_pose() -> dict:
     """Poziția curentă în același frame map în care sunt țintele și PCD-ul."""
     live_pose = dict(slam_runtime_info.get("current_pose") or {})
-    pose = live_pose if _pose_xy(live_pose) else dict(map_state["pose"])
+    native_age = time.monotonic() - float(
+        slam_runtime_info.get("pose_received_at", 0.0) or 0.0
+    )
+    # 1102 planifică în pose-ul său nativ. Cât pos_info este proaspăt, acesta
+    # trebuie să fie și pose-ul executorului; alegerea relocation înaintea lui
+    # amesteca două yaw-uri și producea rotații aparent aleatoare. Odometria
+    # relocation este folosită numai ca punte în pauza cunoscută de pos_info.
+    if _pose_xy(live_pose) and native_age < NATIVE_POS_INFO_MAX_AGE:
+        pose = live_pose
+    elif _relocation_odom_fresh() or (
+        _native_active_pose_grace_fresh() and _anchored_pelvis_odom_fresh()
+    ):
+        pose = dict(map_state["pose"])
+    else:
+        pose = live_pose if _pose_xy(live_pose) else dict(map_state["pose"])
     return {
         "x": float(pose.get("x", 0.0)),
         "y": float(pose.get("y", 0.0)),
         "yaw": _pose_yaw(pose),
     }
+
+
+def _native_waypoint_completed(
+        target_x: float, target_y: float, dispatched_at: float,
+) -> bool:
+    """Corelează FINISHED cu waypoint-ul curent, nu cu o comandă veche."""
+    completion = dict(slam_last_completion)
+    if float(completion.get("received_at", 0.0) or 0.0) < float(dispatched_at):
+        return False
+    machine_state = str(completion.get("machine_state") or "").strip().lower()
+    if not (
+        completion.get("arrived")
+        or any(token in machine_state for token in ("finished", "arrived", "reached"))
+    ):
+        return False
+    position = _pose_xy(completion.get("current_pose"))
+    if not position:
+        return False
+    # Firmware-ul 1102 declară frecvent FINISHED la 0,4–0,5 m de țintele
+    # intermediare. Sub 0,60 m acceptăm confirmarea explicită; timestampul
+    # împiedică folosirea FINISHED-ului rămas de la waypoint-ul precedent.
+    return math.hypot(position[0] - target_x, position[1] - target_y) <= 0.60
 
 
 async def _dispatch_native_waypoint(x: float, y: float, yaw: float, speed: float) -> dict:
@@ -2552,6 +3100,15 @@ def _append_navigation_flight_log(event: dict) -> None:
         logged_event["dynamic_costmap_count"] = len(dynamic_points)
         logged_event["dynamic_costmap"] = dynamic_points[:80]
     sensor_status = obstacle_guard.sensor_status()
+    now_mono = time.monotonic()
+    now_wall = time.time()
+    native_pose_received_at = float(
+        slam_runtime_info.get("pose_received_at", 0.0) or 0.0
+    )
+    native_telemetry_received_at = float(
+        slam_runtime_info.get("received_at", 0.0) or 0.0
+    )
+    map_pose_updated_at = float(map_state.get("pose_updated_at", 0.0) or 0.0)
     slam_snapshot = {
         key: slam_runtime_info.get(key)
         for key in (
@@ -2572,6 +3129,24 @@ def _append_navigation_flight_log(event: dict) -> None:
         "lidar_center_distance": sensor_status.get("lidar_center_distance"),
         "slam": slam_snapshot,
         "pose_source": map_state.get("pose_source"),
+        "localization_diagnostic": {
+            "native_pose_age_s": (
+                round(now_mono - native_pose_received_at, 3)
+                if native_pose_received_at else None
+            ),
+            "native_telemetry_age_s": (
+                round(now_mono - native_telemetry_received_at, 3)
+                if native_telemetry_received_at else None
+            ),
+            "map_pose_age_s": (
+                round(now_wall - map_pose_updated_at, 3)
+                if map_pose_updated_at else None
+            ),
+            "same_map": _native_runtime_same_map(),
+            "relocation_bridge": _relocation_odom_fresh(),
+            "anchored_pelvis_bridge": _anchored_pelvis_odom_fresh(),
+            "accepted": _native_localization_fresh(),
+        },
         "fsm": getattr(sport_client, "_last_fsm_id", None),
     }
     try:
@@ -2695,6 +3270,7 @@ def _get_native_waypoint_navigator() -> NativeWaypointNavigator:
             enable_stagnation_lateral_recovery=(
                 os.environ.get("G1_ENABLE_LATERAL_RECOVERY") == "1"
             ),
+            waypoint_completed=_native_waypoint_completed,
         )
     return native_waypoint_navigator
 
@@ -2847,11 +3423,11 @@ async def _local_navigation_replan(
 
 
 def _build_static_costmap_preview(
-        map_path: str, resolution: float = 0.08, robot_radius: float = 0.25,
+        map_path: str, resolution: float = 0.10, robot_radius: float = 0.25,
         min_obstacle_points: int = 3, obstacle_min_z: float = 0.15,
         obstacle_max_z: float = 1.85, level_to_floor: bool = True,
-        floor_tolerance: float = 0.08, comfort_radius: float = 0.65,
-        clearance_weight: float = 6.00, planner_mode: str = "legacy") -> dict:
+        floor_tolerance: float = 0.08, comfort_radius: float = 0.50,
+        clearance_weight: float = 3.50, planner_mode: str = "legacy") -> dict:
     """Rasterizează costmapul A*: obstacol brut, inflație configurabilă și liber."""
     if obstacle_min_z >= obstacle_max_z:
         raise ValueError("Z minim trebuie să fie mai mic decât Z maxim")
@@ -2988,15 +3564,15 @@ def _build_static_costmap_preview(
 
 @app.get("/api/nav/costmap")
 async def get_navigation_costmap(
-        resolution: float = Query(0.08, ge=0.05, le=0.30),
+        resolution: float = Query(0.10, ge=0.05, le=0.30),
         min_points: int = Query(4, ge=1, le=20),
         min_z: float = Query(0.15, ge=-5.0, le=5.0),
         max_z: float = Query(1.85, ge=-5.0, le=5.0),
         radius: float = Query(0.20, ge=0.20, le=0.80),
         level_floor: bool = Query(True),
         floor_tolerance: float = Query(0.08, ge=0.03, le=0.25),
-        comfort_radius: float = Query(0.65, ge=0.10, le=1.00),
-        clearance_weight: float = Query(6.00, ge=3.5, le=10.0),
+        comfort_radius: float = Query(0.50, ge=0.10, le=1.00),
+        clearance_weight: float = Query(3.50, ge=3.5, le=10.0),
         driver: str = Query("legacy")):
     map_path = _resolve_map_path(loaded_map_path)
     if not map_path:
@@ -3133,9 +3709,10 @@ def _parse_navigation_goal(body: dict) -> tuple:
         raise ValueError("Coordonatele nu pot fi NaN sau infinite")
     if not 0.1 <= speed <= 1.0:
         raise ValueError("Viteza trebuie să fie între 0.1 și 1.0 m/s")
-    # Rapiditatea deciziei este separată de viteza fizică. La 0,9 m/s,
-    # controllerul G1 corectează indoor prin pași laterali succesivi.
-    speed = min(speed, 0.22)
+    # Profil indoor fluent: 1102 poate păstra 0,30-0,35 m/s pe segmentele
+    # drepte; navigatorul reduce separat viteza în necunoscut, la colțuri și
+    # în culoare înguste. Nu transmitem niciodată valoarea brută de 1 m/s.
+    speed = min(speed, 0.35)
     if timeout != 0.0 and not 5.0 <= timeout <= 86400.0:
         raise ValueError("Timeout-ul trebuie să fie 0 (nelimitat) sau între 5 și 86400 secunde")
     return x, y, yaw, speed, timeout
@@ -3154,15 +3731,15 @@ def _parse_navigation_costmap(body: dict) -> dict:
     raw=body.get("costmap") or {}
     try:
         settings={
-            "resolution":float(raw.get("resolution",0.08)),
+            "resolution":float(raw.get("resolution",0.10)),
             "min_obstacle_points":int(raw.get("min_points",3)),
             "obstacle_min_z":float(raw.get("min_z",0.15)),
             "obstacle_max_z":float(raw.get("max_z",1.85)),
             "robot_radius":float(raw.get("radius",0.25)),
             "level_to_floor":bool(raw.get("level_floor",True)),
             "floor_tolerance":float(raw.get("floor_tolerance",0.08)),
-            "comfort_radius":float(raw.get("comfort_radius",0.65)),
-            "clearance_weight":float(raw.get("clearance_weight",6.00)),
+            "comfort_radius":float(raw.get("comfort_radius",0.50)),
+            "clearance_weight":float(raw.get("clearance_weight",3.50)),
         }
     except (TypeError,ValueError):
         raise ValueError("Parametrii costmap trebuie să fie numere valide")
@@ -3216,12 +3793,28 @@ async def _preview_navigation(body: dict, allow_active: bool = False):
         return {"success": False, "error": "Robotul trebuie să fie în modul localization"}
     if executor == "native_1102":
         if not _native_localization_fresh():
+            local_controller_ready = _localization_fresh()
+            local_lidar_status = local_lidar_localizer.status()
             return {
                 "success": False,
                 "error": (
                     "SLAM Unitree nu furnizează poziția nativă pentru 1102. "
-                    "Alege explicit «Controller local sigur» dacă vrei să folosești ancora locală."
+                    + (
+                        "Poziția locală este validă; folosește «Controller local sigur»."
+                        if local_controller_ready
+                        else "Repornește localizarea până când apare o poziție recentă."
+                    )
                 ),
+                "recommended_executor": (
+                    "local_velocity" if local_controller_ready else None
+                ),
+                "local_controller_ready": local_controller_ready,
+                "diagnostics": {
+                    "native_1102_pose_ready": False,
+                    "local_pose_ready": local_controller_ready,
+                    "local_pose_source": map_state.get("pose_source"),
+                    "local_lidar": local_lidar_status,
+                },
             }
         pose = _native_pose()
     else:
@@ -3237,6 +3830,17 @@ async def _preview_navigation(body: dict, allow_active: bool = False):
             plan_pcd_route,map_path,(pose["x"],pose["y"]),(x,y),None,
             **costmap_settings,allow_narrow_fallback=True
         )
+        semantic_shapes = obstacle_guard.semantic_obstacle_shapes()
+        for semantic in semantic_shapes:
+            planner.add_dynamic_points(
+                semantic.get("points") or [],
+                inflation_radius=max(0.24, planner.robot_radius + 0.04),
+                source="semantic",
+            )
+        if semantic_shapes:
+            # Preview-ul trebuie să corespundă aceleiași geometrii pe care o
+            # va folosi replanificarea în mers.
+            path = planner.plan((pose["x"], pose["y"]), (x, y))
         # A* poate deplasa controlat un click aflat în inflația unui obstacol
         # spre cea mai apropiată celulă hard-validă. De aici înainte Nav2,
         # preview-ul și executorul trebuie să folosească exact același capăt.
@@ -3676,9 +4280,10 @@ async def navigation_preflight(
             checks.update({
                 "localization_fresh": _localization_fresh(),
                 "unitree_pose_ready": native_pose_ready,
-                "slam_native_navigation": bool(
-                    native_pose_ready and native_controller != "not init"
-                ),
+                # `not init` from ctrl_info is transient on this firmware and
+                # must not invalidate a simultaneous, fresh native pos_info.
+                # Dispatch still waits for the real API 1102 acknowledgement.
+                "slam_native_navigation": native_pose_ready,
                 "slam_telemetry_fresh": (
                     time.monotonic() - float(slam_runtime_info.get("received_at", 0.0)) < 2.0
                 ),
@@ -3755,8 +4360,76 @@ async def get_robot_fsm_id():
     vezi dacă tranzițiile Damp/stand_up/Start chiar au avut efect)."""
     return await asyncio.to_thread(sport_client.get_fsm_id)
 
+
+@app.post("/api/yolo/toggle")
+async def toggle_yolo(request: Request):
+    """Pornește/oprește detecția fără să întrerupă fluxul RealSense."""
+    global _yolo_enabled
+    if not _YOLO_AVAILABLE:
+        return JSONResponse(
+            {
+                "success": False,
+                "enabled": False,
+                "error": "ultralytics nu este instalat; rulează instalarea dependențelor",
+            },
+            status_code=503,
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    requested = bool(body.get("enabled", not _yolo_enabled))
+    if requested and _get_yolo_model() is None:
+        return JSONResponse(
+            {
+                "success": False,
+                "enabled": False,
+                "error": f"modelul {YOLO_MODEL_SIZE}.pt nu poate fi încărcat",
+            },
+            status_code=503,
+        )
+    _yolo_enabled = requested
+    if not requested:
+        payload = _reset_semantic_objects(_resolve_map_path(loaded_map_path))
+        await broadcast(payload)
+    return {
+        "success": True,
+        "enabled": _yolo_enabled,
+        "model": YOLO_MODEL_SIZE,
+        "model_path": _yolo_model_path(),
+    }
+
+
+@app.get("/api/yolo/status")
+async def get_yolo_status():
+    return {
+        "available": _YOLO_AVAILABLE,
+        "enabled": _yolo_enabled,
+        "model": YOLO_MODEL_SIZE,
+        "model_loaded": _yolo_model is not None,
+        "model_path": _yolo_model_path(),
+    }
+
+
+@app.get("/api/semantic/objects")
+async def get_semantic_objects():
+    return {"success": True, **_semantic_object_payload()}
+
+
+@app.delete("/api/semantic/objects")
+async def clear_semantic_objects():
+    payload = _reset_semantic_objects(_resolve_map_path(loaded_map_path))
+    await broadcast(payload)
+    return {"success": True, **payload}
+
 @app.get("/")
-async def get_dashboard(): return FileResponse(str(FRONTEND_DIR / "index.html"))
+async def get_dashboard():
+    # Frontendul conține logica de siguranță și tokenul de storage pe versiune;
+    # nu permitem browserului să păstreze o copie veche după restart.
+    return FileResponse(
+        str(FRONTEND_DIR / "index.html"),
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 @app.on_event("startup")
 async def startup_event():
@@ -3767,6 +4440,7 @@ async def startup_event():
     threading.Thread(target=camera_receiver_thread, daemon=True).start()
     asyncio.create_task(map_broadcast_loop())
     asyncio.create_task(teleop_watchdog_loop())
+    asyncio.create_task(semantic_object_aging_loop())
 
 
 @app.on_event("shutdown")

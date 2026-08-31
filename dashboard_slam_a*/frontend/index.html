@@ -33,6 +33,26 @@
     }
     
     .pip-video-feed img { width: 100%; height: 100%; object-fit: cover; }
+    .pip-yolo-controls {
+      position:absolute; top:5px; left:5px; right:5px; z-index:2;
+      display:flex; justify-content:space-between; align-items:center; gap:5px;
+      pointer-events:none;
+    }
+    .pip-yolo-status, .pip-yolo-button {
+      color:#e2e8f0; background:rgba(2,6,23,0.84);
+      border:1px solid rgba(148,163,184,0.42); border-radius:5px;
+      font-size:0.62rem;
+    }
+    .pip-yolo-status { padding:3px 5px; }
+    .pip-yolo-status.active { color:#fecaca; border-color:#ef4444; }
+    .pip-yolo-button { padding:3px 6px; cursor:pointer; pointer-events:auto; }
+    .pip-yolo-button:disabled { opacity:0.55; cursor:wait; }
+    .semantic-object-status {
+      position:absolute; top:12px; left:12px; z-index:90;
+      padding:5px 9px; border:1px solid rgba(168,85,247,0.55);
+      border-radius:6px; background:rgba(2,6,23,0.84);
+      color:#d8b4fe; font-size:0.7rem; pointer-events:none;
+    }
 
     .map-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .map-filter-control { display:flex; flex-direction:column; gap:3px; min-width:0; }
@@ -88,6 +108,7 @@
           Executor mișcare
           <select id="nav-executor" style="padding:7px; border-radius:4px; border:1px solid var(--border); background:#0f172a; color:white;">
             <option id="nav-executor-native-option" value="native_1102" selected>Unitree nativ 1102</option>
+            <option value="local_velocity">Controller local sigur — ICP LiDAR + SetVelocity</option>
           </select>
         </label>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
@@ -220,7 +241,7 @@
           <button class="btn" onclick="refreshMapList()" style="background:#334155; color:white; font-size:0.75rem;">🔄</button>
         </div>
         <button class="btn btn-full" id="load-map-btn" onclick="loadRobotMap()" style="background:#059669; color:white; font-size:0.75rem;">📍 Afișează și indexează harta</button>
-        <button class="btn btn-full" id="unload-map-btn" onclick="clearDisplayedMap()" title="Golește numai afișarea 3D; harta, localizarea și fișierul PCD rămân active" style="background:#dc2626; color:white; font-size:0.75rem;">⌫ Șterge harta din afișare</button>
+        <button type="button" class="btn btn-full" id="unload-map-btn" onclick="clearDisplayedMap()" title="Golește numai afișarea 3D; harta, localizarea și fișierul PCD rămân active" style="background:#dc2626; color:white; font-size:0.75rem;">⌫ Șterge harta din afișare</button>
         <button class="btn btn-full" onclick="openCostmap2D()" style="background:#b45309; color:white; font-size:0.72rem;">🧱 Vezi costmap 2D</button>
         <button class="btn btn-full" onclick="startRelocationRobot()" style="background:#3b82f6; color:white; font-size:0.72rem; margin-top: 2px;">⚡ Reverifică localizarea aleasă</button>
         
@@ -259,7 +280,7 @@
 
         <div style="margin: 10px 0; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px; border: 1px solid var(--border);">
           <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 4px;">
-            <span>Viteză manuală (navigarea este limitată la 0,22 m/s):</span>
+            <span>Viteză mers/Nav A* (limită indoor 0,35 m/s):</span>
             <b id="linear-speed-val">0.30</b>
           </div>
           <input type="range" id="linear-speed-input" min="0.10" max="1.00" step="0.05" value="0.30" style="width: 100%; margin-bottom: 8px; cursor: pointer;" oninput="updateSpeedSettings()" />
@@ -297,10 +318,24 @@
     
     <div class="viewport-container">
       <div id="view-3d" style="width:100%; height:100%"><canvas id="canvas-3d"></canvas></div>
+
+      <div class="obstacle-legend" aria-label="Legendă obstacole live">
+        <div class="obstacle-legend-title">Obstacole live</div>
+        <div class="obstacle-legend-item"><i class="obstacle-legend-swatch detected"></i><span>Roșu — obstacol măsurat de LiDAR</span></div>
+        <div class="obstacle-legend-item"><i class="obstacle-legend-swatch blocked"></i><span>Portocaliu — zonă interzisă robotului</span></div>
+        <div class="obstacle-legend-item"><i class="obstacle-legend-swatch comfort"></i><span>Galben — marjă de precauție</span></div>
+        <div class="obstacle-legend-item"><i class="obstacle-legend-swatch camera"></i><span>Mov — obstacol detectat de cameră</span></div>
+        <div class="obstacle-legend-item"><i class="obstacle-legend-swatch unknown"></i><span>Gri — sursă neclasificată</span></div>
+      </div>
+      <div id="semantic-object-status" class="semantic-object-status">🪑 0 obiecte 3D</div>
       
       <div class="pip-video-feed">
         <img id="live-video-feed" src="" style="display:none;">
         <div id="video-placeholder" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; color:var(--text-secondary); text-align:center; padding:10px;">Aștept RealSense (5005)</div>
+        <div class="pip-yolo-controls">
+          <span id="pip-yolo-status" class="pip-yolo-status">YOLO oprit</span>
+          <button id="pip-yolo-button" class="pip-yolo-button" onclick="toggleYolo()">Pornește YOLO</button>
+        </div>
       </div>
 
       <div class="map-overlay-info" style="bottom: 20px; left: 20px;">Rotește: Click Stânga | Pan: Click Dreapta | Zoom: Scroll</div>
@@ -355,7 +390,9 @@
 </div>
 
 <script>
-const TOKEN_STORAGE_KEY = 'g1_dashboard_token';
+// Cheie separată pe versiune, adresă și pagină. Astfel V24 nu reutilizează
+// accidental tokenul unui alt dashboard deschis în același browser.
+const TOKEN_STORAGE_KEY = `g1_dashboard_v24_token:${window.location.host}${window.location.pathname}`;
 let CONTROL_TOKEN = sessionStorage.getItem(TOKEN_STORAGE_KEY) || '';
 if (!CONTROL_TOKEN) {
   CONTROL_TOKEN = window.prompt('Introdu tokenul afișat în terminalul dashboardului:') || '';
@@ -388,18 +425,67 @@ const S = {
   robotVisual: null, robotFallback: null,
   headingArrow: null, poseArrow: null, goalMarker: null,
   routeLine: null, routePoints: null,
-  dynamicCostmapMesh: null,
+  dynamicCostmapMesh: null, semanticObjectGroup: null,
+  semanticObjectVisuals: new Map(),
   loadedMapMesh: null,
   rawSlamPoints: [], rawLoadedMapPoints: [],
   visibleSlamPoints: 0, visibleLoadedMapPoints: 0,
   floorPlane: null, floorPlaneSignature: null, floorPlaneSource: null
 };
-const MAP_DISPLAY_STORAGE_KEY = 'g1_map_display_suppressed';
+let yoloEnabled = false;
+let yoloTogglePending = false;
+let latestSemanticObjectMessage = null;
+
+function updateYoloUI(enabled, detections = []) {
+  yoloEnabled = Boolean(enabled);
+  const status = document.getElementById('pip-yolo-status');
+  const button = document.getElementById('pip-yolo-button');
+  if (status) {
+    status.classList.toggle('active', yoloEnabled);
+    status.textContent = yoloEnabled ? `YOLO activ · ${detections.length}` : 'YOLO oprit';
+  }
+  if (button && !yoloTogglePending) {
+    button.textContent = yoloEnabled ? 'Oprește YOLO' : 'Pornește YOLO';
+  }
+}
+
+async function refreshYoloStatus() {
+  try {
+    const response = await fetch(API_BASE + '/api/yolo/status');
+    const data = await response.json();
+    updateYoloUI(Boolean(data.enabled), []);
+  } catch (_) {
+    updateYoloUI(false, []);
+  }
+}
+
+async function toggleYolo() {
+  if (yoloTogglePending) return;
+  yoloTogglePending = true;
+  const button = document.getElementById('pip-yolo-button');
+  if (button) { button.disabled = true; button.textContent = 'Se procesează...'; }
+  try {
+    const response = await fetch(API_BASE + '/api/yolo/toggle', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({enabled:!yoloEnabled}),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Eroare YOLO');
+    yoloEnabled = Boolean(data.enabled);
+  } catch (error) {
+    window.alert(`Eroare YOLO: ${error.message || error}`);
+  } finally {
+    yoloTogglePending = false;
+    if (button) button.disabled = false;
+    updateYoloUI(yoloEnabled, []);
+  }
+}
+const MAP_DISPLAY_STORAGE_KEY = `g1_dashboard_v24_map_hidden:${window.location.host}${window.location.pathname}`;
 let mapDisplaySuppressed = sessionStorage.getItem(MAP_DISPLAY_STORAGE_KEY) === '1';
 let costmapView = {data: null, zoom: 1};
 let latestPoseSource = null;
-const COSTMAP_DEFAULTS = {resolution:0.08,minPoints:3,minZ:0.15,maxZ:1.85,radius:0.25,
-  comfortRadius:0.65,clearanceWeight:6.0,floorTolerance:0.08,levelFloor:true};
+const COSTMAP_DEFAULTS = {resolution:0.10,minPoints:3,minZ:0.15,maxZ:1.85,radius:0.25,
+  comfortRadius:0.50,clearanceWeight:3.5,floorTolerance:0.08,levelFloor:true};
 
 function readCostmapSettings() {
   const settings = {
@@ -469,10 +555,176 @@ function worldToThree(x, y)   { return { tx: x, tz: -y }; }
 function threeToWorld(tx, tz) { return { x: tx, y: -tz }; }
 function yawToThreeRotation(yaw) { return (yaw + YAW_OFFSET) - Math.PI / 2; }
 
+/** Aceeași transformare Z folosită de harta PCD nivelată în viewer. */
+function mapZToVisual(x, y, z) {
+  const planeZ = mapViewFilters.floorLeveling && S.floorPlane
+    ? S.floorPlane.a * Number(x) + S.floorPlane.b * Number(y) + S.floorPlane.c
+    : 0;
+  const leveledZ = mapViewFilters.floorLeveling && S.floorPlane
+    ? Number(z) - planeZ
+    : Number(z);
+  return leveledZ + mapViewFilters.heightOffset;
+}
+
 /** Direcția unui yaw din lume, ca vector Three.js. */
 function headingVector(yaw) {
   const a = yaw + YAW_OFFSET;
   return new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)).normalize();
+}
+
+function semanticAgingColor(remaining, lifespan) {
+  const ratio=Math.max(0,Math.min(1,Number(remaining)/Math.max(0.1,Number(lifespan))));
+  return ratio>0.5?'#c084fc':ratio>0.25?'#f59e0b':'#ef4444';
+}
+
+function updateSemanticLabel(sprite, text, remaining, lifespan) {
+  const canvas=sprite?.userData?.canvas;
+  if (!canvas) return;
+  const context=canvas.getContext('2d');
+  const left=Math.max(0,Number(remaining)||0);
+  const total=Math.max(0.1,Number(lifespan)||10);
+  const color=semanticAgingColor(left,total);
+  context.clearRect(0,0,canvas.width,canvas.height);
+  context.fillStyle='rgba(15,5,30,0.94)'; context.strokeStyle=color; context.lineWidth=5;
+  context.fillRect(4,4,canvas.width-8,canvas.height-8);
+  context.strokeRect(4,4,canvas.width-8,canvas.height-8);
+  context.fillStyle='#fff'; context.font='bold 30px Inter,sans-serif';
+  context.textAlign='left'; context.textBaseline='middle'; context.fillText(text,18,34);
+  context.fillStyle=color; context.font='bold 23px JetBrains Mono,monospace';
+  context.textAlign='right'; context.fillText(`${left.toFixed(1)}s`,canvas.width-18,34);
+  context.fillStyle='rgba(255,255,255,0.16)'; context.fillRect(18,70,canvas.width-36,16);
+  context.fillStyle=color; context.fillRect(18,70,(canvas.width-36)*Math.min(1,left/total),16);
+  sprite.material.map.needsUpdate=true;
+}
+
+function createSemanticLabel(text, remaining, lifespan) {
+  const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=96;
+  const texture=new THREE.CanvasTexture(canvas);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));
+  sprite.userData.canvas=canvas; sprite.scale.set(1.55,0.29,1); sprite.renderOrder=20;
+  updateSemanticLabel(sprite,text,remaining,lifespan);
+  return sprite;
+}
+
+function clearSemanticObjectScene() {
+  if (!S.semanticObjectGroup) return;
+  S.semanticObjectGroup.traverse(object=>{
+    if (object.geometry) object.geometry.dispose();
+    const materials=Array.isArray(object.material)?object.material:[object.material];
+    materials.filter(Boolean).forEach(material=>{
+      if (material.map) material.map.dispose();
+      material.dispose();
+    });
+  });
+  S.semanticObjectGroup.clear();
+  S.semanticObjectVisuals.clear();
+}
+
+function renderSemanticObjects(message) {
+  latestSemanticObjectMessage=message;
+  const status=document.getElementById('semantic-object-status');
+  if (!message.calibration_available) {
+    if (status) {
+      status.textContent=`⚠ Calibrare 3D indisponibilă: ${message.calibration_error||'necunoscut'}`;
+      status.style.color='#fbbf24';
+    }
+    clearSemanticObjectScene();
+    return;
+  }
+  const objects=Array.isArray(message.objects)?message.objects:[];
+  if (status) {
+    const lidarConfirmed=objects.filter(item=>item.lidar_supported).length;
+    status.textContent=objects.length
+      ? `🪑 ${objects.length} ${objects.length===1?'scaun 3D':'obiecte 3D'} · LiDAR ${lidarConfirmed}/${objects.length}`
+      : '🪑 0 obiecte 3D · aștept YOLO + depth + LiDAR';
+    status.style.color='#d8b4fe';
+  }
+  if (!S.semanticObjectGroup) return;
+  clearSemanticObjectScene();
+  const lifespan=Math.max(1,Number(message.lifespan_s)||10);
+  objects.forEach(item=>{
+    const visuals=[];
+    const positions=[],colors=[];
+    (Array.isArray(item.points)?item.points:[]).forEach(point=>{
+      const x=Number(point.x),y=Number(point.y),z=Number(point.z);
+      if (![x,y,z].every(Number.isFinite)) return;
+      const mapped=worldToThree(x,y);
+      positions.push(mapped.tx,mapZToVisual(x,y,z),mapped.tz);
+      colors.push(Number(point.r||180)/255,Number(point.g||180)/255,Number(point.b||180)/255);
+    });
+    if (positions.length) {
+      const geometry=new THREE.BufferGeometry();
+      geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+      geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+      const cloud=new THREE.Points(geometry,new THREE.PointsMaterial({
+        size:0.028,vertexColors:true,sizeAttenuation:true,transparent:true,opacity:0.93,
+      }));
+      S.semanticObjectGroup.add(cloud); visuals.push(cloud);
+    }
+    const minimum=item.bounds?.min,maximum=item.bounds?.max;
+    if (!minimum||!maximum) return;
+    const sizeX=Math.max(0.08,Number(maximum.x)-Number(minimum.x));
+    const sizeY=Math.max(0.08,Number(maximum.y)-Number(minimum.y));
+    const sizeZ=Math.max(0.08,Number(maximum.z)-Number(minimum.z));
+    const centerX=(Number(minimum.x)+Number(maximum.x))/2;
+    const centerY=(Number(minimum.y)+Number(maximum.y))/2;
+    const centerRawZ=(Number(minimum.z)+Number(maximum.z))/2;
+    const centerZ=mapZToVisual(centerX,centerY,centerRawZ);
+    const center=worldToThree(centerX,centerY);
+    const boxGeometry=new THREE.BoxGeometry(sizeX,sizeZ,sizeY);
+    const volume=new THREE.Mesh(boxGeometry,new THREE.MeshBasicMaterial({
+      color:0xa855f7,transparent:true,opacity:0.07,depthWrite:false,side:THREE.DoubleSide,
+    }));
+    volume.position.set(center.tx,centerZ,center.tz);
+    S.semanticObjectGroup.add(volume); visuals.push(volume);
+    const remaining=Math.max(0,Number(item.expires_in_s??lifespan));
+    const outlineMaterial=new THREE.LineBasicMaterial({
+      color:semanticAgingColor(remaining,lifespan),transparent:true,opacity:0.98,
+    });
+    const outline=new THREE.LineSegments(new THREE.EdgesGeometry(boxGeometry.clone()),outlineMaterial);
+    outline.position.copy(volume.position);
+    S.semanticObjectGroup.add(outline); visuals.push(outline);
+    const labelText=`${item.name||`${item.label||'object'} ${item.id||''}`.trim()}${item.lidar_supported?' · LiDAR':''}`;
+    const label=createSemanticLabel(labelText,remaining,lifespan);
+    label.position.set(
+      center.tx,
+      mapZToVisual(centerX,centerY,Number(maximum.z))+0.18,
+      center.tz
+    );
+    S.semanticObjectGroup.add(label); visuals.push(label);
+    S.semanticObjectVisuals.set(String(item.id),{
+      objects:visuals,label,labelText,outlineMaterial,
+      initialRemaining:remaining,lifespan,receivedAt:performance.now(),
+    });
+  });
+}
+
+function updateSemanticObjectAging() {
+  if (!S.semanticObjectVisuals?.size) return;
+  const now=performance.now(); let visible=0,minRemaining=Infinity;
+  S.semanticObjectVisuals.forEach(item=>{
+    const remaining=Math.max(0,item.initialRemaining-(now-item.receivedAt)/1000);
+    item.objects.forEach(object=>{object.visible=remaining>0;});
+    if (remaining<=0) return;
+    visible+=1; minRemaining=Math.min(minRemaining,remaining);
+    updateSemanticLabel(item.label,item.labelText,remaining,item.lifespan);
+    item.outlineMaterial.color.set(semanticAgingColor(remaining,item.lifespan));
+  });
+  const status=document.getElementById('semantic-object-status');
+  if (status) status.textContent=visible
+    ? `🪑 ${visible} ${visible===1?'scaun 3D':'obiecte 3D'} · memorie ${minRemaining.toFixed(1)}s`
+    : '🪑 0 obiecte 3D';
+}
+
+function pointInsideSemanticObject(point) {
+  const x=Number(point.x),y=Number(point.y);
+  return (latestSemanticObjectMessage?.objects||[]).some(item=>{
+    if (Number(item.expires_in_s||0)<=0) return false;
+    const minimum=item.bounds?.min,maximum=item.bounds?.max;
+    return minimum&&maximum
+      && x>=Number(minimum.x)-0.10&&x<=Number(maximum.x)+0.10
+      && y>=Number(minimum.y)-0.10&&y<=Number(maximum.y)+0.10;
+  });
 }
 
 /** Singurul loc din care se mișcă/rotește marcatorul robotului. */
@@ -512,7 +764,7 @@ function initWS() {
       }
       setRealtimeScanUI(!msg.scan_paused);
       if (Array.isArray(msg.slam_points)) {
-        document.getElementById('stat-pts').textContent = msg.slam_points.length;
+        document.getElementById('stat-pts').textContent = mapDisplaySuppressed ? '0' : msg.slam_points.length;
         renderSlamCloud(msg.slam_points);
       }
     } else if (msg.type === 'pose') {
@@ -541,7 +793,13 @@ function initWS() {
         document.getElementById('live-video-feed').style.display = 'block';
         document.getElementById('video-placeholder').style.display = 'none';
       }
+      updateYoloUI(
+        Boolean(msg.yolo_enabled),
+        Array.isArray(msg.yolo_detections) ? msg.yolo_detections : []
+      );
       renderRealSensePoints(msg.points);
+    } else if (msg.type === 'semantic_objects') {
+      renderSemanticObjects(msg);
     } else if (msg.type === 'map_reset') {
       S.rawSlamPoints = [];
       S.visibleSlamPoints = 0;
@@ -553,6 +811,14 @@ function initWS() {
       document.getElementById('stat-pts').textContent = "0";
       renderDynamicCostmap([]);
     } else if (msg.type === 'loaded_map_points') {
+      // Mesajul complet este tranzacția de înlocuire; abia acum eliminăm
+      // geometria veche. Nu există o fereastră în care un `cleared` separat
+      // poate lăsa viewerul gol dacă payloadul mare întârzie.
+      if (msg.replace && S.loadedMapMesh) {
+        const previousGeometry = S.loadedMapMesh.geometry;
+        S.loadedMapMesh.geometry = new THREE.BufferGeometry();
+        if (previousGeometry) previousGeometry.dispose();
+      }
       renderLoadedMap(msg.points);
       const out = document.getElementById('status-result');
       if (out && !mapDisplaySuppressed) out.textContent = `Hartă încărcată: ${msg.points.length} puncte (${msg.path || ''})\nSetează poziția inițială pentru convergența LiDAR–PCD.`;
@@ -606,7 +872,7 @@ function initWS() {
 
 function updateNavigationStatus(msg) {
   const out = document.getElementById('nav-result');
-  const labels = {idle:'pregătit', planning:'verifică drumul direct / calculează A*', stopped_replanning:'OPRIT — ruta veche invalidată', validating_replan:'OPRIT — validează ruta nouă', replanning:'recalculează automat și ocolește', lateral_positioning:'repoziționare laterală unică', lateral_evading:'execută pas lateral controlat', retrying_waypoint:'reîncearcă waypoint-ul — fără obstacol detectat', waiting_obstacle:'OPRIT — caută automat o ocolire sigură', waiting_sensor:'OPRIT — așteaptă senzorii', starting:msg.executor==='local_velocity'?'așteaptă acceptarea primei comenzi locale':'așteaptă confirmarea SLAM', navigating:msg.executor==='local_velocity'?'controller local urmărește ruta':'navighează pe waypoint-uri 1102', arrived:'ajuns', failed:'eșuat', cancelled:'oprit', paused:'pauză'};
+  const labels = {idle:'pregătit', planning:'verifică drumul direct / calculează A*', stopped_replanning:'OPRIT — ruta veche invalidată', validating_replan:'OPRIT — validează ruta nouă', replanning:'recalculează automat și ocolește', lateral_positioning:'repoziționare laterală unică', lateral_evading:'execută pas lateral controlat', retrying_waypoint:'reîncearcă waypoint-ul — fără obstacol detectat', waiting_obstacle:'OPRIT — caută automat o ocolire sigură', waiting_sensor:'OPRIT — așteaptă senzorii', waiting_localization:'OPRIT — reconfirmă localizarea', starting:msg.executor==='local_velocity'?'așteaptă acceptarea primei comenzi locale':'așteaptă confirmarea SLAM', navigating:msg.executor==='local_velocity'?'controller local urmărește ruta':'navighează pe waypoint-uri 1102', arrived:'ajuns', failed:'eșuat', cancelled:'oprit', paused:'pauză'};
   const pose = msg.pose ? `\nPoziție: (${msg.pose.x.toFixed(2)}, ${msg.pose.y.toFixed(2)})` : '';
   const error = msg.error ? `\nMotiv: ${msg.error}` : '';
   const dynamicPoints=Array.isArray(msg.dynamic_costmap) ? msg.dynamic_costmap : [];
@@ -624,7 +890,7 @@ function updateNavigationStatus(msg) {
     : msg.motion_mode==='startup_forward' ? '\nMișcare: pornire stabilizată (0,15 m/s)' : '';
   out.textContent = `Stare: ${labels[msg.state] || msg.state}${pose}${error}${dynamic}${obstacleMode}${movement}`;
   out.style.color = msg.state === 'arrived' ? '#22c55e' : msg.state === 'failed' ? '#ef4444' : 'var(--text-secondary)';
-  document.getElementById('nav-start-btn').disabled = ['planning', 'stopped_replanning', 'validating_replan', 'replanning', 'lateral_positioning', 'lateral_evading', 'retrying_waypoint', 'waiting_obstacle', 'waiting_sensor', 'starting', 'navigating'].includes(msg.state);
+  document.getElementById('nav-start-btn').disabled = ['planning', 'stopped_replanning', 'validating_replan', 'replanning', 'lateral_positioning', 'lateral_evading', 'retrying_waypoint', 'waiting_obstacle', 'waiting_sensor', 'waiting_localization', 'starting', 'navigating'].includes(msg.state);
 }
 
 function showNavigationPreview(data, source = 'manual') {
@@ -635,7 +901,7 @@ function showNavigationPreview(data, source = 'manual') {
     : source === 'replace' ? 'Taskul anterior a fost oprit. Ruta înlocuitoare este pregătită.'
     : 'Ruta este doar previzualizată — robotul NU se mișcă.';
   const activeRadius = Number(data.costmap_settings?.radius ?? 0.20);
-  const comfortRadius = Number(data.costmap_settings?.comfort_radius ?? 0.65);
+  const comfortRadius = Number(data.costmap_settings?.comfort_radius ?? 0.50);
   const clearance = data.clearance_mode === 'narrow'
     ? `\n⚠ Mod CULOAR ÎNGUST: rază hard ${activeRadius.toFixed(2)} m și viteză redusă automat.`
     : data.clearance_mode === 'safe'
@@ -723,7 +989,15 @@ async function startAutonomousNavigation() {
   });
   const data = await response.json();
   if (!data.success) {
-    out.textContent = `Eroare: ${data.error || 'ruta nu a putut fi calculată'}`;
+    if (data.recommended_executor === 'local_velocity' && data.local_controller_ready) {
+      const executorSelect = document.getElementById('nav-executor');
+      executorSelect.value = 'local_velocity';
+      out.textContent = `${data.error || 'Poziția nativă 1102 lipsește'}\n` +
+        'Controller local sigur a fost selectat. Apasă din nou „Previzualizează ruta”; robotul nu pornește fără confirmarea ta.';
+      refreshNavigationSensorReadiness();
+    } else {
+      out.textContent = `Eroare: ${data.error || 'ruta nu a putut fi calculată'}`;
+    }
     diagnosticsOut.textContent = `Diagnostic planificare:\n${JSON.stringify(data.diagnostics || {}, null, 2)}`;
     diagnosticsOut.style.display = 'block';
     document.getElementById('nav-start-btn').disabled = false;
@@ -770,9 +1044,11 @@ async function refreshNavigationSensorReadiness() {
     const anchorCorrectionLabel = anchorCorrection
       ? ` · corecție inițială ${Number(anchorCorrection.distance || 0).toFixed(2)}m/${(Number(anchorCorrection.dyaw || 0) * 180 / Math.PI).toFixed(1)}°`
       : '';
-    const localLidarLabel = localLidar.ready
-      ? `✓ ICP LiDAR score=${Number(localLidar.score || 0).toFixed(3)} inliers=${localLidar.inliers || 0}${anchorCorrectionLabel}`
-      : `✕ ICP LiDAR ${localLidar.error || 'neinițializat'}`;
+    const localLidarLabel = executor === 'native_1102'
+      ? 'ICP LiDAR local: rezervă (1102 folosește pos_info nativ)'
+      : (localLidar.ready
+          ? `✓ ICP LiDAR score=${Number(localLidar.score || 0).toFixed(3)} inliers=${localLidar.inliers || 0}${anchorCorrectionLabel}`
+          : `✕ ICP LiDAR ${localLidar.error || 'neinițializat'}`);
     const localCoreReady = Boolean(
       data.checks?.localization_fresh && data.checks?.local_velocity_sdk_available
     );
@@ -791,7 +1067,7 @@ async function refreshNavigationSensorReadiness() {
           : 'local sigur ✕')
       : `1102 ${selectedExecutorReady ? '✓' : '✕'}`;
     element.textContent = `Protecție autonomie: ${camera} · ${lidar}${nav2Label}\n` +
-      `Poziție UI: ${displaySource} · ${localLidarLabel}\n1102 nativ: ${nativeReady ? '✓ pregătit' : `✕ ${nativeController}`} · ` +
+      `Poziție UI: ${displaySource} · ${localLidarLabel}\n1102 nativ: ${nativeReady ? '✓ poziție nativă recentă' : `✕ ${nativeController}`} · ` +
       `executor ales: ${executorState}${fsmLabel}`;
     element.style.whiteSpace = 'pre-line';
     const fullyReady = ready && nav2Ready && selectedExecutorReady;
@@ -1210,6 +1486,10 @@ function init3D() {
   S.dynamicCostmapMesh.visible = false;
   S.scene.add(S.dynamicCostmapMesh);
 
+  S.semanticObjectGroup = new THREE.Group();
+  S.scene.add(S.semanticObjectGroup);
+  if (latestSemanticObjectMessage) renderSemanticObjects(latestSemanticObjectMessage);
+
   window.addEventListener('resize', () => {
     S.camera.aspect = area.clientWidth / area.clientHeight; S.camera.updateProjectionMatrix();
     S.renderer.setSize(area.clientWidth, area.clientHeight);
@@ -1376,8 +1656,9 @@ function clearMapVisualization(suppressUpdates = true) {
   S.floorPlaneSource = null;
   for (const mesh of [S.pointsMesh, S.loadedMapMesh]) {
     if (!mesh) continue;
-    mesh.geometry.removeAttribute('position');
-    mesh.geometry.removeAttribute('color');
+    const previousGeometry = mesh.geometry;
+    mesh.geometry = new THREE.BufferGeometry();
+    if (previousGeometry) previousGeometry.dispose();
     mesh.geometry.setDrawRange(0, 0);
     mesh.visible = false;
   }
@@ -1390,8 +1671,8 @@ function clearMapVisualization(suppressUpdates = true) {
 function enableMapVisualization() {
   mapDisplaySuppressed = false;
   sessionStorage.removeItem(MAP_DISPLAY_STORAGE_KEY);
-  if (S.pointsMesh) S.pointsMesh.visible = mapViewFilters.liveVisible;
-  if (S.loadedMapMesh) S.loadedMapMesh.visible = mapViewFilters.loadedVisible;
+  if (S.pointsMesh) S.pointsMesh.visible = !mapDisplaySuppressed && mapViewFilters.liveVisible;
+  if (S.loadedMapMesh) S.loadedMapMesh.visible = !mapDisplaySuppressed && mapViewFilters.loadedVisible;
 }
 
 function updateMapPointStats() {
@@ -1480,13 +1761,19 @@ function updateMapViewFilters() {
     mesh.material.opacity = mapViewFilters.opacity;
     mesh.material.needsUpdate = true;
   }
-  if (S.pointsMesh) S.pointsMesh.visible = mapViewFilters.liveVisible;
-  if (S.loadedMapMesh) S.loadedMapMesh.visible = mapViewFilters.loadedVisible;
+  if (S.pointsMesh) S.pointsMesh.visible = !mapDisplaySuppressed && mapViewFilters.liveVisible;
+  if (S.loadedMapMesh) S.loadedMapMesh.visible = !mapDisplaySuppressed && mapViewFilters.loadedVisible;
   if (S.cameraPointsMesh) S.cameraPointsMesh.visible = mapViewFilters.cameraVisible;
   const floorSource=S.rawLoadedMapPoints.length>=200 ? S.rawLoadedMapPoints : S.rawSlamPoints;
   autoAlignMapToFloor(floorSource, false);
   renderSlamCloud(S.rawSlamPoints);
   renderLoadedMap(S.rawLoadedMapPoints);
+  // Obiectele semantice sunt stocate în coordonate map brute, exact ca PCD-ul.
+  // După orice nivelare/ridicare vizuală le redesenăm cu aceeași transformare
+  // verticală; plannerul continuă să primească coordonatele originale.
+  if (latestSemanticObjectMessage) {
+    renderSemanticObjects(latestSemanticObjectMessage);
+  }
   updateFloorStatus();
 }
 
@@ -1577,7 +1864,10 @@ function renderNavigationPath(path, color = 0xfacc15) {
 function renderDynamicCostmap(points) {
   if (!S.dynamicCostmapMesh) return;
   const valid = Array.isArray(points) ? points.filter(point =>
-    Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y))) : [];
+    Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y))
+    // În interiorul volumului semantic afișăm reconstrucția 3D; păstrăm
+    // costurile/inflarea în planner, dar nu mai desenăm pata generică peste ea.
+    && !pointInsideSemanticObject(point)) : [];
   const positions = new Float32Array(valid.length * 3);
   const colors=new Float32Array(valid.length*3);
   valid.forEach((point, index) => {
@@ -1585,10 +1875,15 @@ function renderDynamicCostmap(points) {
     positions[index * 3] = world.tx;
     positions[index * 3 + 1] = 0.10;
     positions[index * 3 + 2] = world.tz;
-    const color=point.source?.endsWith('_comfort') ? [1.00,0.72,0.10]
-      : point.source==='lidar' ? [1.00,0.55,0.08]
-      : point.source==='camera' ? [0.95,0.20,0.55]
-      : [0.94,0.27,0.27];
+    const source = String(point.source || 'sensor');
+    // Keep the measured object visually distinct from the planner's two
+    // surrounding safety regions. This makes the live overlay readable at a
+    // glance instead of displaying one ambiguous orange blob.
+    const color = source.endsWith('_comfort') ? [1.00, 0.84, 0.04]
+      : source === 'lidar_raw' ? [1.00, 0.18, 0.18]
+      : source === 'lidar' ? [1.00, 0.54, 0.00]
+      : source === 'camera' ? [0.75, 0.15, 0.83]
+      : [0.58, 0.64, 0.72];
     colors[index*3]=color[0]; colors[index*3+1]=color[1]; colors[index*3+2]=color[2];
   });
   S.dynamicCostmapMesh.geometry.dispose();
@@ -1880,6 +2175,8 @@ async function sendInitialPose(x, y, yaw) {
   }
   const out = document.getElementById('status-result');
   const mapName = document.getElementById('map-select').value || null;
+  const executorSelect = document.getElementById('nav-executor');
+  const useLocalController = executorSelect.value === 'local_velocity';
   out.textContent = 'Se repoziționează și se verifică cu datele live...';
   try {
     const res = await fetch(API_BASE + '/api/slam/relocalize', {
@@ -1887,8 +2184,8 @@ async function sendInitialPose(x, y, yaw) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         x, y, yaw, map_name: mapName,
-        local_only: false,
-        force_native: true
+        local_only: useLocalController,
+        force_native: !useLocalController
       })
     });
     const data = await res.json();
@@ -1914,8 +2211,15 @@ async function sendInitialPose(x, y, yaw) {
     } else {
       const failed = (data.steps || []).filter(s => !s.ok).map(s => `${s.step}: ${s.detail}`);
       const details = failed.length ? '\n' + failed.join('\n') : '';
-      if (data.local_controller_pose_ready || data.local_controller_anchor_ready) {
-        out.textContent = `❌ ${data.error || '1102 nativ indisponibil'}${details}\nProfilul A* stabil nu comută automat pe controllerul local.`;
+      if (data.recommended_executor === 'local_velocity' &&
+          (data.local_controller_pose_ready || data.local_controller_anchor_ready)) {
+        executorSelect.value = 'local_velocity';
+        const localState = data.local_controller_pose_ready
+          ? 'ICP LiDAR a convergat.'
+          : 'Ancora este instalată, dar ICP LiDAR încă trebuie reverificat.';
+        out.textContent = `❌ ${data.error || '1102 nativ indisponibil'}${details}\n` +
+          `Controller local sigur a fost selectat. ${localState} ` +
+          'Apasă „Reverifică localizarea aleasă”; robotul nu pornește automat.';
         refreshNavigationSensorReadiness();
       } else {
         out.textContent = `❌ ${data.error || 'Eroare'}${details}`;
@@ -2170,6 +2474,7 @@ function animate() {
   
   // Un singur punct de aplicare a regulii de orientare (vezi applyRobotPose).
   applyRobotPose(S.pose.x, S.pose.y, S.pose.yaw);
+  updateSemanticObjectAging();
   
   if (S.renderer) S.renderer.render(S.scene, S.camera);
   requestAnimationFrame(animate);
@@ -2316,12 +2621,12 @@ async function startRelocationRobot() {
 
 resetMapViewFilters(false);
 // Browserul poate restaura automat valoarea veche a unui <select> după reload.
-// Pornim deliberat pe calea verificată local; operatorul poate selecta manual
-// 1102 ulterior, când diagnosticul arată că localizarea nativă este pregătită.
+// Păstrăm deliberat 1102 ca implicit; fallbackul local devine activ numai după
+// selecția vizibilă în UI și o nouă previzualizare/confirmare a operatorului.
 document.getElementById('nav-driver').value = 'legacy';
 document.getElementById('nav-executor').value = 'native_1102';
 setTimeout(() => { init3D(); updateMapViewFilters(); }, 100);
-initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness();
+initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness(); refreshYoloStatus();
 setInterval(refreshNavigationSensorReadiness, 1000);
 </script>
 </body>

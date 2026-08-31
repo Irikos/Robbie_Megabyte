@@ -55,13 +55,31 @@ def main() -> int:
     parser.add_argument("--interface", default="enP8p1s0")
     parser.add_argument("--timeout", type=float, default=20.0)
     mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--status", action="store_true")
     mode.add_argument("--stop-native-sensors", action="store_true")
     mode.add_argument("--restart-slam", action="store_true")
     args = parser.parse_args()
 
     try:
         client = _client(args.interface, args.timeout)
-        if args.stop_native_sensors:
+        if args.status:
+            code, services = client.ServiceList()
+            if code != 0 or services is None:
+                raise RuntimeError(f"ServiceList a eșuat: {code}")
+            wanted = {"lidar_driver", "unitree_slam"}
+            states = {
+                service.name: ("ON" if int(service.status) == 0 else "OFF")
+                for service in services if service.name in wanted
+            }
+            missing = sorted(wanted - set(states))
+            if missing:
+                raise RuntimeError(f"servicii lipsă: {', '.join(missing)}")
+            print(
+                "[native-slam] " + " · ".join(
+                    f"{name}={states[name]}" for name in sorted(states)
+                ), flush=True,
+            )
+        elif args.stop_native_sensors:
             _set_and_wait(client, "unitree_slam", False, args.timeout)
             _set_and_wait(client, "lidar_driver", False, args.timeout)
             print("[native-slam] unitree_slam + lidar_driver OFF confirmate", flush=True)

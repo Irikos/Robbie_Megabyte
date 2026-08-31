@@ -14,11 +14,21 @@ from autonomous_navigation import (
 )
 
 
-def test_v24_astar_module_is_identical_to_v23_reference():
-    """Deadline profile: orice schimbare A* trebuie să fie explicită, nu accidentală."""
+def test_v24_astar_keeps_v23_core_with_explicit_live_route_extensions():
+    """V24 păstrează API-ul v23, dar adaugă ruta densă/live cerută."""
     current = Path(__file__).parents[1] / "autonomous_navigation.py"
     reference = Path(__file__).parents[3] / "dashboard_g1_v23" / "backend" / "autonomous_navigation.py"
-    assert current.read_bytes() == reference.read_bytes()
+    current_source = current.read_text(encoding="utf-8")
+    reference_source = reference.read_text(encoding="utf-8")
+
+    for symbol in (
+        "class PCDGridPlanner", "def plan_pcd_route",
+        "class NativeWaypointNavigator", "class AutonomousNavigator",
+    ):
+        assert symbol in current_source
+        assert symbol in reference_source
+    assert "LIVE_ROUTE_WAYPOINT_SPACING = 0.85" in current_source
+    assert "def _remaining_route_blocked" in current_source
 
 
 def write_pcd(path: Path, points):
@@ -93,9 +103,9 @@ def test_static_costmap_preview_returns_png_and_exact_parameters(tmp_path):
     png = base64.b64decode(preview["image_b64"])
 
     assert preview["success"] is True
-    assert preview["resolution"] == pytest.approx(0.08)
+    assert preview["resolution"] == pytest.approx(0.10)
     assert preview["clearance_radius"] == pytest.approx(0.25)
-    assert preview["comfort_radius"] == pytest.approx(0.65)
+    assert preview["comfort_radius"] == pytest.approx(0.50)
     assert preview["planner_filter"]["min_points_per_cell"] == 3
     assert preview["counts"]["raw_obstacle"] == 1
     assert preview["counts"]["inflated_buffer"] > 0
@@ -110,7 +120,7 @@ def test_static_costmap_preview_returns_png_and_exact_parameters(tmp_path):
     assert tuned["planner_filter"] == {
         "min_z": 0.05, "max_z": 2.00, "min_points_per_cell": 1,
         "level_to_floor": True, "floor_tolerance": 0.08,
-        "comfort_radius": 0.65, "clearance_weight": 6.00,
+            "comfort_radius": 0.50, "clearance_weight": 3.50,
     }
     assert tuned["width"] > preview["width"]
 
@@ -129,7 +139,7 @@ def test_navigation_costmap_clamps_unsafe_route_radius():
 
     assert settings["robot_radius"] == pytest.approx(0.20)
     assert settings["comfort_radius"] == pytest.approx(0.20)
-    assert settings["clearance_weight"] == pytest.approx(6.00)
+    assert settings["clearance_weight"] == pytest.approx(3.50)
 
 
 def test_navigation_speed_is_capped_for_stable_indoor_walk():
@@ -139,7 +149,7 @@ def test_navigation_speed_is_capped_for_stable_indoor_walk():
         "x": 1.0, "y": 2.0, "yaw": 0.0, "speed": 0.90, "timeout": 0.0,
     })
 
-    assert speed == pytest.approx(0.22)
+    assert speed == pytest.approx(0.35)
 
 
 def test_navigation_gesture_whitelist():
@@ -336,6 +346,75 @@ def test_lidar_cluster_requires_confirmation_and_survives_short_occlusion():
     assert guard.front_obstacle_shape() is None
 
 
+def test_two_separate_side_objects_leave_center_corridor_open():
+    from robot_client import ObstacleGuard
+
+    guard = ObstacleGuard()
+    guard.configure_navigation_map(
+        {"a": 0.0, "b": 0.0, "c": 0.0},
+        resolution=0.10, raw_static_cells=set(), robot_radius=0.20,
+    )
+    pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+    left_object = [
+        {"x": 0.60 + index * 0.006, "y": 0.48 + index * 0.004, "z": 0.45}
+        for index in range(8)
+    ]
+    right_object = [
+        {"x": 0.60 + index * 0.006, "y": -0.48 - index * 0.004, "z": 0.45}
+        for index in range(8)
+    ]
+    points = left_object + right_object
+
+    guard.update_lidar_points(points, pose)
+    guard.update_lidar_points(points, pose)
+
+    status = guard.sensor_status()
+    assert set(status["lidar_zones"]) == {"left", "right"}
+    assert status["lidar_zone_distances"]["left"] > 0.56
+    assert status["lidar_zone_distances"]["right"] > 0.56
+    assert not guard.is_navigation_blocked()
+    assert not guard.is_lateral_clear(1)
+    assert not guard.is_lateral_clear(-1)
+    assert guard.front_obstacle_shape() is not None
+
+
+def test_near_lidar_side_object_protects_hand_without_closing_wide_corridor():
+    from robot_client import ObstacleGuard
+
+    guard = ObstacleGuard()
+    guard.configure_navigation_map(
+        {"a": 0.0, "b": 0.0, "c": 0.0},
+        resolution=0.10, raw_static_cells=set(), robot_radius=0.20,
+    )
+    pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+    chair_corner = [
+        {"x": 0.24 + index * 0.004, "y": 0.38 + index * 0.004, "z": 0.65}
+        for index in range(8)
+    ]
+
+    guard.update_lidar_points(chair_corner, pose)
+    guard.update_lidar_points(chair_corner, pose)
+
+    status = guard.sensor_status()
+    assert status["lidar_zones"] == ["left"]
+    assert status["lidar_zone_distances"]["left"] < 0.56
+    assert guard.is_navigation_blocked()
+
+
+def test_dynamic_comfort_does_not_merge_objects_across_wide_gap():
+    planner = PCDGridPlanner(
+        resolution=0.05, robot_radius=0.25,
+        comfort_radius=0.65, clearance_weight=6.0,
+    )
+    planner.add_dynamic_points(
+        [(0.0, 0.0)], inflation_radius=0.30,
+        observed_at=10.0, source="lidar",
+    )
+
+    assert planner.world_to_cell(0.40, 0.0) in planner.dynamic_clearance_cost
+    assert planner.world_to_cell(0.50, 0.0) not in planner.dynamic_clearance_cost
+
+
 def test_navigation_camera_stops_before_center_or_hand_collision():
     from robot_client import ObstacleGuard
 
@@ -387,6 +466,24 @@ def test_autonomy_requires_both_realsense_and_lidar_fresh():
     status = guard.sensor_status()
     assert status["camera_fresh"] and status["lidar_fresh"]
     assert guard.navigation_sensors_ready()
+
+
+def test_lidar_does_not_flicker_stale_between_one_and_two_seconds(monkeypatch):
+    import robot_client
+
+    now = 100.0
+    monkeypatch.setattr(robot_client.time, "time", lambda: now)
+    guard = robot_client.ObstacleGuard()
+    guard.update({"center": {"level": "safe", "dist": 1.50}})
+    guard.update_lidar_points([], {"x": 0.0, "y": 0.0, "yaw": 0.0})
+
+    now = 101.5
+    assert guard.sensor_status()["lidar_fresh"] is True
+    assert guard.navigation_sensors_ready() is True
+
+    now = 102.1
+    assert guard.sensor_status()["lidar_fresh"] is False
+    assert guard.navigation_sensors_ready() is False
 
 
 def test_navigation_preflight_reports_camera_and_lidar_separately():
@@ -764,7 +861,7 @@ def test_safe_corner_smoothing_stays_collision_free_and_removes_redundancy(tmp_p
     )
 
 
-def test_clear_direct_corridor_uses_one_command_instead_of_centerline_zigzag(tmp_path):
+def test_clear_direct_corridor_has_only_endpoints_and_no_centerline_zigzag(tmp_path):
     points = [
         (x / 10, y / 10, 0.0)
         for x in range(-20, 21) for y in range(-10, 11)
@@ -784,8 +881,7 @@ def test_clear_direct_corridor_uses_one_command_instead_of_centerline_zigzag(tmp
     route = planner.plan((-1.8, 0.50), (1.8, 0.50))
 
     assert len(route) == 2
-    assert route[0][1] == pytest.approx(0.50)
-    assert route[-1][1] == pytest.approx(0.50)
+    assert all(point[1] == pytest.approx(0.50) for point in route)
     assert all(
         planner._line_cells(
             planner.world_to_cell(*a), planner.world_to_cell(*b)
@@ -835,6 +931,143 @@ def test_side_waypoint_rotates_body_toward_travel_direction():
         [(0.0, 0.0), (0.0, 2.0), (2.0, 2.0)], pose
     )
     assert detour == [(0.0, 0.0), (0.0, 2.0), (2.0, 2.0)]
+
+
+def test_native_control_lookahead_skips_dense_collinear_commands():
+    class ClearPlanner:
+        @staticmethod
+        def segment_is_free(_start, _goal):
+            return True
+
+    async def command(*_args):
+        return {"success": True}
+
+    navigator = NativeWaypointNavigator(
+        lambda: {"x": 0.0, "y": 0.0, "yaw": 0.0}, lambda: True,
+        object(), command, command, command, lambda _event: asyncio.sleep(0),
+    )
+    navigator.planner = ClearPlanner()
+    dense = [(0.0, 0.0), (0.8, 0.0), (1.6, 0.0), (2.4, 0.0)]
+
+    assert navigator._select_control_waypoint_index(
+        dense, 1, {"x": 0.0, "y": 0.0, "yaw": 0.0}
+    ) == 3
+
+
+def test_future_obstacle_is_replanned_while_current_segment_keeps_moving():
+    class HealthyGuard:
+        @staticmethod
+        def navigation_sensors_ready():
+            return True
+
+        @staticmethod
+        def is_navigation_blocked():
+            return False
+
+    class DetourPlanner:
+        @staticmethod
+        def dynamic_costmap_points():
+            return []
+
+        @staticmethod
+        def segment_is_free(_start, _goal):
+            return True
+
+        @staticmethod
+        def plan(start, goal):
+            return [start, (1.0, 0.6), goal]
+
+    async def scenario():
+        pauses = []
+
+        async def pause(*_args):
+            pauses.append("pause")
+            return {"success": True}
+
+        navigator = NativeWaypointNavigator(
+            lambda: {"x": 0.0, "y": 0.0, "yaw": 0.0}, lambda: True,
+            HealthyGuard(), pause, pause, pause,
+            lambda _event: asyncio.sleep(0), poll_interval=0.005,
+        )
+        navigator.planner = DetourPlanner()
+        navigator.status["native_command_active"] = True
+
+        result = await navigator._replan_ahead_while_moving(
+            [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)], 1,
+            2.0, 0.0, 0,
+        )
+
+        assert result is not None
+        path, index, replans = result
+        assert path == [(0.0, 0.0), (1.0, 0.6), (2.0, 0.0)]
+        assert index == 2
+        assert replans == 1
+        assert pauses == []
+        assert navigator.status["error"] == (
+            "ocolire recalculată în mers; continui fără STOP"
+        )
+
+    asyncio.run(scenario())
+
+
+def test_native_finished_near_start_requires_real_progress():
+    # Cazul real: țintă de evitare la ~0,42 m și FINISHED la ~0,34 m după
+    # numai câțiva centimetri. Nu avem voie să sărim waypoint-ul lateral.
+    assert not NativeWaypointNavigator._native_completion_has_progress(
+        0.42, 0.34, 0.34
+    )
+    # După un segment lung, firmware-ul poate termina legitim la 0,5 m.
+    assert NativeWaypointNavigator._native_completion_has_progress(
+        1.80, 0.50, 0.50
+    )
+    assert NativeWaypointNavigator._native_completion_has_progress(
+        0.42, 0.25, 0.25
+    )
+
+
+def test_lidar_costmap_preserves_previous_chair_edge_until_ttl():
+    class ShapeGuard:
+        shape = None
+
+        def front_obstacle_shape(self):
+            return self.shape
+
+    async def command(*_args):
+        return {"success": True}
+
+    guard = ShapeGuard()
+    navigator = NativeWaypointNavigator(
+        lambda: {"x": 0.0, "y": 0.0, "yaw": 0.0}, lambda: True,
+        guard, command, command, command, lambda _event: asyncio.sleep(0),
+    )
+    planner = PCDGridPlanner(resolution=0.10, robot_radius=0.20)
+    navigator.planner = planner
+    guard.shape = {"points": [(1.0, 0.20)], "vector": (1.0, 0.20)}
+    navigator._sync_lidar_costmap(observed_at=10.0)
+    first_edge = planner.world_to_cell(1.0, 0.20)
+    guard.shape = {"points": [(1.0, -0.20)], "vector": (1.0, -0.20)}
+    navigator._sync_lidar_costmap(observed_at=10.1)
+    second_edge = planner.world_to_cell(1.0, -0.20)
+
+    assert first_edge in planner.dynamic_occupied
+    assert second_edge in planner.dynamic_occupied
+
+
+def test_corner_waypoint_uses_continuous_tangent_instead_of_second_rotation():
+    async def command(*_args):
+        return {"success": True}
+
+    navigator = NativeWaypointNavigator(
+        lambda: {"x": 0.0, "y": 0.0, "yaw": 0.0}, lambda: True,
+        object(), command, command, command, lambda _event: asyncio.sleep(0),
+    )
+
+    yaw = navigator._waypoint_yaw(
+        [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        1, {"x": 0.0, "y": 0.0, "yaw": math.pi}, 0.0,
+    )
+
+    assert yaw == pytest.approx(math.pi / 4)
 
 
 def test_departure_lateral_positioning_is_single_and_only_for_direct_diagonal():
@@ -1094,7 +1327,7 @@ def test_stagnation_without_lidar_retries_forward_without_lateral(tmp_path):
         assert result["success"]
         await navigator.task
 
-        assert navigator.status["state"] == "arrived"
+        assert navigator.status["state"] == "arrived", navigator.status
         assert navigator.status.get("stagnation_recoveries", 0) == 0
         assert lateral_commands == []
         assert waypoint_sends >= 2
@@ -1171,7 +1404,7 @@ def test_lidar_shape_has_soft_clearance_outside_blocked_cells(tmp_path):
     planner.add_dynamic_points(
         [(0.0, 0.0)], inflation_radius=0.25, observed_at=10.0
     )
-    soft_cell = planner.world_to_cell(0.50, 0.0)
+    soft_cell = planner.world_to_cell(0.40, 0.0)
 
     assert soft_cell not in planner.dynamic_occupied
     assert planner.dynamic_clearance_cost[soft_cell] > 0.0
@@ -1296,7 +1529,10 @@ def test_direct_first_ignores_soft_cost_when_hard_segment_is_clear():
 
     route = planner.plan((0.0, 0.0), (6.0, 0.0))
 
-    assert route == [(0.0, 0.0), (6.0, 0.0)]
+    assert route[0] == (0.0, 0.0)
+    assert route[-1] == (6.0, 0.0)
+    assert len(route) == 2
+    assert all(point[1] == pytest.approx(0.0) for point in route)
 
 
 def test_dynamic_obstacle_replans_around_blocked_straight_line(tmp_path):
@@ -1310,8 +1546,10 @@ def test_dynamic_obstacle_replans_around_blocked_straight_line(tmp_path):
     planner.add_dynamic_obstacle(0.0, 0.0, radius=0.58)
     detour = planner.plan((-2.0, 0.0), (2.0, 0.0))
 
-    # În spațiu liber 1102 primește direct destinația finală.
+    # În spațiu liber traseul este A→B. Apariția obstacolului invalidează
+    # segmentul complet și A* introduce doar colțurile ocolirii necesare.
     assert len(direct) == 2
+    assert all(y == pytest.approx(0.0) for _, y in direct)
     assert len(detour) > 2
     assert any(abs(y) >= 0.55 for _, y in detour[1:-1])
     assert all(planner.world_to_cell(*point) not in planner.occupied for point in detour)
@@ -1405,8 +1643,8 @@ def test_temporary_obstacle_is_cleared_and_original_route_resumes(tmp_path):
         assert not any(event["state"] == "awaiting_replan_confirmation" for event in events)
         # După pauza de siguranță reluăm 1202 înainte să trimitem noul 1102;
         # controllerul Unitree ignoră uneori țintele publicate cât este paused.
-        # Drumul drept de 1 m este acum o singură comandă, nu două segmente
-        # artificiale care pot introduce opriri și corecții de orientare.
+        # Dreapta este o singură comandă 1102 stabilă; LiDAR rasterizează
+        # segmentul complet, fără waypoint-uri artificiale.
         assert commands.count("1102") == 1
         assert commands[-1] == "1201"
         assert not planner.dynamic_occupied
@@ -1508,7 +1746,8 @@ def test_stagnation_retries_waypoint_without_virtual_obstacle(tmp_path):
 
         async def send_waypoint(x, y, _yaw, _speed):
             sends.append((x, y))
-            if len(sends) == 2:
+            # Fiecare segment răspunde numai la retry-ul său.
+            if len(sends) % 2 == 0:
                 pose.update({"x": x, "y": y})
             return {"success": True}
 
@@ -1534,7 +1773,9 @@ def test_stagnation_retries_waypoint_without_virtual_obstacle(tmp_path):
         assert result["success"]
         await navigator.task
 
-        assert navigator.status["state"] == "arrived"
+        assert navigator.status["state"] == "arrived", navigator.status
+        # 1 comandă de control + retry-ul ei; nu există punct intermediar
+        # artificial care să provoace încă un ciclu de oprire și rotație.
         assert len(sends) == 2
         assert resumes == ["1202"]
         assert not any(source == "stagnation" for source in planner.dynamic_sources.values())
@@ -2122,5 +2363,146 @@ def test_waypoint_feedback_ignores_one_short_sensor_gap(tmp_path):
         assert result["success"]
         assert hazard is None
         assert pauses == []
+
+    asyncio.run(scenario())
+
+
+def test_active_1102_is_resumed_without_resending_after_sensor_gap(tmp_path):
+    class GapGuard:
+        def __init__(self):
+            self.fresh = True
+
+        def navigation_sensors_ready(self):
+            return self.fresh
+
+        @staticmethod
+        def is_navigation_blocked():
+            return False
+
+        @staticmethod
+        def front_obstacle_shape():
+            return None
+
+    points = [
+        (x / 5, y / 5, 0.0)
+        for x in range(-10, 11) for y in range(-10, 11)
+    ]
+    map_path = tmp_path / "sensor_resume.pcd"
+    write_pcd(map_path, points)
+    planner = PCDGridPlanner(resolution=0.10, robot_radius=0.20)
+    planner.load(str(map_path))
+    route = planner.plan((0.0, 0.0), (1.0, 0.0))
+
+    async def scenario():
+        pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+        guard = GapGuard()
+        sends = []
+        resumes = []
+
+        async def create_gap(x, y):
+            await asyncio.sleep(0.02)
+            guard.fresh = False
+            await asyncio.sleep(0.35)
+            guard.fresh = True
+            await asyncio.sleep(0.03)
+            pose.update({"x": x, "y": y})
+
+        async def send_waypoint(x, y, _yaw, _speed):
+            sends.append((x, y))
+            asyncio.create_task(create_gap(x, y))
+            return {"success": True}
+
+        async def pause():
+            return {"success": True}
+
+        async def resume():
+            resumes.append("1202")
+            return {"success": True}
+
+        navigator = NativeWaypointNavigator(
+            lambda: dict(pose), lambda: True, guard,
+            send_waypoint, pause, resume, lambda _event: asyncio.sleep(0),
+            poll_interval=0.01, sensor_loss_timeout=1.0,
+        )
+        result = await navigator.start(
+            str(map_path), 1.0, 0.0, 0.0, timeout=2.0,
+            prepared_plan={
+                "planner": planner, "path": route,
+                "clearance_mode": "normal",
+            },
+        )
+        assert result["success"]
+        await navigator.task
+
+        assert navigator.status["state"] == "arrived"
+        assert sends == [(route[-1][0], route[-1][1])]
+        assert resumes == ["1202"]
+
+    asyncio.run(scenario())
+
+
+def test_native_localization_gap_requires_three_stable_samples_before_resume():
+    async def scenario():
+        checks = iter([False, False, True, True, True])
+        pauses = []
+        events = []
+
+        def localization_ok():
+            return next(checks, True)
+
+        async def pause():
+            pauses.append("1201")
+            return {"success": True}
+
+        navigator = NativeWaypointNavigator(
+            lambda: {"x": 0.0, "y": 0.0, "yaw": 0.0},
+            localization_ok,
+            object(),
+            lambda *_args: asyncio.sleep(0),
+            pause,
+            lambda: asyncio.sleep(0),
+            lambda event: events.append(event) or asyncio.sleep(0),
+            poll_interval=0.01,
+        )
+
+        await navigator._wait_for_localization_recovery(
+            time.monotonic() + 1.0, timeout=0.5,
+        )
+
+        assert pauses == ["1201"]
+        assert navigator.status["state"] == "navigating"
+        assert navigator.status["localization_recoveries"] == 1
+        assert [event["state"] for event in events] == [
+            "waiting_localization", "navigating",
+        ]
+
+    asyncio.run(scenario())
+
+
+def test_persistent_native_localization_loss_stays_stopped():
+    async def scenario():
+        pauses = []
+
+        async def pause():
+            pauses.append("1201")
+            return {"success": True}
+
+        navigator = NativeWaypointNavigator(
+            lambda: {"x": 0.0, "y": 0.0, "yaw": 0.0},
+            lambda: False,
+            object(),
+            lambda *_args: asyncio.sleep(0),
+            pause,
+            lambda: asyncio.sleep(0),
+            lambda _event: asyncio.sleep(0),
+            poll_interval=0.01,
+        )
+
+        with pytest.raises(RuntimeError, match="nu a revenit stabil"):
+            await navigator._wait_for_localization_recovery(
+                time.monotonic() + 1.0, timeout=0.04,
+            )
+        assert pauses == ["1201"]
+        assert navigator.status["state"] == "waiting_localization"
 
     asyncio.run(scenario())

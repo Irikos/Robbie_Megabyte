@@ -21,27 +21,40 @@ DYNAMIC_OBSTACLE_RADIUS = 0.30
 DYNAMIC_OBSTACLE_TTL = 2.5
 DYNAMIC_SENSOR_PADDING = 0.05
 LIVE_OBSTACLE_MIN_CLEARANCE = 0.28
-CENTERLINE_CLEARANCE_RADIUS = 1.00
-CENTERLINE_CLEARANCE_WEIGHT = 3.50
-TURN_CLEARANCE_RADIUS = 0.65
-TURN_CLEARANCE_WEIGHT = 12.0
-OBSTACLE_WAIT_BEFORE_REPLAN = 0.12
-# Evită ciclurile STOP/START produse de 1-2 cadre LiDAR lipsă. Robotul
-# pornește din nou numai după ce zona a rămas liberă continuu o secundă.
-OBSTACLE_CLEAR_STABLE = 1.00
+# Mobilierul live are margine hard separată mai jos. Confortul dinamic nu
+# trebuie să moștenească automat raza statică de 0,65 m, altfel două scaune cu
+# culoar real între ele produc două câmpuri moi suprapuse și par un singur zid.
+DYNAMIC_OBSTACLE_COMFORT_RADIUS = 0.45
+CENTERLINE_CLEARANCE_RADIUS = 0.75
+CENTERLINE_CLEARANCE_WEIGHT = 1.50
+TURN_CLEARANCE_RADIUS = 0.55
+TURN_CLEARANCE_WEIGHT = 7.0
+OBSTACLE_WAIT_BEFORE_REPLAN = 0.05
+# Trackurile LiDAR cer deja confirmare temporală. După ce geometria a rămas
+# liberă continuu aproape o jumătate de secundă putem relua fără secunda de
+# ezitare care făcea mersul sacadat.
+OBSTACLE_CLEAR_STABLE = 0.30
 OBSTACLE_SENSOR_LOSS_TIMEOUT = 5.0
 # Un singur cadru întârziat nu justifică ciclul costisitor 1201/1202. În
 # această fereastră nu lansăm comenzi noi, dar nici nu declarăm senzorul pierdut.
 SENSOR_GLITCH_GRACE = 0.25
-ROUTE_OBSTACLE_CONFIRMATION = 0.30
-REPLAN_ROUTE_STABLE = 0.30
+ROUTE_OBSTACLE_CONFIRMATION = 0.15
+REPLAN_ROUTE_STABLE = 0.12
 # Dacă A* nu găsește o ieșire deși LiDAR-ul confirmă un obstacol apropiat,
 # permitem o singură degajare laterală verificată. Fereastra scurtă evită
 # rotațiile/replanificările repetate, fără să transforme orice STOP într-un pas.
 DYNAMIC_LATERAL_UNLOCK_DELAY = 0.55
 NATIVE_WAYPOINT_MIN_DISTANCE = 0.65
-STARTUP_SPEED_LIMIT = 0.15
-STARTUP_PROGRESS_DISTANCE = 0.15
+# 1102 primește o polilinie controlată, nu o singură țintă aflată la câțiva
+# metri. Valoarea rămâne peste toleranța nativă de waypoint ca să nu fie sărite
+# punctele, dar este suficient de mică pentru curbe și replănuire live precisă.
+LIVE_ROUTE_WAYPOINT_SPACING = 0.85
+# Ruta densă rămâne adevărul geometric pentru viewer și verificarea LiDAR,
+# însă 1102 nu trebuie reprogramat la fiecare 85 cm. Un punct de control este
+# ales cât mai departe pe aceeași porțiune sigură, fără să taie colțurile A*.
+NATIVE_CONTROL_LOOKAHEAD = 3.20
+STARTUP_SPEED_LIMIT = 0.20
+STARTUP_PROGRESS_DISTANCE = 0.10
 STARTUP_WAYPOINT_DISTANCE = 0.70
 RECOVERY_OBSTACLE_MEMORY = 12.0
 RECOVERY_OBSTACLE_MAX_ROBOT_TRAVEL = 0.55
@@ -141,7 +154,10 @@ class PCDGridPlanner:
                     changed += 1
                 self.dynamic_occupied[cell] = timestamp
                 self.dynamic_sources[cell] = source
-        comfort_radius = max(radius, self.comfort_radius)
+        comfort_radius = max(
+            radius,
+            min(self.comfort_radius, DYNAMIC_OBSTACLE_COMFORT_RADIUS),
+        )
         comfort_span = max(self.resolution, comfort_radius - radius)
         comfort_offsets = tuple(self._inflation_offsets(comfort_radius))
         for center_x, center_y in centers:
@@ -721,6 +737,27 @@ class PCDGridPlanner:
             anchor = candidate
         return reduced
 
+    @staticmethod
+    def _densify_execution_path(
+            points: List[Tuple[float, float]],
+            maximum_spacing: float = LIVE_ROUTE_WAYPOINT_SPACING,
+    ) -> List[Tuple[float, float]]:
+        """Împarte numai segmentele lungi; geometria sigură nu este mutată."""
+        if len(points) < 2:
+            return points
+        spacing = max(NATIVE_WAYPOINT_MIN_DISTANCE + 0.05, float(maximum_spacing))
+        dense = [points[0]]
+        for start, end in zip(points, points[1:]):
+            length = math.hypot(end[0] - start[0], end[1] - start[1])
+            pieces = max(1, int(math.ceil(length / spacing)))
+            for index in range(1, pieces + 1):
+                ratio = index / pieces
+                dense.append((
+                    start[0] + (end[0] - start[0]) * ratio,
+                    start[1] + (end[1] - start[1]) * ratio,
+                ))
+        return dense
+
     def _round_safe_corners(self, points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
         """Rotunjește virajele, dar numai în spațiul hard și de confort verificat."""
         if len(points) < 3:
@@ -837,6 +874,9 @@ class PCDGridPlanner:
             if (direct_is_observed
                     and not direct_has_dynamic_risk
                     and minimum_clearance >= self.robot_radius + direct_margin):
+                # O dreaptă liberă are exact A și B. Intersecția cu LiDAR-ul
+                # rasterizează oricum întregul segment; punctele coliniare nu
+                # aduc siguranță, dar produc marcaje și comenzi redundante.
                 return [self.cell_to_world(start), self.cell_to_world(goal)]
 
         frontier: List[Tuple[float, GridCell]] = [(0.0, start)]
@@ -914,8 +954,9 @@ class PCDGridPlanner:
         rounded = self._round_safe_corners([
             self.cell_to_world(cell) for cell in reduced
         ])
-        # API 1102 primește direct capătul fiecărui segment sigur. Nu mai
-        # introducem waypoint-uri doar pentru că segmentul are câțiva metri.
+        # Păstrăm numai colțurile relevante. Verificarea live rasterizează
+        # fiecare segment complet, deci nu are nevoie de puncte artificiale la
+        # fiecare 0,85 m pentru a observa un obstacol apărut între două colțuri.
         return self._simplify_polyline_for_execution(rounded)
 
 
@@ -977,9 +1018,20 @@ def plan_pcd_route(map_path: str, start_xy: Tuple[float, float],
                     for start, end in zip(route, route[1:])
                 )
 
-            if (len(safe_path) >= 5
+            safe_length = route_length(safe_path)
+            narrow_length = route_length(narrow_path)
+            if (
+                narrow_length <= safe_length * 0.90
+                or (
+                    safe_length - narrow_length >= 0.60
+                    and narrow_length <= safe_length * 1.01
+                )
+                or (
+                    len(safe_path) >= 5
                     and len(narrow_path) <= len(safe_path) - 2
-                    and route_length(narrow_path) <= route_length(safe_path) * 1.03):
+                    and narrow_length <= safe_length * 1.03
+                )
+            ):
                 return narrow_solution
     return solutions[0]
 
@@ -1002,7 +1054,10 @@ class NativeWaypointNavigator:
                  stop_locomotion: Optional[Callable[[], Awaitable[dict]]] = None,
                  enable_stagnation_lateral_recovery: bool = False,
                  stagnation_timeout: float = 4.0,
-                 max_waypoint_retries: int = 1):
+                 max_waypoint_retries: int = 1,
+                 waypoint_completed: Optional[
+                     Callable[[float, float, float], bool]
+                 ] = None):
         self.pose_provider = pose_provider
         self.localization_ok = localization_ok
         self.obstacle_guard = obstacle_guard
@@ -1023,6 +1078,7 @@ class NativeWaypointNavigator:
         )
         self.stagnation_timeout = max(0.1, float(stagnation_timeout))
         self.max_waypoint_retries = max(0, int(max_waypoint_retries))
+        self.waypoint_completed = waypoint_completed
         self.last_lateral_escape_at = -math.inf
         self.last_lateral_direction = 0
         self.route_blocked_since: Optional[float] = None
@@ -1036,6 +1092,54 @@ class NativeWaypointNavigator:
         self.replan_confirmation_id: Optional[str] = None
         self.replan_confirmation_event: Optional[asyncio.Event] = None
         self.status = {"state": "idle", "path": [], "goal": None, "error": "", "driver": "astar_waypoints"}
+
+    async def _wait_for_localization_recovery(
+            self, navigation_deadline: float, already_paused: bool = False,
+            timeout: float = 4.0,
+    ) -> None:
+        """Oprește imediat, apoi separă un gol de telemetrie de pierderea reală.
+
+        Trei verificări consecutive sunt necesare înainte de reluare. Astfel nu
+        continuăm orbește pe o singură poziție reapărută și nici nu declarăm
+        cursa eșuată din cauza unui singur pachet pos_info lipsă.
+        """
+        if not already_paused:
+            pause_result = await self.pause_navigation()
+            if isinstance(pause_result, dict) and pause_result.get("success") is False:
+                raise RuntimeError(
+                    pause_result.get("error", "API 1201 nu a confirmat oprirea")
+                )
+        started = time.monotonic()
+        stable_samples = 0
+        self.status.update({
+            "state": "waiting_localization",
+            "error": "robot oprit: verific localizarea nativă și odometria de rezervă",
+        })
+        await self._emit()
+        while not self.cancel_requested:
+            now = time.monotonic()
+            if now > navigation_deadline:
+                raise RuntimeError("timeout de navigare în așteptarea localizării")
+            if self.localization_ok():
+                stable_samples += 1
+                if stable_samples >= 3:
+                    self.status.update({
+                        "state": "navigating",
+                        "error": "localizarea a fost reconfirmată; continui ruta",
+                        "localization_recoveries": int(
+                            self.status.get("localization_recoveries", 0) or 0
+                        ) + 1,
+                    })
+                    await self._emit()
+                    return
+            else:
+                stable_samples = 0
+            if now - started >= timeout:
+                raise RuntimeError(
+                    "localizarea nativă nu a revenit stabil după STOP; "
+                    "cursa rămâne oprită în siguranță"
+                )
+            await asyncio.sleep(self.poll_interval)
 
     async def start(self, map_path: str, x: float, y: float, yaw: float,
                     speed: float = 0.3, timeout: float = 0.0,
@@ -1089,6 +1193,7 @@ class NativeWaypointNavigator:
             "motion_profile": motion_profile,
             "path_pattern": path_pattern,
             "path_reference_yaw": path_pattern.get("reference_yaw"),
+            "native_command_active": False,
         }
         self.task = asyncio.create_task(
             self._run(path, x, y, yaw, speed, timeout, motion_profile)
@@ -1233,22 +1338,57 @@ class NativeWaypointNavigator:
         return True
 
     def _sync_lidar_costmap(self, observed_at: Optional[float] = None):
-        if not self.planner or not hasattr(self.obstacle_guard, "front_obstacle_shape"):
+        if not self.planner:
             return None
-        shape = self.obstacle_guard.front_obstacle_shape()
+        timestamp = time.monotonic() if observed_at is None else observed_at
+        shape = (
+            self.obstacle_guard.front_obstacle_shape()
+            if hasattr(self.obstacle_guard, "front_obstacle_shape") else None
+        )
         if shape and shape.get("points"):
-            # Snapshot-ul include track-urile LiDAR confirmate și memoria lor
-            # temporală; reconstruim stratul plannerului din acel snapshot.
-            self.planner.clear_dynamic_source("lidar")
+            # Păstrăm uniunea temporală a cadrelor până la TTL. Înlocuirea
+            # completă la fiecare scan făcea marginea opusă a unui scaun să
+            # dispară când robotul se rotea, iar următorul A* tăia prin ea.
             self.planner.add_dynamic_points(
                 shape["points"],
                 inflation_radius=max(
                     LIVE_OBSTACLE_MIN_CLEARANCE,
                     self.planner.robot_radius + DYNAMIC_SENSOR_PADDING,
                 ),
-                observed_at=(time.monotonic() if observed_at is None else observed_at),
+                observed_at=timestamp,
                 source="lidar",
             )
+        # Geometria semantică este reconstruită din depth și calibrată în
+        # același frame map. O reintroducem ca formă, nu ca disc de centroid,
+        # astfel încât A* ocolește corpul real al scaunului. Sursa separată
+        # permite UI-ului să ascundă inflația generică sub obiectul 3D.
+        self.planner.clear_dynamic_source("semantic")
+        semantic_shapes = (
+            self.obstacle_guard.semantic_obstacle_shapes()
+            if hasattr(self.obstacle_guard, "semantic_obstacle_shapes") else []
+        )
+        for semantic in semantic_shapes:
+            self.planner.add_dynamic_points(
+                semantic.get("points") or [],
+                inflation_radius=max(
+                    LIVE_OBSTACLE_MIN_CLEARANCE,
+                    self.planner.robot_radius + DYNAMIC_SENSOR_PADDING,
+                ),
+                observed_at=timestamp,
+                source="semantic",
+            )
+        if semantic_shapes:
+            self.status["semantic_obstacles"] = [
+                {
+                    "id": item.get("id"),
+                    "label": item.get("label"),
+                    "points": len(item.get("points") or []),
+                }
+                for item in semantic_shapes
+            ]
+        else:
+            self.status.pop("semantic_obstacles", None)
+        if shape and shape.get("points"):
             return shape
         # Un cadru LiDAR lipsă nu șterge instantaneu scaunul. Celulele rămân
         # până la TTL și sunt eliminate numai dacă observația nu revine.
@@ -1260,6 +1400,17 @@ class NativeWaypointNavigator:
             return False
         return not self.planner.segment_is_free(
             (pose["x"], pose["y"]), path[waypoint_index]
+        )
+
+    def _remaining_route_blocked(self, path: List[Tuple[float, float]],
+                                 waypoint_index: int, pose: dict) -> bool:
+        """Verifică întreaga rută rămasă față de snapshotul LiDAR curent."""
+        if not self.planner or not path or waypoint_index >= len(path):
+            return False
+        remaining = [(pose["x"], pose["y"]), *path[waypoint_index:]]
+        return any(
+            not self.planner.segment_is_free(start, end)
+            for start, end in zip(remaining, remaining[1:])
         )
 
     def _confirmed_segment_blocked(self, blocked: bool, obstacle_info: Optional[dict],
@@ -1304,7 +1455,12 @@ class NativeWaypointNavigator:
                 self.recent_obstacle_pose = dict(pose)
         else:
             self.planner.clear_dynamic_source("camera")
-        segment_blocked = self._current_segment_blocked(path, waypoint_index, pose)
+        # Nu așteptăm ca obstacolul să ajungă în segmentul imediat următor.
+        # Dacă intersectează orice porțiune rămasă, ruta este invalidată și A*
+        # o reconstruiește din poziția live.
+        segment_blocked = self._remaining_route_blocked(
+            path, waypoint_index, pose
+        )
         camera_stop_only = bool(
             sensor_blocked and obstacle_info
             and obstacle_info.get("mode") == "camera_stop_only"
@@ -1446,6 +1602,64 @@ class NativeWaypointNavigator:
                 break
             index += 1
         return index
+
+    @staticmethod
+    def _native_completion_has_progress(
+            initial_distance: float, current_distance: float,
+            best_distance: float,
+    ) -> bool:
+        """Nu acceptă FINISHED-ul unei comenzi vechi pentru o țintă apropiată."""
+        closest = min(float(current_distance), float(best_distance))
+        return bool(
+            current_distance <= 0.30
+            or (
+                closest <= 0.60
+                and initial_distance - closest >= 0.15
+            )
+        )
+
+    def _select_control_waypoint_index(
+            self, path: List[Tuple[float, float]], waypoint_index: int,
+            pose: dict,
+    ) -> int:
+        """Comprimă numai execuția 1102, păstrând polilinia live completă.
+
+        Punctele dese sunt utile pentru afișare și pentru intersecția cu
+        obstacole dinamice, dar trimiterea fiecăruia către firmware producea
+        STOP + rotație + o nouă estimare yaw. Alegem cel mai îndepărtat punct
+        vizibil în fereastra de lookahead numai dacă scurtătura păstrează atât
+        spațiul hard, cât și profilul de clearance al traseului A*.
+        """
+        if (not self.planner or not path
+                or waypoint_index >= len(path) - 1):
+            return waypoint_index
+        start = (float(pose["x"]), float(pose["y"]))
+        selected = waypoint_index
+        for candidate in range(waypoint_index + 1, len(path)):
+            target = path[candidate]
+            if math.hypot(target[0] - start[0], target[1] - start[1]) > NATIVE_CONTROL_LOOKAHEAD:
+                break
+            if not self.planner.segment_is_free(start, target):
+                break
+            # Planner-ele simplificate din teste/compatibilitate nu expun
+            # rasterizarea internă; segment_is_free rămâne fallback-ul sigur.
+            if all(hasattr(self.planner, name) for name in (
+                    "_line_cells", "_polyline_cells",
+                    "_shortcut_preserves_execution_clearance")):
+                direct = self.planner._line_cells(
+                    self.planner.world_to_cell(*start),
+                    self.planner.world_to_cell(*target),
+                )
+                via = self.planner._polyline_cells(
+                    [start, *path[waypoint_index:candidate + 1]]
+                )
+                if (direct is None or via is None
+                        or not self.planner._shortcut_preserves_execution_clearance(
+                            direct, via
+                        )):
+                    break
+            selected = candidate
+        return selected
 
     def _stabilize_departure_path(
             self, path: List[Tuple[float, float]], pose: dict,
@@ -1797,9 +2011,33 @@ class NativeWaypointNavigator:
         dx, dy = waypoint[0] - pose["x"], waypoint[1] - pose["y"]
         if math.hypot(dx, dy) < 0.08:
             return goal_yaw
-        # Corpul este orientat exact pe direcția translației. Fără bisectoare,
-        # mers diagonal sau păstrarea yaw-ului pentru un pas lateral implicit.
-        return math.atan2(dy, dx)
+        incoming_yaw = math.atan2(dy, dx)
+        if waypoint_index >= len(path) - 1:
+            return incoming_yaw
+
+        # La un colț, orientarea finală a comenzii este tangenta continuă dintre
+        # segmentul curent și cel următor. Astfel robotul ia curba o singură
+        # dată; nu ajunge orientat pe segmentul vechi ca apoi să se rotească pe
+        # loc din nou pentru următorul waypoint.
+        next_index = waypoint_index + 1
+        while next_index < len(path) - 1 and math.hypot(
+                path[next_index][0] - waypoint[0],
+                path[next_index][1] - waypoint[1],
+        ) < 0.30:
+            next_index += 1
+        out_dx = path[next_index][0] - waypoint[0]
+        out_dy = path[next_index][1] - waypoint[1]
+        out_length = math.hypot(out_dx, out_dy)
+        in_length = math.hypot(dx, dy)
+        if out_length < 0.08 or in_length < 0.08:
+            return incoming_yaw
+        in_x, in_y = dx / in_length, dy / in_length
+        out_x, out_y = out_dx / out_length, out_dy / out_length
+        # Pentru o întoarcere aproape completă nu există bisectoare stabilă;
+        # ținta curentă trebuie abordată pe direcția de sosire.
+        if in_x * out_x + in_y * out_y < -0.50:
+            return incoming_yaw
+        return math.atan2(in_y + out_y, in_x + out_x)
 
     async def _wait_for_fresh_sensors(
             self, navigation_deadline: float, already_paused: bool = False,
@@ -1815,18 +2053,44 @@ class NativeWaypointNavigator:
             "error": "robot oprit: aștept date recente RealSense/LiDAR",
         })
         await self._emit()
+        last_status = {}
         while not self.cancel_requested:
             now = time.monotonic()
             if now > navigation_deadline:
                 raise RuntimeError("timeout de navigare în așteptarea senzorilor")
             if not self.localization_ok():
-                raise RuntimeError("localizarea nativă s-a pierdut")
+                await self._wait_for_localization_recovery(
+                    navigation_deadline, already_paused=True,
+                )
+                self.status.update({
+                    "state": "waiting_sensor",
+                    "error": "localizare reconfirmată; aștept încă RealSense/LiDAR",
+                })
+                await self._emit()
+                continue
             if navigation_sensors_ready(self.obstacle_guard):
                 self.status.update({"state": "navigating", "error": "datele senzorilor au revenit"})
                 await self._emit()
                 return
             if now - lost_at > self.sensor_loss_timeout:
-                raise RuntimeError("datele RealSense/LiDAR s-au pierdut; robotul rămâne oprit")
+                if hasattr(self.obstacle_guard, "sensor_status"):
+                    last_status = self.obstacle_guard.sensor_status()
+                camera_age = last_status.get("camera_age")
+                lidar_age = last_status.get("lidar_age")
+                lidar_source = last_status.get("lidar_source") or "topic LiDAR necunoscut"
+                stale = []
+                if not last_status.get("camera_fresh", True):
+                    stale.append(
+                        "RealSense fără cadre"
+                        + (f" de {camera_age:.1f}s" if camera_age is not None else "")
+                    )
+                if not last_status.get("lidar_fresh", True):
+                    stale.append(
+                        f"LiDAR {lidar_source} fără cloud valid"
+                        + (f" de {lidar_age:.1f}s" if lidar_age is not None else "")
+                    )
+                detail = "; ".join(stale) or "fluxurile de protecție sunt vechi"
+                raise RuntimeError(f"{detail}; robotul rămâne oprit în siguranță")
             await asyncio.sleep(self.poll_interval)
 
     async def _stage_route_while_paused(
@@ -1844,6 +2108,7 @@ class NativeWaypointNavigator:
         command_speed = self._safe_segment_speed(
             path, waypoint_index, pose, requested_speed
         )
+        dispatched_at = time.monotonic()
         result = await self.send_waypoint(
             waypoint_x, waypoint_y, waypoint_yaw, command_speed
         )
@@ -1854,7 +2119,7 @@ class NativeWaypointNavigator:
         self.staged_waypoint = {
             "x": waypoint_x, "y": waypoint_y, "yaw": waypoint_yaw,
             "speed": command_speed, "waypoint_index": waypoint_index,
-            "result": result,
+            "result": result, "dispatched_at": dispatched_at,
         }
         return result
 
@@ -1947,7 +2212,15 @@ class NativeWaypointNavigator:
             if now > navigation_deadline:
                 raise RuntimeError("timeout de navigare în așteptarea obstacolului")
             if not self.localization_ok():
-                raise RuntimeError("localizarea nativă s-a pierdut")
+                await self._wait_for_localization_recovery(
+                    navigation_deadline, already_paused=True,
+                )
+                self.status.update({
+                    "state": "waiting_obstacle",
+                    "error": "localizare reconfirmată; ruta rămâne oprită până la ocolire",
+                })
+                await self._emit()
+                continue
 
             if not navigation_sensors_ready(self.obstacle_guard):
                 candidate_signature = None
@@ -2041,6 +2314,18 @@ class NativeWaypointNavigator:
                     "mode": "route_refresh", "shape_points": 0,
                 }
 
+            # Dacă obiectul este deja în spațiul imediat al robotului, un 1102
+            # către un punct aflat dincolo de el poate porni prin scaun înainte
+            # ca plannerul nativ să respecte colțul A*. Mai întâi degajăm o
+            # singură dată lateral, numai pe direcția confirmată liberă.
+            if (
+                float(obstacle_info.get("distance", math.inf)) <= 0.45
+                and await try_lateral_unlock(pose, obstacle_info)
+            ):
+                clear_since = None
+                await asyncio.sleep(self.poll_interval)
+                continue
+
             self.planner.expire_dynamic_obstacles(self.dynamic_obstacle_ttl, now=now)
             if now < next_plan_attempt:
                 await asyncio.sleep(self.poll_interval)
@@ -2079,6 +2364,9 @@ class NativeWaypointNavigator:
                 continue
 
             candidate_index = 1 if len(candidate_path) > 1 else 0
+            candidate_index = self._select_control_waypoint_index(
+                candidate_path, candidate_index, pose
+            )
             if self._current_segment_blocked(candidate_path, candidate_index, pose):
                 candidate_signature = None
                 candidate_stable_since = None
@@ -2098,11 +2386,23 @@ class NativeWaypointNavigator:
                 continue
 
             signature = tuple(
-                (round(point[0], 2), round(point[1], 2)) for point in candidate_path
+                (float(point[0]), float(point[1])) for point in candidate_path
             )
-            if signature != candidate_signature:
-                candidate_signature = signature
+            same_route_family = bool(
+                candidate_signature
+                and len(signature) == len(candidate_signature)
+                and all(
+                    math.hypot(x1 - x2, y1 - y2) <= 0.20
+                    for (x1, y1), (x2, y2) in zip(
+                        signature, candidate_signature
+                    )
+                )
+            )
+            if not same_route_family:
                 candidate_stable_since = now
+            # Validăm geometria cea mai nouă, dar nu reluăm cronometrul pentru
+            # jitter LiDAR de câțiva centimetri pe aceeași parte a obstacolului.
+            candidate_signature = signature
             self.status.update({
                 "state": "validating_replan", "path": candidate_path,
                 "waypoint_index": candidate_index,
@@ -2149,6 +2449,71 @@ class NativeWaypointNavigator:
 
         return path, waypoint_index, replans, 0.0
 
+    async def _replan_ahead_while_moving(
+            self, path: List[Tuple[float, float]], waypoint_index: int,
+            goal_x: float, goal_y: float, replans: int,
+    ) -> Optional[Tuple[List[Tuple[float, float]], int, int]]:
+        """Calculează ocolirea înainte ca obstacolul să ajungă la robot.
+
+        Comanda 1102 curentă rămâne activă numai cât segmentul imediat este
+        liber și senzorii sunt sănătoși. Când planul alternativ este gata,
+        bucla exterioară îl trimite ca suprascriere 1102 fără ciclul lent
+        1201/1202. Dacă pericolul devine imediat între timp, abandonăm această
+        optimizare și ramura fail-safe oprește robotul.
+        """
+        if self._navigation_blocked() or not navigation_sensors_ready(
+                self.obstacle_guard):
+            return None
+        pose = self._pose()
+        if self._current_segment_blocked(path, waypoint_index, pose):
+            return None
+        self.status.update({
+            "state": "navigating", "path": path,
+            "error": "obstacol mai în față: calculez ocolirea în mers",
+            "replan_in_motion": True,
+        })
+        await self._emit()
+        planning_started = time.monotonic()
+        try:
+            # Grila implicită de 10 cm păstrează această căutare scurtă. Nu
+            # folosim asyncio.to_thread aici: directoarele de deployment care
+            # conțin literal `*` pot bloca executorul implicit Python.
+            candidate = self.planner.plan(
+                (pose["x"], pose["y"]), (goal_x, goal_y)
+            )
+            candidate = self._prepare_dynamic_detour(candidate, self._pose())
+        except Exception:
+            self.status["replan_in_motion"] = False
+            return None
+        live_pose = self._pose()
+        if (
+            self._navigation_blocked()
+            or not navigation_sensors_ready(self.obstacle_guard)
+            or self._current_segment_blocked(path, waypoint_index, live_pose)
+        ):
+            self.status["replan_in_motion"] = False
+            return None
+        candidate_index = 1 if len(candidate) > 1 else 0
+        candidate_index = self._select_control_waypoint_index(
+            candidate, candidate_index, live_pose
+        )
+        if self._current_segment_blocked(candidate, candidate_index, live_pose):
+            self.status["replan_in_motion"] = False
+            return None
+        self.status.update({
+            "state": "navigating", "path": candidate,
+            "waypoint_index": candidate_index,
+            "replans": replans + 1, "replan_in_motion": False,
+            "last_replan_time_s": round(
+                time.monotonic() - planning_started, 3
+            ),
+            "error": "ocolire recalculată în mers; continui fără STOP",
+            "path_pattern": {"type": "astar"},
+            "path_reference_yaw": None,
+        })
+        await self._emit()
+        return candidate, candidate_index, replans + 1
+
     async def _run(self, path: List[Tuple[float, float]], goal_x: float, goal_y: float,
                    goal_yaw: float, speed: float, timeout: float,
                    motion_profile: str = "stable") -> None:
@@ -2166,14 +2531,29 @@ class NativeWaypointNavigator:
                 if time.monotonic() > navigation_deadline:
                     raise RuntimeError("timeout de navigare")
                 if not self.localization_ok():
-                    raise RuntimeError("localizarea nativă s-a pierdut")
+                    command_was_active = bool(
+                        self.status.get("native_command_active", False)
+                    )
+                    await self._wait_for_localization_recovery(
+                        navigation_deadline,
+                        already_paused=not command_was_active,
+                    )
+                    if not self.cancel_requested and command_was_active:
+                        await self._resume_checked()
+                    continue
                 if not navigation_sensors_ready(self.obstacle_guard):
                     sensor_stale_since = sensor_stale_since or time.monotonic()
                     if time.monotonic() - sensor_stale_since < SENSOR_GLITCH_GRACE:
                         await asyncio.sleep(self.poll_interval)
                         continue
-                    await self._wait_for_fresh_sensors(navigation_deadline)
-                    if not self.cancel_requested:
+                    command_was_active = bool(
+                        self.status.get("native_command_active", False)
+                    )
+                    await self._wait_for_fresh_sensors(
+                        navigation_deadline,
+                        already_paused=not command_was_active,
+                    )
+                    if not self.cancel_requested and command_was_active:
                         await self._resume_checked()
                     sensor_stale_since = None
                     continue
@@ -2187,6 +2567,9 @@ class NativeWaypointNavigator:
                     launch_complete = True
                 advanced_index = self._advance_past_native_tolerance(
                     path, waypoint_index, pose
+                )
+                advanced_index = self._select_control_waypoint_index(
+                    path, advanced_index, pose
                 )
                 if advanced_index != waypoint_index:
                     waypoint_index = advanced_index
@@ -2209,13 +2592,32 @@ class NativeWaypointNavigator:
                     math.hypot(goal_x - pose["x"], goal_y - pose["y"]),
                     math.hypot(route_goal[0] - pose["x"], route_goal[1] - pose["y"]),
                 ) <= 0.22:
-                    self.status.update({"state": "arrived", "error": "", "waypoint_index": len(path) - 1})
+                    self.status.update({
+                        "state": "arrived", "error": "",
+                        "waypoint_index": len(path) - 1,
+                        "native_command_active": False,
+                    })
                     await self.pause_navigation()
                     self.planner.clear_dynamic_costmap()
                     await self._emit()
                     return
 
-                if segment_blocked and time.monotonic() >= replan_grace_until:
+                immediate_blocked = self._current_segment_blocked(
+                    path, waypoint_index, pose
+                )
+                if (segment_blocked and not immediate_blocked
+                        and time.monotonic() >= replan_grace_until):
+                    live_replan = await self._replan_ahead_while_moving(
+                        path, waypoint_index, goal_x, goal_y, replans
+                    )
+                    if live_replan is not None:
+                        path, waypoint_index, replans = live_replan
+                        continue
+                    immediate_blocked = self._current_segment_blocked(
+                        path, waypoint_index, self._pose()
+                    )
+                if (segment_blocked and immediate_blocked
+                        and time.monotonic() >= replan_grace_until):
                     path, waypoint_index, replans, grace = await self._wait_for_clear_or_replan(
                         path, waypoint_index, goal_x, goal_y, replans, navigation_deadline
                     )
@@ -2301,6 +2703,7 @@ class NativeWaypointNavigator:
                 })
                 await self._emit()
                 staged = self.staged_waypoint
+                segment_dispatched_at = time.monotonic()
                 if (staged and staged.get("waypoint_index") == waypoint_index
                         and math.hypot(staged["x"] - wx, staged["y"] - wy) <= 0.03):
                     # Destinația nouă a fost publicată cât 1201 ținea ruta veche
@@ -2309,13 +2712,21 @@ class NativeWaypointNavigator:
                     dispatch_hazard = None
                     waypoint_yaw = float(staged.get("yaw", waypoint_yaw))
                     command_speed = float(staged.get("speed", command_speed))
+                    segment_dispatched_at = float(
+                        staged.get("dispatched_at", segment_dispatched_at)
+                    )
                     self.staged_waypoint = None
                 else:
                     result, dispatch_hazard = await self._send_waypoint_guarded(
                         wx, wy, waypoint_yaw, command_speed, path, waypoint_index
                     )
                 if dispatch_hazard == "localization":
-                    raise RuntimeError("localizarea nativă s-a pierdut în timpul confirmării waypoint-ului 1102")
+                    await self._wait_for_localization_recovery(
+                        navigation_deadline, already_paused=True,
+                    )
+                    if not self.cancel_requested:
+                        await self._resume_checked()
+                    continue
                 if dispatch_hazard == "sensor":
                     await self._wait_for_fresh_sensors(
                         navigation_deadline, already_paused=True
@@ -2339,6 +2750,7 @@ class NativeWaypointNavigator:
                 # de mai sus a recalculat ruta. Doar un eșec fără hazard e fatal.
                 if not result.get("success"):
                     raise RuntimeError(result.get("error", "waypoint-ul 1102 a fost respins"))
+                self.status["native_command_active"] = True
                 # Așteptăm atingerea waypoint-ului sau apariția unui obstacol nou.
                 segment_started = time.monotonic()
                 best_segment_distance=distance
@@ -2349,6 +2761,16 @@ class NativeWaypointNavigator:
                 segment_sensor_stale_since: Optional[float] = None
                 while not self.cancel_requested:
                     await asyncio.sleep(self.poll_interval)
+                    if time.monotonic() > navigation_deadline:
+                        raise RuntimeError("timeout de navigare")
+                    if not self.localization_ok():
+                        await self._wait_for_localization_recovery(
+                            navigation_deadline, already_paused=False,
+                        )
+                        if not self.cancel_requested:
+                            await self._resume_checked()
+                        last_segment_progress = time.monotonic()
+                        continue
                     pose = self._pose()
                     self.status["pose"] = pose
                     observed_at = time.monotonic()
@@ -2364,6 +2786,35 @@ class NativeWaypointNavigator:
                         self.status["dynamic_obstacle"] = None
                     self.planner.expire_dynamic_obstacles(self.dynamic_obstacle_ttl)
                     current_distance=math.hypot(wx-pose["x"],wy-pose["y"])
+                    native_finished = False
+                    if self.waypoint_completed:
+                        try:
+                            native_finished = bool(self.waypoint_completed(
+                                wx, wy, segment_dispatched_at
+                            ))
+                        except Exception:
+                            native_finished = False
+                    if native_finished:
+                        if self._native_completion_has_progress(
+                                distance, current_distance,
+                                best_segment_distance):
+                            self.status["native_completion_confirmed"] = True
+                            if waypoint_index < len(path) - 1:
+                                waypoint_index += 1
+                                self.status["waypoint_index"] = waypoint_index
+                                break
+                            self.status.update({
+                                "state": "arrived", "error": "",
+                                "waypoint_index": len(path) - 1,
+                                "native_command_active": False,
+                            })
+                            await self.pause_navigation()
+                            self.planner.clear_dynamic_costmap()
+                            await self._emit()
+                            return
+                        self.status["native_completion_ignored"] = (
+                            "FINISHED fără progres suficient pentru ținta curentă"
+                        )
                     if current_distance<=best_segment_distance-0.03:
                         best_segment_distance=current_distance
                         last_segment_progress=time.monotonic()
@@ -2392,18 +2843,41 @@ class NativeWaypointNavigator:
                             waypoint_index += 1
                         break
                     if segment_blocked and time.monotonic() >= replan_grace_until:
-                        break
+                        immediate_blocked = self._current_segment_blocked(
+                            path, waypoint_index, pose
+                        )
+                        if not immediate_blocked:
+                            live_replan = await self._replan_ahead_while_moving(
+                                path, waypoint_index, goal_x, goal_y, replans
+                            )
+                            if live_replan is not None:
+                                path, waypoint_index, replans = live_replan
+                                break
+                            immediate_blocked = self._current_segment_blocked(
+                                path, waypoint_index, self._pose()
+                            )
+                        if immediate_blocked:
+                            break
                     if not navigation_sensors_ready(self.obstacle_guard):
                         segment_sensor_stale_since = (
                             segment_sensor_stale_since or time.monotonic()
                         )
                         if (time.monotonic() - segment_sensor_stale_since
                                 >= SENSOR_GLITCH_GRACE):
-                            break
+                            # Păstrăm aceeași comandă 1102. Vechea ramură ieșea
+                            # în bucla exterioară și retrimitea aceeași țintă
+                            # după 1202, făcând firmware-ul să reînceapă rotația.
+                            await self._wait_for_fresh_sensors(
+                                navigation_deadline, already_paused=False
+                            )
+                            if not self.cancel_requested:
+                                await self._resume_checked()
+                            segment_sensor_stale_since = None
+                            last_segment_progress = time.monotonic()
                         continue
                     segment_sensor_stale_since = None
                     if (time.monotonic() - last_segment_progress >= self.stagnation_timeout
-                            and current_distance > 0.35):
+                            and current_distance > 0.22):
                         recovery_obstacle = (
                             obstacle_info or self._recent_obstacle_for_recovery(
                                 pose, observed_at
@@ -2511,14 +2985,18 @@ class NativeWaypointNavigator:
                                 "dynamic_obstacle": None,
                             })
                             await self._emit()
+                            segment_dispatched_at = time.monotonic()
                             retry_result, retry_hazard = await self._send_waypoint_guarded(
                                 wx, wy, waypoint_yaw, min(command_speed, 0.18),
                                 path, waypoint_index,
                             )
                             if retry_hazard == "localization":
-                                raise RuntimeError(
-                                    "localizarea nativă s-a pierdut în timpul reîncercării 1102"
+                                await self._wait_for_localization_recovery(
+                                    navigation_deadline, already_paused=True,
                                 )
+                                if not self.cancel_requested:
+                                    await self._resume_checked()
+                                break
                             if retry_hazard in {"sensor", "obstacle"}:
                                 # Bucla exterioară intră în fail-safe/replanificare;
                                 # 1201 a fost deja trimis de gardă.
@@ -2547,15 +3025,16 @@ class NativeWaypointNavigator:
                             "Unitree nu a progresat după reîncercarea 1102; "
                             "LiDAR-ul și camera nu confirmă niciun obstacol, deci nu inventez o rută de ocolire"
                         )
-                    if not self.localization_ok():
-                        raise RuntimeError("localizarea nativă s-a pierdut")
         except asyncio.CancelledError:
             return
         except Exception as exc:
             await self.pause_navigation()
             if self.planner:
                 self.planner.clear_dynamic_costmap()
-            self.status.update({"state": "failed", "error": str(exc)})
+            self.status.update({
+                "state": "failed", "error": str(exc),
+                "native_command_active": False,
+            })
             await self._emit()
 
 

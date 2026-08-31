@@ -22,6 +22,13 @@ from typing import Optional, Callable
 ROBOT_IP = "192.168.123.161"          # MCU principal robot
 ORIN_IP = "192.168.123.164"           # Orin NX
 NETWORK_INTERFACE = "enP8p1s0"        # Interfata Orin spre robot
+# Mid360 publică uneori la puțin peste o secundă când serviciul nativ SLAM
+# procesează simultan pos_info/ctrl_info. Pragul unic de 2 s evită alternanța
+# falsă verde/roșu; după acest interval autonomia rămâne fail-safe.
+# Mid360 publică uneori în rafale când serviciul SLAM procesează o comandă
+# 1102. Jurnalele reale au arătat pauze de aproape 2 s urmate de cadre valide;
+# 2,5 s elimină oscilația verde/roșu, iar camera continuă frâna redundantă.
+LIDAR_FRESHNESS_MAX_AGE = 2.5
 
 # API-uri adaugate in clientul G1 oficial dupa versiunea instalata pe robot.
 # Firmware-ul nou poate ramane pe controlul intern chiar daca SetVelocity(7105)
@@ -799,11 +806,14 @@ class ObstacleGuard:
         self._camera_center_distance = None
         self._lidar_center_distance = None
         self._lidar_center_vector = None
+        self._lidar_zone_distances = {}
         self._lidar_obstacle_shape = []
         self._lidar_self_filtered_points = 0
         self._lidar_source = None
         self._lidar_tracks = {}
         self._next_lidar_track_id = 1
+        self._semantic_obstacles = []
+        self._semantic_last_update = 0.0
         self._floor_plane = None
         self._static_resolution = None
         self._static_raw_cells = set()
@@ -816,6 +826,7 @@ class ObstacleGuard:
         self._lidar_blocked = set()
         self._lidar_center_distance = None
         self._lidar_center_vector = None
+        self._lidar_zone_distances = {}
         self._lidar_obstacle_shape = []
         self._lidar_self_filtered_points = 0
         self._lidar_source = None
@@ -873,6 +884,53 @@ class ObstacleGuard:
             center = zones.get("center", {}).get("dist")
             self._camera_center_distance = float(center) if center is not None else None
             self._camera_last_update = time.time()
+
+    def update_semantic_objects(self, objects: list) -> None:
+        """Store confirmed 3D objects as compact map-frame planning geometry.
+
+        The semantic mapper already rejects background depth and transforms
+        every point into the active map.  We retain one XY sample per 5 cm
+        voxel: enough to preserve chair legs/seat shape without copying the
+        full RGB cloud into every navigation cycle.
+        """
+        compact = []
+        for item in objects or []:
+            cells = {}
+            for point in item.get("points") or []:
+                try:
+                    x, y = float(point["x"]), float(point["y"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if not math.isfinite(x) or not math.isfinite(y):
+                    continue
+                cells.setdefault((round(x / 0.05), round(y / 0.05)), (x, y))
+            points = list(cells.values())
+            if not points:
+                continue
+            compact.append({
+                "id": int(item.get("id", 0) or 0),
+                "label": str(item.get("label") or "object"),
+                "points": points,
+                "bounds": dict(item.get("bounds") or {}),
+                "confidence": float(item.get("confidence", 0.0) or 0.0),
+            })
+        with self._lock:
+            self._semantic_obstacles = compact
+            self._semantic_last_update = time.time() if compact else 0.0
+
+    def semantic_obstacle_shapes(self, max_age: float = 11.0) -> list:
+        """Thread-safe semantic footprints currently valid in the active map."""
+        with self._lock:
+            if (not self._semantic_obstacles
+                    or time.time() - self._semantic_last_update > float(max_age)):
+                return []
+            return [
+                {
+                    **{key: value for key, value in item.items() if key != "points"},
+                    "points": list(item["points"]),
+                }
+                for item in self._semantic_obstacles
+            ]
 
     def update_lidar_points(self, points: list, pose: dict,
                             source: str = "slam_global_points") -> None:
@@ -1048,6 +1106,7 @@ class ObstacleGuard:
             center_vector = None
             center_distance = None
             blocked = set()
+            zone_distances = {}
 
             if blocking_clusters:
                 blocked.add("center")
@@ -1072,24 +1131,38 @@ class ObstacleGuard:
                 middle = len(nearest) // 2
                 center_vector = (forward_values[middle], left_values[middle])
                 center_distance = math.hypot(*center_vector)
+                zone_distances["center"] = center_distance
 
             side_limit = blocking_half_width + 0.35
-            if any(any(
-                    0.05 < sample[2] < 0.95
-                    and blocking_half_width < sample[3] <= side_limit
-                    for sample in cluster["samples"]
-            ) for cluster in confirmed_clusters):
+            left_samples = [
+                sample
+                for cluster in confirmed_clusters
+                for sample in cluster["samples"]
+                if 0.05 < sample[2] < 0.95
+                and blocking_half_width < sample[3] <= side_limit
+            ]
+            right_samples = [
+                sample
+                for cluster in confirmed_clusters
+                for sample in cluster["samples"]
+                if 0.05 < sample[2] < 0.95
+                and -side_limit <= sample[3] < -blocking_half_width
+            ]
+            if left_samples:
                 blocked.add("left")
-            if any(any(
-                    0.05 < sample[2] < 0.95
-                    and -side_limit <= sample[3] < -blocking_half_width
-                    for sample in cluster["samples"]
-            ) for cluster in confirmed_clusters):
+                zone_distances["left"] = min(
+                    math.hypot(sample[2], sample[3]) for sample in left_samples
+                )
+            if right_samples:
                 blocked.add("right")
+                zone_distances["right"] = min(
+                    math.hypot(sample[2], sample[3]) for sample in right_samples
+                )
 
             self._lidar_blocked = blocked
             self._lidar_center_distance = center_distance
             self._lidar_center_vector = center_vector
+            self._lidar_zone_distances = zone_distances
             self._lidar_obstacle_shape = obstacle_shape
             self._lidar_self_filtered_points = self_filtered_points
             self._lidar_source = str(source)
@@ -1102,7 +1175,7 @@ class ObstacleGuard:
             blocked = set()
             if now - self._camera_last_update <= 2.0:
                 blocked.update(self._camera_blocked)
-            if now - self._lidar_last_update <= 1.0:
+            if now - self._lidar_last_update <= LIDAR_FRESHNESS_MAX_AGE:
                 blocked.update(self._lidar_blocked)
 
         if not blocked:
@@ -1117,13 +1190,24 @@ class ObstacleGuard:
         return False
 
     def is_navigation_blocked(self) -> bool:
-        """Pentru A*: orice cluster care intersectează corpul sau brațele G1."""
+        """Protejează axa corpului și anvelopa apropiată a mâinilor.
+
+        Clusterele laterale depărtate rămân doar în costmap și în
+        ``is_lateral_clear``. Un cluster lateral sub 0,56 m oprește însă mersul
+        înainte: pelvisul poate avea culoar liber în timp ce mâna sau umărul
+        ating colțul unui scaun.
+        """
         with self._lock:
             now = time.time()
-            lidar_blocked = (
-                now - self._lidar_last_update <= 1.0
-                and bool(self._lidar_blocked.intersection({"left", "center", "right"}))
-            )
+            lidar_blocked = False
+            if now - self._lidar_last_update <= LIDAR_FRESHNESS_MAX_AGE:
+                lidar_blocked = "center" in self._lidar_blocked
+                if not lidar_blocked:
+                    lidar_blocked = any(
+                        zone in self._lidar_blocked
+                        and self._lidar_zone_distances.get(zone, math.inf) <= 0.56
+                        for zone in ("left", "right")
+                    )
             camera_emergency = False
             if now - self._camera_last_update <= 2.0:
                 for zone in self._camera_blocked:
@@ -1162,7 +1246,8 @@ class ObstacleGuard:
                     and side in self._camera_warning
                     and self._camera_distances.get(side, math.inf) <= 0.60):
                 return False
-            if now - self._lidar_last_update <= 1.0 and side in self._lidar_blocked:
+            if (now - self._lidar_last_update <= LIDAR_FRESHNESS_MAX_AGE
+                    and side in self._lidar_blocked):
                 return False
         return True
 
@@ -1176,7 +1261,11 @@ class ObstacleGuard:
         with self._lock:
             now = time.time()
             camera_fresh = self._camera_last_update > 0.0 and now - self._camera_last_update <= max_age
-            lidar_fresh = self._lidar_last_update > 0.0 and now - self._lidar_last_update <= min(max_age, 1.0)
+            lidar_fresh = (
+                self._lidar_last_update > 0.0
+                and now - self._lidar_last_update
+                    <= min(max_age, LIDAR_FRESHNESS_MAX_AGE)
+            )
             camera_zones = {
                 zone: "danger" for zone in sorted(self._camera_blocked)
             }
@@ -1192,6 +1281,7 @@ class ObstacleGuard:
                 "camera_zones": camera_zones,
                 "camera_distances": dict(self._camera_distances),
                 "lidar_zones": sorted(self._lidar_blocked),
+                "lidar_zone_distances": dict(self._lidar_zone_distances),
                 "lidar_center_distance": self._lidar_center_distance,
                 "lidar_self_filtered_points": self._lidar_self_filtered_points,
                 "lidar_source": self._lidar_source,
@@ -1205,7 +1295,8 @@ class ObstacleGuard:
     def front_obstacle_shape(self):
         """Forma 2D curentă a obiectului necunoscut care intersectează coridorul robotului."""
         with self._lock:
-            if time.time() - self._lidar_last_update > 1.0 or not self._lidar_obstacle_shape:
+            if (time.time() - self._lidar_last_update > LIDAR_FRESHNESS_MAX_AGE
+                    or not self._lidar_obstacle_shape):
                 return None
             return {
                 "points": list(self._lidar_obstacle_shape),
@@ -1221,7 +1312,8 @@ class ObstacleGuard:
         """Poziția obstacolului (înainte, stânga) în cadrul robotului."""
         with self._lock:
             now = time.time()
-            if now - self._lidar_last_update <= 1.0 and self._lidar_center_vector is not None:
+            if (now - self._lidar_last_update <= LIDAR_FRESHNESS_MAX_AGE
+                    and self._lidar_center_vector is not None):
                 forward, left = self._lidar_center_vector
             elif (now - self._camera_last_update <= 2.0
                   and (self._camera_blocked or self._camera_warning)):
