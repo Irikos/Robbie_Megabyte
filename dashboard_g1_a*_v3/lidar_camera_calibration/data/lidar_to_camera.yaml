@@ -1,8 +1,0 @@
-# x_camera = R_camera_livox * x_livox + t_camera_livox
-parent_frame: livox_frame
-child_frame: camera_color_optical_frame
-translation_m: [0.03925992357, 0.04152105177, 0.007452133009]
-rotation_matrix:
-  - [0.01040740286, 0.9999293221, -0.005747764553]
-  - [-0.7140221566, 0.01145552994, 0.7000293784]
-  - [0.7000457455, -0.003181456517, 0.7140909134]
