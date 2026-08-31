@@ -211,152 +211,307 @@ def extract_livox_points(
 
 
 class SemanticChairTracker:
-    """Multi-frame spatial tracker with stable chair numbering."""
+    """Confidence map backed by an ID dictionary and a spatial hash.
+
+    YOLO supplies semantics. LiDAR only supports existing hypotheses or proves
+    that a previously occupied, currently observable volume has been cleared.
+    Confirmed objects remain anchored; a chair moved beyond the association
+    gate creates a new hypothesis while the old coordinate loses evidence.
+    """
 
     def __init__(
         self,
         confirmations: int = 3,
-        merge_distance_m: float = 0.70,
+        merge_distance_m: float = 0.45,
         voxel_size_m: float = 0.025,
         lifespan_s: float = 10.0,
         max_voxels: int = 10000,
+        aging_cap: float = 100.0,
+        growth_per_observation: float = 6.0,
+        visible_miss_decay: float = 9.0,
     ):
         self.confirmations = max(1, int(confirmations))
-        self.merge_distance_m = float(merge_distance_m)
+        self.merge_distance_m = max(0.15, float(merge_distance_m))
         self.voxel_size_m = float(voxel_size_m)
-        self.lifespan_s = max(1.0, float(lifespan_s))
+        self.lifespan_s = max(1.0, float(lifespan_s))  # compatibility metadata
         self.max_voxels = max(100, int(max_voxels))
-        self._tracks: list[dict] = []
+        self.aging_cap = max(10.0, float(aging_cap))
+        self.growth_per_observation = max(0.1, float(growth_per_observation))
+        self.visible_miss_decay = max(
+            self.growth_per_observation + 0.1, float(visible_miss_decay)
+        )
+        self.confirmation_score = self.confirmations * self.growth_per_observation
+        self.spatial_cell_m = self.merge_distance_m
+        self._tracks: dict[int, dict] = {}
+        self._spatial_index: dict[tuple[int, int], set[int]] = {}
+        self._next_track_key = 1
         self._next_id = 1
 
     def reset(self) -> None:
-        self._tracks = []
+        self._tracks = {}
+        self._spatial_index = {}
+        self._next_track_key = 1
         self._next_id = 1
 
-    def expire(self, observed_at: Optional[float] = None) -> bool:
-        """Remove candidates after 2 s and confirmed chairs after lifespan_s."""
-        now = float(time.monotonic() if observed_at is None else observed_at)
-        previous_count = len(self._tracks)
-        self._tracks = [
-            track for track in self._tracks
-            if now - track["last_seen"] <= (
-                self.lifespan_s if track["id"] is not None else 2.0
-            )
-        ]
-        return len(self._tracks) != previous_count
+    def _cell(self, x: float, y: float) -> tuple[int, int]:
+        return (
+            math.floor(float(x) / self.spatial_cell_m),
+            math.floor(float(y) / self.spatial_cell_m),
+        )
 
-    def observe(
-        self,
-        points: Iterable[dict],
-        confidence: float,
-        observed_at: Optional[float] = None,
-    ) -> bool:
+    def _index(self, key: int, track: dict) -> None:
+        cell = self._cell(track["anchor"][0], track["anchor"][1])
+        track["spatial_cell"] = cell
+        self._spatial_index.setdefault(cell, set()).add(key)
+
+    def _reindex(self, key: int, track: dict) -> None:
+        previous = track.get("spatial_cell")
+        current = self._cell(track["anchor"][0], track["anchor"][1])
+        if previous == current:
+            return
+        members = self._spatial_index.get(previous)
+        if members:
+            members.discard(key)
+            if not members:
+                self._spatial_index.pop(previous, None)
+        track["spatial_cell"] = current
+        self._spatial_index.setdefault(current, set()).add(key)
+
+    def _remove(self, key: int) -> None:
+        track = self._tracks.pop(key, None)
+        if not track:
+            return
+        cell = track.get("spatial_cell")
+        members = self._spatial_index.get(cell)
+        if members:
+            members.discard(key)
+            if not members:
+                self._spatial_index.pop(cell, None)
+
+    def _nearby(self, center: np.ndarray) -> list[tuple[int, dict]]:
+        cell_x, cell_y = self._cell(center[0], center[1])
+        keys: set[int] = set()
+        for offset_x in (-1, 0, 1):
+            for offset_y in (-1, 0, 1):
+                keys.update(self._spatial_index.get((cell_x + offset_x, cell_y + offset_y), ()))
+        return [(key, self._tracks[key]) for key in keys if key in self._tracks]
+
+    @staticmethod
+    def _valid_points(points: Iterable[dict]) -> tuple[list[dict], np.ndarray]:
         points = list(points)
         if len(points) < 20:
-            return False
-        now = float(time.monotonic() if observed_at is None else observed_at)
+            return [], np.empty((0, 3), dtype=np.float64)
         xyz = np.asarray(
             [[point["x"], point["y"], point["z"]] for point in points],
             dtype=np.float64,
         )
         finite = np.isfinite(xyz).all(axis=1)
-        xyz = xyz[finite]
-        points = [point for point, keep in zip(points, finite) if keep]
+        return [point for point, keep in zip(points, finite) if keep], xyz[finite]
+
+    def _lidar_evidence(
+        self, track: dict, lidar_points: list[dict], sensor_pose: Optional[dict]
+    ) -> tuple[int, bool, bool]:
+        """Return support count, camera visibility and ray-clearing evidence."""
+        if not sensor_pose:
+            return 0, False, False
+        pose_x = float(sensor_pose.get("x", 0.0))
+        pose_y = float(sensor_pose.get("y", 0.0))
+        pose_yaw = float(sensor_pose.get("yaw", 0.0))
+        center_x, center_y, _ = track["anchor"]
+        dx, dy = center_x - pose_x, center_y - pose_y
+        cosine, sine = math.cos(pose_yaw), math.sin(pose_yaw)
+        forward = cosine * dx + sine * dy
+        left = -sine * dx + cosine * dy
+        visible = 0.25 <= forward <= 4.2 and abs(math.atan2(left, forward)) <= math.radians(36)
+        if not lidar_points:
+            return 0, visible, False
+
+        points = list(track["voxels"].values())
+        z_values = [float(point["z"]) for point in points] or [track["anchor"][2]]
+        min_z, max_z = min(z_values) - 0.15, max(z_values) + 0.20
+        radius = max(0.28, min(0.60, self.merge_distance_m))
+        support = 0
+        target_range = math.hypot(dx, dy)
+        target_angle = math.atan2(dy, dx)
+        angular_gate = max(math.radians(2.0), math.atan2(radius * 0.55, max(0.2, target_range)))
+        returns_behind = 0
+        for point in lidar_points:
+            x, y = float(point.get("x", 0.0)), float(point.get("y", 0.0))
+            z = float(point.get("z", track["anchor"][2]))
+            if math.hypot(x - center_x, y - center_y) <= radius and min_z <= z <= max_z:
+                support += 1
+            point_dx, point_dy = x - pose_x, y - pose_y
+            point_range = math.hypot(point_dx, point_dy)
+            angle_error = abs((math.atan2(point_dy, point_dx) - target_angle + math.pi) % (2 * math.pi) - math.pi)
+            if point_range >= target_range + 0.25 and angle_error <= angular_gate:
+                returns_behind += 1
+        cleared = visible and support < 4 and returns_behind >= 3
+        return support, visible, cleared
+
+    def _observe_points(
+        self, points: Iterable[dict], confidence: float, now: float,
+        lidar_points: Optional[list[dict]] = None, sensor_pose: Optional[dict] = None,
+    ) -> tuple[Optional[int], bool]:
+        points, xyz = self._valid_points(points)
         if len(points) < 20:
-            return False
+            return None, False
         center = np.median(xyz, axis=0)
-
-        self.expire(now)
-        track = None
-        best_distance = math.inf
-        for candidate in self._tracks:
-            distance = math.hypot(
-                float(center[0]) - candidate["center"][0],
-                float(center[1]) - candidate["center"][1],
-            )
+        best_key, best_track, best_distance = None, None, math.inf
+        for key, candidate in self._nearby(center):
+            distance = math.hypot(center[0] - candidate["anchor"][0], center[1] - candidate["anchor"][1])
             if distance <= self.merge_distance_m and distance < best_distance:
-                track = candidate
-                best_distance = distance
-        if track is None:
-            track = {
-                "id": None,
-                "hits": 0,
-                "center": center.tolist(),
-                "last_seen": now,
-                "confidence": 0.0,
-                "voxels": {},
+                best_key, best_track, best_distance = key, candidate, distance
+        if best_track is None:
+            best_key = self._next_track_key
+            self._next_track_key += 1
+            best_track = {
+                "id": None, "hits": 0, "anchor": center.tolist(), "center": center.tolist(),
+                "last_seen": now, "last_lidar_seen": 0.0, "confidence": 0.0,
+                "aging": 0.0, "semantic_confidence": 0.0, "lidar_confidence": 0.0,
+                "lidar_supported": False, "visible_misses": 0, "voxels": {},
             }
-            self._tracks.append(track)
+            self._tracks[best_key] = best_track
+            self._index(best_key, best_track)
 
-        track["hits"] += 1
-        track["last_seen"] = now
-        track["confidence"] = max(float(confidence), track["confidence"])
-        previous = np.asarray(track["center"], dtype=np.float64)
-        track["center"] = (previous * 0.75 + center * 0.25).tolist()
+        support, _, _ = self._lidar_evidence(best_track, lidar_points or [], sensor_pose)
+        best_track["hits"] += 1
+        best_track["last_seen"] = now
+        best_track["confidence"] = max(float(confidence), best_track["confidence"])
+        best_track["semantic_confidence"] = min(100.0, best_track["semantic_confidence"] + 8.0)
+        best_track["aging"] = min(
+            self.aging_cap,
+            best_track["aging"] + self.growth_per_observation + (2.0 if support >= 4 else 0.0),
+        )
+        best_track["visible_misses"] = 0
+        best_track["lidar_supported"] = support >= 4
+        if support >= 4:
+            best_track["last_lidar_seen"] = now
+            best_track["lidar_confidence"] = min(100.0, best_track["lidar_confidence"] + 6.0)
+        else:
+            best_track["lidar_confidence"] = max(0.0, best_track["lidar_confidence"] - 1.0)
+
+        # Confirmed furniture remains spatially anchored. Candidate centers may
+        # settle within the gate before receiving their public chair number.
+        if best_track["id"] is None:
+            previous = np.asarray(best_track["center"], dtype=np.float64)
+            best_track["center"] = (previous * 0.65 + center * 0.35).tolist()
+            best_track["anchor"] = list(best_track["center"])
+            self._reindex(best_key, best_track)
         for point in points:
-            key = (
+            if math.hypot(float(point["x"]) - best_track["anchor"][0], float(point["y"]) - best_track["anchor"][1]) > self.merge_distance_m:
+                continue
+            voxel = (
                 round(float(point["x"]) / self.voxel_size_m),
                 round(float(point["y"]) / self.voxel_size_m),
                 round(float(point["z"]) / self.voxel_size_m),
             )
-            if key not in track["voxels"] and len(track["voxels"]) < self.max_voxels:
-                track["voxels"][key] = {
-                    "x": round(float(point["x"]), 4),
-                    "y": round(float(point["y"]), 4),
-                    "z": round(float(point["z"]), 4),
-                    "r": int(point.get("r", 180)),
-                    "g": int(point.get("g", 180)),
-                    "b": int(point.get("b", 180)),
+            if voxel not in best_track["voxels"] and len(best_track["voxels"]) < self.max_voxels:
+                best_track["voxels"][voxel] = {
+                    "x": round(float(point["x"]), 4), "y": round(float(point["y"]), 4),
+                    "z": round(float(point["z"]), 4), "r": int(point.get("r", 180)),
+                    "g": int(point.get("g", 180)), "b": int(point.get("b", 180)),
                 }
         became_confirmed = False
-        if track["id"] is None and track["hits"] >= self.confirmations:
-            track["id"] = self._next_id
+        if (best_track["id"] is None and best_track["hits"] >= self.confirmations
+                and best_track["aging"] >= self.confirmation_score):
+            best_track["id"] = self._next_id
             self._next_id += 1
             became_confirmed = True
-        return became_confirmed or track["id"] is not None
+        return best_key, became_confirmed or best_track["id"] is not None
+
+    def observe(
+        self, points: Iterable[dict], confidence: float,
+        observed_at: Optional[float] = None,
+    ) -> bool:
+        """Compatibility helper for one positive camera observation."""
+        _, changed = self._observe_points(
+            points, confidence,
+            float(time.monotonic() if observed_at is None else observed_at),
+        )
+        return changed
+
+    def update_frame(
+        self, observations: Iterable[dict], lidar_points: Optional[list[dict]],
+        sensor_pose: Optional[dict], observed_at: Optional[float] = None,
+    ) -> bool:
+        """Fuse one camera frame and one recent raw LiDAR scan."""
+        now = float(time.monotonic() if observed_at is None else observed_at)
+        matched: set[int] = set()
+        changed = False
+        for observation in observations:
+            key, visible = self._observe_points(
+                observation.get("points", []), float(observation.get("confidence", 0.0)),
+                now, lidar_points or [], sensor_pose,
+            )
+            if key is not None:
+                matched.add(key)
+            changed = changed or visible
+
+        for key, track in list(self._tracks.items()):
+            if key in matched:
+                continue
+            support, visible, cleared = self._lidar_evidence(track, lidar_points or [], sensor_pose)
+            before = float(track["aging"])
+            if support >= 4:
+                track["aging"] = min(self.aging_cap, before + 1.0)
+                track["last_lidar_seen"] = now
+                track["lidar_supported"] = True
+                track["lidar_confidence"] = min(100.0, track["lidar_confidence"] + 3.0)
+            elif cleared:
+                track["aging"] = max(0.0, before - self.visible_miss_decay)
+                track["visible_misses"] += 1
+                track["lidar_supported"] = False
+                track["lidar_confidence"] = max(0.0, track["lidar_confidence"] - 10.0)
+            # A point is penalized only with ray-clearing evidence. Merely being
+            # inside the nominal FOV may still mean that it is occluded.
+            # Outside the current field of view is unknown, not negative evidence.
+            if track["id"] is None and now - track["last_seen"] > 2.0:
+                track["aging"] = 0.0
+            if track["aging"] <= 0.0:
+                self._remove(key)
+                changed = True
+            elif track["aging"] != before:
+                changed = changed or track["id"] is not None
+        return changed
+
+    def expire(self, observed_at: Optional[float] = None) -> bool:
+        """Only stale, unconfirmed candidates expire without visibility evidence."""
+        now = float(time.monotonic() if observed_at is None else observed_at)
+        removed = False
+        for key, track in list(self._tracks.items()):
+            if track["id"] is None and now - track["last_seen"] > 2.0:
+                self._remove(key)
+                removed = True
+        return removed
 
     def snapshot(self) -> list[dict]:
         objects = []
-        for track in self._tracks:
-            if track["id"] is None:
+        now = time.monotonic()
+        for track in sorted(self._tracks.values(), key=lambda item: item["id"] or math.inf):
+            if track["id"] is None or track["aging"] <= 0.0:
                 continue
             points = list(track["voxels"].values())
             if not points:
                 continue
-            xyz = np.asarray(
-                [[point["x"], point["y"], point["z"]] for point in points],
-                dtype=np.float64,
-            )
-            minimum = np.percentile(xyz, 2.0, axis=0)
-            maximum = np.percentile(xyz, 98.0, axis=0)
+            xyz = np.asarray([[p["x"], p["y"], p["z"]] for p in points], dtype=np.float64)
+            minimum, maximum = np.percentile(xyz, 2.0, axis=0), np.percentile(xyz, 98.0, axis=0)
             chair_id = int(track["id"])
             objects.append({
-                "id": chair_id,
-                "name": f"chair {chair_id}",
-                "label": "chair",
+                "id": chair_id, "name": f"chair {chair_id}", "label": "chair",
                 "confidence": round(float(track["confidence"]), 3),
-                "observations": int(track["hits"]),
-                "age_s": round(max(0.0, time.monotonic() - track["last_seen"]), 2),
-                "expires_in_s": round(max(
-                    0.0,
-                    self.lifespan_s - (time.monotonic() - track["last_seen"]),
-                ), 2),
-                "center": {
-                    "x": round(float(track["center"][0]), 4),
-                    "y": round(float(track["center"][1]), 4),
-                    "z": round(float(track["center"][2]), 4),
-                },
+                "semantic_confidence": round(float(track["semantic_confidence"]), 1),
+                "lidar_confidence": round(float(track["lidar_confidence"]), 1),
+                "lidar_supported": bool(track["lidar_supported"]),
+                "aging_value": round(float(track["aging"]), 1),
+                "aging_cap": round(float(self.aging_cap), 1),
+                "observations": int(track["hits"]), "visible_misses": int(track["visible_misses"]),
+                "age_s": round(max(0.0, now - track["last_seen"]), 2),
+                "center": {"x": round(float(track["anchor"][0]), 4),
+                           "y": round(float(track["anchor"][1]), 4),
+                           "z": round(float(track["anchor"][2]), 4)},
                 "bounds": {
-                    "min": {
-                        "x": round(float(minimum[0]), 4),
-                        "y": round(float(minimum[1]), 4),
-                        "z": round(float(minimum[2]), 4),
-                    },
-                    "max": {
-                        "x": round(float(maximum[0]), 4),
-                        "y": round(float(maximum[1]), 4),
-                        "z": round(float(maximum[2]), 4),
-                    },
+                    "min": {"x": round(float(minimum[0]), 4), "y": round(float(minimum[1]), 4), "z": round(float(minimum[2]), 4)},
+                    "max": {"x": round(float(maximum[0]), 4), "y": round(float(maximum[1]), 4), "z": round(float(maximum[2]), 4)},
                 },
                 "points": points,
             })

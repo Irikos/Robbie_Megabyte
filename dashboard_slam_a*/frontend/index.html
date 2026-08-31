@@ -198,8 +198,11 @@
         </div>
         <div id="car-agent-pose" class="car-agent-note">Poziție hartă: —</div>
         <div class="car-agent-note">
-          Transformare manuală: originea <code>car_map</code> exprimată în harta G1.
+          Alinierea pornește automat când sunt disponibile harta <code>/map</code> a mașinii și PCD-ul G1.
         </div>
+        <button class="btn btn-full" onclick="autoAlignCarMaps()" style="background:#16a34a; color:white;">✦ Aliniază automat car_map → harta G1</button>
+        <div id="car-alignment-status" class="car-agent-note">Aliniere: aștept cele două hărți.</div>
+        <div class="car-agent-note">Corecție manuală / fallback:</div>
         <div class="car-agent-grid">
           <input id="car-tf-x" type="number" step="0.01" value="0" placeholder="TF X (m)" title="X al originii car_map în harta G1" />
           <input id="car-tf-y" type="number" step="0.01" value="0" placeholder="TF Y (m)" title="Y al originii car_map în harta G1" />
@@ -605,6 +608,7 @@ sessionStorage.setItem(MAP_DISPLAY_STORAGE_KEY, '1');
 let costmapView = {data: null, zoom: 1};
 let latestPoseSource = null;
 let carTransformInitialized = false;
+let lastCarAlignmentUpdate = 0;
 let latestSemanticChairMessage = null;
 const COSTMAP_DEFAULTS = {resolution:0.08,minPoints:3,minZ:0.15,maxZ:1.85,radius:0.25,
   comfortRadius:0.65,clearanceWeight:6.0,floorTolerance:0.08,levelFloor:true};
@@ -706,6 +710,25 @@ function updateCarState(message) {
     document.getElementById('car-tf-yaw').value = Number(message.transform.yaw_deg || 0).toFixed(1);
     carTransformInitialized = true;
   }
+  const alignment = message.alignment;
+  const alignmentUpdated = Number(alignment?.updated_at || 0);
+  if (alignment && alignmentUpdated > lastCarAlignmentUpdate) {
+    lastCarAlignmentUpdate = alignmentUpdated;
+    const alignmentStatus = document.getElementById('car-alignment-status');
+    const details = Number.isFinite(Number(alignment.matches))
+      ? ` · ${Number(alignment.matches)} matches · overlap ${(100 * Number(alignment.overlap || 0)).toFixed(1)}% · RMSE ${Number(alignment.rmse_m || 0).toFixed(2)} m`
+      : '';
+    alignmentStatus.textContent = `Aliniere ${alignment.status || 'idle'}: ${alignment.message || '—'}${details}`;
+    alignmentStatus.style.color = alignment.status === 'aligned'
+      ? '#4ade80'
+      : (alignment.status === 'failed' ? '#f87171' : '#fbbf24');
+    if (alignment.status === 'aligned' && message.transform) {
+      document.getElementById('car-tf-x').value = Number(message.transform.x || 0).toFixed(2);
+      document.getElementById('car-tf-y').value = Number(message.transform.y || 0).toFixed(2);
+      document.getElementById('car-tf-yaw').value = Number(message.transform.yaw_deg || 0).toFixed(1);
+      carTransformInitialized = true;
+    }
+  }
   const pose = message.pose;
   if (pose && [pose.x, pose.y, pose.yaw].every(Number.isFinite)) {
     document.getElementById('car-agent-pose').textContent =
@@ -789,6 +812,30 @@ async function saveCarTransform() {
   }
 }
 
+async function autoAlignCarMaps() {
+  const result = document.getElementById('car-agent-result');
+  const alignmentStatus = document.getElementById('car-alignment-status');
+  result.textContent = 'Pornesc proiecția PCD și potrivirea trăsăturilor…';
+  alignmentStatus.textContent = 'Aliniere running: procesez cele două hărți…';
+  alignmentStatus.style.color = '#fbbf24';
+  try {
+    const response = await fetch(API_BASE + '/api/car/auto_align', {method:'POST'});
+    const data = await response.json();
+    if (data.alignment) {
+      lastCarAlignmentUpdate = 0;
+      updateCarState(data);
+    }
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Alinierea a fost respinsă');
+    }
+    const transform = data.transform || {};
+    result.textContent =
+      `Aliniere aplicată · X=${Number(transform.x).toFixed(2)} m · Y=${Number(transform.y).toFixed(2)} m · yaw=${Number(transform.yaw_deg).toFixed(1)}°`;
+  } catch (error) {
+    result.textContent = `Eroare aliniere automată: ${error.message || error}`;
+  }
+}
+
 async function sendCarGoal() {
   const result = document.getElementById('car-agent-result');
   try {
@@ -845,32 +892,34 @@ function renderCarGoal(goal) {
   S.carGoalMarker.visible = true;
 }
 
-function semanticAgingColor(remainingSeconds, lifespanSeconds) {
-  const ratio=Math.max(0,Math.min(1,remainingSeconds/Math.max(0.1,lifespanSeconds)));
+function semanticAgingColor(agingValue, agingCap) {
+  const ratio=Math.max(0,Math.min(1,agingValue/Math.max(0.1,agingCap)));
   return ratio>0.50?'#c084fc':ratio>0.25?'#f59e0b':'#ef4444';
 }
 
-function updateSemanticLabelSprite(sprite, text, remainingSeconds, lifespanSeconds) {
+function updateSemanticLabelSprite(sprite, text, agingValue, agingCap, lidarSupported=false) {
   if (!sprite?.userData?.canvas) return;
   const canvas=sprite.userData.canvas,context=canvas.getContext('2d');
-  const remaining=Math.max(0,Number(remainingSeconds)||0);
-  const lifespan=Math.max(0.1,Number(lifespanSeconds)||10);
-  const ratio=Math.max(0,Math.min(1,remaining/lifespan));
-  const color=semanticAgingColor(remaining,lifespan);
+  const value=Math.max(0,Number(agingValue)||0);
+  const cap=Math.max(1,Number(agingCap)||100);
+  const ratio=Math.max(0,Math.min(1,value/cap));
+  const color=semanticAgingColor(value,cap);
   context.clearRect(0,0,canvas.width,canvas.height);
   context.fillStyle='rgba(15, 5, 30, 0.94)'; context.strokeStyle=color; context.lineWidth=5;
   context.fillRect(4,4,canvas.width-8,canvas.height-8); context.strokeRect(4,4,canvas.width-8,canvas.height-8);
   context.fillStyle='#ffffff'; context.font='bold 30px Inter, sans-serif';
   context.textAlign='left'; context.textBaseline='middle'; context.fillText(text,18,34);
   context.fillStyle=color; context.font='bold 25px JetBrains Mono, monospace';
-  context.textAlign='right'; context.fillText(`AGING ${remaining.toFixed(1)}s`,canvas.width-18,35);
+  context.textAlign='right'; context.fillText(`AGING ${value.toFixed(0)}/${cap.toFixed(0)}`,canvas.width-18,35);
   context.fillStyle='rgba(255,255,255,0.16)'; context.fillRect(18,70,canvas.width-36,17);
   context.fillStyle=color; context.fillRect(18,70,(canvas.width-36)*ratio,17);
+  context.fillStyle=lidarSupported?'#22d3ee':'#94a3b8'; context.font='bold 15px Inter, sans-serif';
+  context.textAlign='right'; context.fillText(lidarSupported?'LiDAR ✓':'YOLO/cameră',canvas.width-20,61);
   sprite.material.map.needsUpdate=true;
-  sprite.userData.remainingSeconds=remaining;
+  sprite.userData.agingValue=value;
 }
 
-function semanticLabelSprite(text, remainingSeconds=10, lifespanSeconds=10) {
+function semanticLabelSprite(text, agingValue=0, agingCap=100, lidarSupported=false) {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 96;
@@ -880,8 +929,8 @@ function semanticLabelSprite(text, remainingSeconds=10, lifespanSeconds=10) {
   }));
   sprite.userData.canvas=canvas;
   sprite.userData.labelText=text;
-  sprite.userData.lifespanSeconds=lifespanSeconds;
-  updateSemanticLabelSprite(sprite,text,remainingSeconds,lifespanSeconds);
+  sprite.userData.agingCap=agingCap;
+  updateSemanticLabelSprite(sprite,text,agingValue,agingCap,lidarSupported);
   sprite.scale.set(1.55, 0.29, 1);
   sprite.renderOrder = 20;
   return sprite;
@@ -915,7 +964,7 @@ function renderSemanticChairs(message) {
   status.style.color = '#d8b4fe';
   if (!S.semanticChairGroup) return;
   clearSemanticChairScene();
-  const lifespan=Math.max(1,Number(message.lifespan_s)||10);
+  const agingCap=Math.max(1,Number(message.aging_cap)||100);
 
   objects.forEach(object => {
     const visualObjects=[];
@@ -967,8 +1016,9 @@ function renderSemanticChairs(message) {
     volume.position.set(mappedCenter.tx, centerZ, mappedCenter.tz);
     S.semanticChairGroup.add(volume);
     visualObjects.push(volume);
-    const remaining=Math.max(0,Number(object.expires_in_s ?? lifespan));
-    const agingColor=semanticAgingColor(remaining,lifespan);
+    const agingValue=Math.max(0,Number(object.aging_value)||0);
+    const objectAgingCap=Math.max(1,Number(object.aging_cap)||agingCap);
+    const agingColor=semanticAgingColor(agingValue,objectAgingCap);
     const boxMaterial=new THREE.LineBasicMaterial({color:agingColor,transparent:true,opacity:0.98});
     const box = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(sizeX, sizeZ, sizeY)),
@@ -978,35 +1028,33 @@ function renderSemanticChairs(message) {
     S.semanticChairGroup.add(box);
     visualObjects.push(box);
     const labelText=object.name || `chair ${object.id}`;
-    const label = semanticLabelSprite(labelText,remaining,lifespan);
+    const label = semanticLabelSprite(labelText,agingValue,objectAgingCap,Boolean(object.lidar_supported));
     label.position.set(mappedCenter.tx, maximum.z + 0.18, mappedCenter.tz);
     S.semanticChairGroup.add(label);
     visualObjects.push(label);
     S.semanticChairVisuals.set(String(object.id),{
       label,labelText,boxMaterial,objects:visualObjects,
-      initialRemaining:remaining,lifespan,receivedAt:performance.now(),
+      agingValue,agingCap:objectAgingCap,lidarSupported:Boolean(object.lidar_supported),
     });
   });
 }
 
 function updateSemanticChairAgingDisplay() {
   if (!S.semanticChairVisuals?.size) return;
-  const now=performance.now(); let visibleCount=0,minRemaining=Infinity;
+  let visibleCount=0,minAging=Infinity;
   S.semanticChairVisuals.forEach(visual=>{
-    const elapsed=(now-visual.receivedAt)/1000;
-    const remaining=Math.max(0,visual.initialRemaining-elapsed);
-    const visible=remaining>0;
+    const value=Math.max(0,visual.agingValue);
+    const visible=value>0;
     visual.objects.forEach(object=>{object.visible=visible;});
     if (!visible) return;
-    visibleCount+=1; minRemaining=Math.min(minRemaining,remaining);
-    updateSemanticLabelSprite(visual.label,visual.labelText,remaining,visual.lifespan);
-    visual.boxMaterial.color.set(semanticAgingColor(remaining,visual.lifespan));
-    visual.boxMaterial.opacity=remaining<=2?0.65+0.35*(Math.floor(remaining*5)%2):0.98;
+    visibleCount+=1; minAging=Math.min(minAging,value);
+    visual.boxMaterial.color.set(semanticAgingColor(value,visual.agingCap));
+    visual.boxMaterial.opacity=value<=20?0.65+0.35*(Math.floor(performance.now()/220)%2):0.98;
   });
   const status=document.getElementById('semantic-chair-status');
   if (status) {
     status.textContent=visibleCount
-      ? `🪑 ${visibleCount} ${visibleCount===1?'scaun semantic':'scaune semantice'} · următorul expiră în ${minRemaining.toFixed(1)}s`
+      ? `🪑 ${visibleCount} ${visibleCount===1?'scaun semantic':'scaune semantice'} · aging minim ${minAging.toFixed(0)}/100`
       : '🪑 0 obiecte semantice';
   }
 }

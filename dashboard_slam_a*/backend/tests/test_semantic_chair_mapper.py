@@ -121,24 +121,81 @@ def test_tracker_confirms_three_frames_deduplicates_and_numbers_stably():
     assert [item["name"] for item in objects] == ["chair 1", "chair 2"]
 
 
-def test_confirmed_chair_expires_10_seconds_after_last_observation_and_resets():
+def _observation(center_x, center_y, confidence=0.82):
+    return {"points": _chair_points(center_x, center_y), "confidence": confidence}
+
+
+def _clearing_returns(x=2.0):
+    return [
+        {"x": x, "y": offset, "z": 0.25}
+        for offset in (-0.08, -0.04, 0.0, 0.04, 0.08)
+    ]
+
+
+def test_tracker_uses_dictionary_spatial_index_and_caps_aging():
     tracker = SemanticChairTracker(
         confirmations=3,
-        merge_distance_m=0.70,
-        lifespan_s=10.0,
+        merge_distance_m=0.45,
+        aging_cap=40.0,
     )
-    tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.0)
-    tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.2)
-    tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.4)
+    for frame in range(20):
+        tracker.update_frame([_observation(1.0, 0.0)], [], {"x": 0, "y": 0, "yaw": 0}, frame * 0.25)
 
-    assert tracker.expire(observed_at=20.4) is False
-    assert len(tracker.snapshot()) == 1
-    # A new observation resets aging to a fresh 10-second lifespan.
-    tracker.observe(_chair_points(1.0, 2.0), 0.90, observed_at=20.4)
-    assert tracker.expire(observed_at=30.4) is False
-    assert len(tracker.snapshot()) == 1
-    assert tracker.expire(observed_at=30.401) is True
+    objects = tracker.snapshot()
+    assert isinstance(tracker._tracks, dict)
+    assert isinstance(tracker._spatial_index, dict)
+    assert len(objects) == 1
+    assert objects[0]["aging_value"] == 40.0
+    assert objects[0]["aging_cap"] == 40.0
+
+
+def test_lidar_support_preserves_object_and_verified_clearing_removes_it():
+    tracker = SemanticChairTracker(confirmations=3, merge_distance_m=0.45)
+    pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+    for frame in range(3):
+        tracker.update_frame([_observation(1.0, 0.0)], [], pose, frame * 0.25)
+    initial = tracker.snapshot()[0]["aging_value"]
+
+    supporting_lidar = [
+        {"x": 1.0 + 0.02 * (index % 3), "y": -0.04 + 0.04 * (index // 3), "z": 0.24}
+        for index in range(9)
+    ]
+    tracker.update_frame([], supporting_lidar, pose, 1.0)
+    supported = tracker.snapshot()[0]
+    assert supported["aging_value"] > initial
+    assert supported["lidar_supported"] is True
+
+    # Decay (9/frame) is faster than growth (6/frame), but only because raw
+    # LiDAR returns behind the old volume prove that its coordinate is empty.
+    for frame in range(20):
+        tracker.update_frame([], _clearing_returns(), pose, 2.0 + frame * 0.25)
+        if not tracker.snapshot():
+            break
     assert tracker.snapshot() == []
+
+
+def test_unobservable_object_is_not_penalized_and_moved_chair_gets_new_id():
+    tracker = SemanticChairTracker(confirmations=3, merge_distance_m=0.35)
+    forward_pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+    for frame in range(3):
+        tracker.update_frame([_observation(1.0, 0.0)], [], forward_pose, frame * 0.25)
+    original = tracker.snapshot()[0]
+
+    away_pose = {"x": 0.0, "y": 0.0, "yaw": np.pi}
+    for frame in range(10):
+        tracker.update_frame([], [], away_pose, 2.0 + frame * 0.25)
+    assert tracker.snapshot()[0]["aging_value"] == original["aging_value"]
+
+    # The new coordinate is outside the association gate. It becomes chair 2;
+    # the old coordinate is simultaneously cleared by LiDAR and disappears.
+    for frame in range(3):
+        tracker.update_frame(
+            [_observation(2.0, 0.0)], _clearing_returns(x=2.0), forward_pose,
+            5.0 + frame * 0.25,
+        )
+    objects = tracker.snapshot()
+    assert [obj["id"] for obj in objects] == [2]
+    assert objects[0]["center"]["x"] == pytest.approx(2.05, abs=0.12)
 
 
 def test_server_and_frontend_wire_semantic_chairs():
@@ -148,9 +205,11 @@ def test_server_and_frontend_wire_semantic_chairs():
     assert "def _process_semantic_chairs(" in server
     assert "deduplicate_chair_detections" in server
     assert "semantic_chair_aging_loop" in server
-    assert "lifespan_s=10.0" in server
-    assert '"lifespan_s": semantic_chair_tracker.lifespan_s' in server
+    assert "aging_cap=100.0" in server
+    assert '"aging_cap": semantic_chair_tracker.aging_cap' in server
+    assert "_semantic_lidar_map_snapshot" in server
     assert '@app.get("/api/semantic/chairs")' in server
     assert "function renderSemanticChairs(message)" in frontend
     assert "semanticLabelSprite" in frontend
+    assert "AGING ${value.toFixed(0)}/${cap.toFixed(0)}" in frontend
     assert "new THREE.EdgesGeometry" in frontend

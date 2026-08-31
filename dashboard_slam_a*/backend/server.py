@@ -65,6 +65,7 @@ from semantic_chair_mapper import (
     deduplicate_chair_detections,
     extract_livox_points,
 )
+from feature_stiching import align_point_maps
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 CALIBRATION_DIR = Path(__file__).parent.parent / "lidar_camera_calibration"
@@ -302,6 +303,19 @@ if FRONTEND_DIR.exists():
 active_ws: List[WebSocket] = []
 car_ws: Optional[WebSocket] = None
 car_transform = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+car_alignment = {
+    "status": "idle",
+    "message": "Aștept harta mașinii și o hartă PCD G1 încărcată.",
+    "trigger": None,
+    "updated_at": 0.0,
+}
+car_auto_align_task: Optional[asyncio.Task] = None
+car_alignment_projection_cache = {
+    "path": None,
+    "mtime": None,
+    "points": None,
+}
+car_alignment_projection_lock = threading.Lock()
 car_state = {
     "connected": False,
     "last_seen": 0.0,
@@ -314,12 +328,15 @@ car_state = {
     "map_source_points": [],
     "map_points": [],
     "map_resolution": 0.0,
+    "map_native_resolution": 0.0,
     "map_occupied_count": 0,
     "map_frame": None,
+    "map_signature": None,
 }
 semantic_chair_tracker = SemanticChairTracker(
-    confirmations=3, merge_distance_m=0.70, voxel_size_m=0.025,
-    lifespan_s=10.0, max_voxels=10000,
+    confirmations=3, merge_distance_m=0.45, voxel_size_m=0.025,
+    lifespan_s=10.0, max_voxels=10000, aging_cap=100.0,
+    growth_per_observation=6.0, visible_miss_decay=9.0,
 )
 semantic_chair_lock = threading.Lock()
 semantic_chair_map_path: Optional[str] = None
@@ -538,7 +555,7 @@ async def map_broadcast_loop():
 
 
 async def semantic_chair_aging_loop():
-    """Expire semantic objects even when YOLO or the camera stops sending."""
+    """Prune stale, unconfirmed hypotheses when the camera stops sending."""
     while True:
         await asyncio.sleep(1.0)
         with semantic_chair_lock:
@@ -690,6 +707,7 @@ def _semantic_chair_payload() -> dict:
         "objects": objects,
         "count": len(objects),
         "lifespan_s": semantic_chair_tracker.lifespan_s,
+        "aging_cap": semantic_chair_tracker.aging_cap,
         "map_path": map_path,
         "calibration_available": lidar_camera_calibration is not None,
         "calibration_error": semantic_calibration_error,
@@ -702,6 +720,19 @@ def _reset_semantic_chairs(map_path: Optional[str] = None) -> dict:
         semantic_chair_tracker.reset()
         semantic_chair_map_path = map_path
     return _semantic_chair_payload()
+
+
+def _semantic_lidar_map_snapshot(pose: dict, floor_plane: Optional[dict]) -> List[dict]:
+    """Transformă numai ultimul scan brut Mid360 recent în map."""
+    if node_instance is None:
+        return []
+    observed_at = float(getattr(node_instance, "last_semantic_raw_lidar_time", 0.0) or 0.0)
+    if observed_at <= 0.0 or time.monotonic() - observed_at > 0.8:
+        return []
+    raw_points = list(getattr(node_instance, "last_semantic_raw_lidar_points", []) or [])
+    if len(raw_points) < 50:
+        return []
+    return _transform_livox_points_to_map(raw_points, pose, floor_plane)
 
 
 def _process_semantic_chairs(
@@ -726,28 +757,29 @@ def _process_semantic_chairs(
         minimum_confidence=0.35,
         iou_threshold=0.35,
     )
-    if not relevant:
-        return None
     pose = dict(map_state.get("pose") or {})
     floor_plane = obstacle_guard.floor_plane()
-    changed = False
+    lidar_map_points = _semantic_lidar_map_snapshot(pose, floor_plane)
+    observations = []
+    for detection in relevant:
+        livox_points = extract_livox_points(
+            depth_img, color_img, detection, lidar_camera_calibration
+        )
+        map_points = _transform_semantic_livox_points_to_map(
+            livox_points, pose, floor_plane
+        )
+        if map_points:
+            observations.append({
+                "points": map_points,
+                "confidence": float(detection.get("confidence", 0.0)),
+            })
     with semantic_chair_lock:
         if semantic_chair_map_path != current_map:
             semantic_chair_tracker.reset()
             semantic_chair_map_path = current_map
-        for detection in relevant:
-            livox_points = extract_livox_points(
-                depth_img, color_img, detection, lidar_camera_calibration
-            )
-            map_points = _transform_semantic_livox_points_to_map(
-                livox_points, pose, floor_plane
-            )
-            if semantic_chair_tracker.observe(
-                map_points,
-                float(detection.get("confidence", 0.0)),
-                observed_at=now,
-            ):
-                changed = True
+        changed = semantic_chair_tracker.update_frame(
+            observations, lidar_map_points, pose, observed_at=now,
+        )
     return _semantic_chair_payload() if changed else None
 
 if ROS2_AVAILABLE:
@@ -790,6 +822,8 @@ if ROS2_AVAILABLE:
             self.last_raw_lidar_frame_points = 0
             self.last_raw_lidar_obstacle_points = 0
             self.last_raw_lidar_ground_base_z = -0.75
+            self.last_semantic_raw_lidar_points = []
+            self.last_semantic_raw_lidar_time = 0.0
             self.nav2_observer = None
 
             # Profilul de deadline este A* + 1102 și nu inițializează deloc
@@ -1032,12 +1066,23 @@ if ROS2_AVAILABLE:
 
         def raw_lidar_callback(self, msg):
             """Fallback sigur LiDAR când serviciul 1804 nu emite cloud global."""
-            if time.time() - self.last_primary_cloud_time <= 0.50:
+            primary_cloud_fresh = time.time() - self.last_primary_cloud_time <= 0.50
+            semantic_now = time.monotonic()
+            if (primary_cloud_fresh
+                    and semantic_now - self.last_semantic_raw_lidar_time < 0.20):
                 return
             if not _pointcloud_has_geometry(msg):
                 return
             points = self._extract_points_from_cloud(msg)
             if len(points) < 100:
+                return
+            # Păstrăm un scan brut separat pentru harta semantică chiar când
+            # cloudul SLAM global este activ. Acesta nu conține mobilier vechi
+            # acumulat și poate confirma că razele au eliberat poziția veche.
+            semantic_step = max(1, len(points) // 3500)
+            self.last_semantic_raw_lidar_points = points[::semantic_step]
+            self.last_semantic_raw_lidar_time = semantic_now
+            if primary_cloud_fresh:
                 return
             self.last_raw_lidar_frame_time = time.monotonic()
             self.last_raw_lidar_frame_points = len(points)
@@ -1449,6 +1494,7 @@ def _car_public_state(
             **car_transform,
             "yaw_deg": math.degrees(car_transform["yaw"]),
         },
+        "alignment": dict(car_alignment),
     }
     if include_scan:
         state["scan_points"] = car_state["scan_points"]
@@ -1571,7 +1617,8 @@ def _car_update_path(data: dict) -> None:
     car_state["path"] = [_car_odom_pose_to_map(pose) for pose in source_path]
 
 
-def _car_update_map(data: dict) -> None:
+def _car_update_map(data: dict) -> bool:
+    """Update the car OccupancyGrid and report whether its geometry changed."""
     width = int(data.get("width", 0))
     height = int(data.get("height", 0))
     resolution = float(data.get("resolution", 0.0))
@@ -1588,6 +1635,16 @@ def _car_update_map(data: dict) -> None:
     origin_y = float(origin_position.get("y", 0.0))
     origin_yaw = _yaw_from_quaternion(origin_orientation)
     cos_origin, sin_origin = math.cos(origin_yaw), math.sin(origin_yaw)
+    signature_step = max(1, len(occupied_indices) // 64)
+    signature_sample = tuple(
+        str(value) for value in occupied_indices[::signature_step][:64]
+    )
+    signature = (
+        width, height, round(resolution, 6),
+        round(origin_x, 4), round(origin_y, 4), round(origin_yaw, 4),
+        len(occupied_indices), signature_sample,
+    )
+    changed = signature != car_state.get("map_signature")
 
     # Keep map traffic/rendering bounded while retaining occupied-wall geometry.
     step = max(1, math.ceil(len(occupied_indices) / 60000))
@@ -1609,8 +1666,149 @@ def _car_update_map(data: dict) -> None:
     car_state["map_source_points"] = source_points
     car_state["map_points"] = _car_source_points_to_g1_map(source_points)
     car_state["map_resolution"] = resolution * step
+    car_state["map_native_resolution"] = resolution
     car_state["map_occupied_count"] = len(occupied_indices)
     car_state["map_frame"] = str(data.get("frame_id") or "map")
+    car_state["map_signature"] = signature
+    return changed
+
+
+def _project_g1_pcd_for_car_alignment(map_path: str) -> List[tuple]:
+    """Create/cache a floor-levelled 2D obstacle projection of the G1 PCD."""
+    resolved = os.path.realpath(map_path)
+    modified = os.path.getmtime(resolved)
+    with car_alignment_projection_lock:
+        if (
+            car_alignment_projection_cache["path"] == resolved
+            and car_alignment_projection_cache["mtime"] == modified
+            and car_alignment_projection_cache["points"]
+        ):
+            return list(car_alignment_projection_cache["points"])
+
+    planner = PCDGridPlanner(
+        resolution=0.08,
+        robot_radius=0.10,
+        min_obstacle_points=2,
+        comfort_radius=0.10,
+        clearance_weight=0.0,
+        unknown_space_weight=0.0,
+    )
+    planner.load(
+        resolved,
+        obstacle_min_z=0.12,
+        obstacle_max_z=1.85,
+        level_to_floor=True,
+        floor_tolerance=0.08,
+    )
+    points = [
+        (cell_x * planner.resolution, cell_y * planner.resolution)
+        for cell_x, cell_y in planner.raw_static_occupied
+    ]
+    if len(points) < 20:
+        raise ValueError("Proiecția 2D a PCD-ului nu conține suficiente obstacole")
+    with car_alignment_projection_lock:
+        car_alignment_projection_cache.update({
+            "path": resolved,
+            "mtime": modified,
+            "points": points,
+        })
+    return list(points)
+
+
+def _compute_car_map_alignment(
+    map_path: str, source_points: List[dict], resolution: float
+) -> dict:
+    target_points = _project_g1_pcd_for_car_alignment(map_path)
+    return align_point_maps(
+        target_points,
+        source_points,
+        resolution=max(0.05, min(0.12, float(resolution or 0.08))),
+    )
+
+
+async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
+    """Estimate and, only if validated, apply car_map -> G1 map."""
+    map_path = _resolve_map_path(loaded_map_path)
+    source_points = list(car_state.get("map_source_points") or [])
+    if not map_path:
+        error = "Încarcă mai întâi harta PCD a robotului G1."
+        car_alignment.update({
+            "status": "waiting", "message": error,
+            "trigger": trigger, "updated_at": time.time(),
+        })
+        return {"success": False, "error": error, **_car_public_state()}
+    if len(source_points) < 20:
+        error = "Aștept o hartă /map cu suficiente celule ocupate de la mașină."
+        car_alignment.update({
+            "status": "waiting", "message": error,
+            "trigger": trigger, "updated_at": time.time(),
+        })
+        return {"success": False, "error": error, **_car_public_state()}
+
+    car_alignment.clear()
+    car_alignment.update({
+        "status": "running",
+        "message": "Proiectez PCD-ul și caut trăsături comune…",
+        "trigger": trigger,
+        "updated_at": time.time(),
+    })
+    await broadcast(_car_public_state(False, False, False))
+    try:
+        result = await asyncio.to_thread(
+            _compute_car_map_alignment,
+            map_path,
+            source_points,
+            car_state.get("map_native_resolution") or 0.08,
+        )
+        if not result.get("accepted"):
+            raise ValueError(
+                "Potrivire nesigură: "
+                f"matches={result.get('matches', 0)}, "
+                f"overlap={100.0 * result.get('overlap', 0.0):.1f}%, "
+                f"RMSE={result.get('rmse_m', 0.0):.2f} m"
+            )
+        car_transform.update({
+            "x": float(result["x"]),
+            "y": float(result["y"]),
+            "yaw": float(result["yaw"]),
+        })
+        _refresh_car_spatial_layers()
+        car_alignment.clear()
+        car_alignment.update({
+            "status": "aligned",
+            "message": "Hărțile au fost aliniate automat.",
+            "trigger": trigger,
+            "updated_at": time.time(),
+            **result,
+        })
+        public_state = _car_public_state()
+        await broadcast(public_state)
+        return {"success": True, **public_state}
+    except Exception as exc:
+        diagnostics = result if "result" in locals() else {}
+        car_alignment.clear()
+        car_alignment.update({
+            "status": "failed",
+            "message": str(exc),
+            "trigger": trigger,
+            "updated_at": time.time(),
+            **diagnostics,
+        })
+        public_state = _car_public_state(False, False, False)
+        await broadcast(public_state)
+        return {"success": False, "error": str(exc), **public_state}
+
+
+def _schedule_car_auto_alignment(trigger: str) -> bool:
+    global car_auto_align_task
+    if car_auto_align_task is not None and not car_auto_align_task.done():
+        return False
+    if not _resolve_map_path(loaded_map_path):
+        return False
+    if len(car_state.get("map_source_points") or []) < 20:
+        return False
+    car_auto_align_task = asyncio.create_task(_run_car_auto_alignment(trigger))
+    return True
 
 
 @app.websocket("/ws")
@@ -1701,7 +1899,7 @@ async def car_websocket_endpoint(ws: WebSocket):
                     _car_update_path(data)
                     public_state = _car_public_state(False, True, False)
                 elif topic == "/map":
-                    _car_update_map(data)
+                    map_changed = _car_update_map(data)
                     public_state = _car_public_state(False, False, True)
                 elif topic == "/path_status":
                     public_state = {"type": "car_path_status", **data}
@@ -1710,6 +1908,11 @@ async def car_websocket_endpoint(ws: WebSocket):
                 car_state["last_seen"] = time.time()
                 public_state["last_seen"] = car_state["last_seen"]
                 await broadcast(public_state)
+                if (
+                    topic == "/map" and map_changed
+                    and car_alignment.get("status") not in {"aligned", "manual"}
+                ):
+                    _schedule_car_auto_alignment("car_map_update")
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
                 print(f"[car] mesaj invalid: {exc}")
     except WebSocketDisconnect:
@@ -1747,9 +1950,37 @@ async def set_car_transform(request: Request):
         )
     car_transform.update(values)
     _refresh_car_spatial_layers()
+    car_alignment.clear()
+    car_alignment.update({
+        "status": "manual",
+        "message": "Transformarea manuală este activă.",
+        "trigger": "manual_transform",
+        "updated_at": time.time(),
+    })
     public_state = _car_public_state()
     await broadcast(public_state)
     return {"success": True, **public_state}
+
+
+@app.post("/api/car/auto_align")
+async def auto_align_car_maps():
+    global car_auto_align_task
+    if car_auto_align_task is not None and not car_auto_align_task.done():
+        return JSONResponse(
+            {
+                "success": False,
+                "error": "Alinierea automată rulează deja.",
+                **_car_public_state(False, False, False),
+            },
+            status_code=409,
+        )
+    car_auto_align_task = asyncio.create_task(
+        _run_car_auto_alignment("operator_retry")
+    )
+    result = await car_auto_align_task
+    if not result.get("success"):
+        return JSONResponse(result, status_code=422)
+    return result
 
 
 @app.post("/api/car/goal")
@@ -2167,6 +2398,7 @@ async def load_robot_map(body: dict = Body({})):
         )
         _set_slam_mode("localization" if localization_armed else "idle")
         local_map["initial_pose_preserved"] = localization_armed
+        _schedule_car_auto_alignment("g1_map_loaded")
         return {
             "success": True,
             "output": (
