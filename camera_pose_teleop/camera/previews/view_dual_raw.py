@@ -1,32 +1,53 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
+import subprocess
+
 import cv2
 import numpy as np
-import subprocess
+
 
 WINDOW = "G1 - Raw Camera"
 
-WIDTH = 1280
-HEIGHT = 720
-FRAME_BYTES = WIDTH * HEIGHT * 3
+UDP_URL = (
+    "udp://127.0.0.1:5600"
+    "?fifo_size=1024"
+    "&overrun_nonfatal=1"
+)
 
 cmd = [
     "ffmpeg",
     "-hide_banner",
-    "-loglevel", "error",
+    "-loglevel",
+    "error",
 
-    "-fflags", "nobuffer",
-    "-flags", "low_delay",
-    "-probesize", "32",
-    "-analyzeduration", "0",
+    "-fflags",
+    "nobuffer",
 
-    "-f", "mjpeg",
+    "-flags",
+    "low_delay",
+
+    "-probesize",
+    "32",
+
+    "-analyzeduration",
+    "0",
+
+    "-f",
+    "mjpeg",
+
     "-i",
-    "udp://127.0.0.1:5600?fifo_size=1024&overrun_nonfatal=1",
+    UDP_URL,
 
     "-an",
-    "-pix_fmt", "bgr24",
-    "-f", "rawvideo",
+
+    "-c:v",
+    "copy",
+
+    "-f",
+    "mjpeg",
+
     "pipe:1",
 ]
 
@@ -34,16 +55,14 @@ proc = subprocess.Popen(
     cmd,
     stdout=subprocess.PIPE,
     stderr=subprocess.DEVNULL,
-    bufsize=FRAME_BYTES * 2,
+    bufsize=0,
 )
 
 if proc.stdout is None:
-    raise RuntimeError("Could not open FFmpeg output.")
+    raise RuntimeError(
+        "Could not open FFmpeg output."
+    )
 
-# Same window behavior as the keypoint viewer:
-# - no OpenCV toolbar
-# - no status bar
-# - freely fills resized/tiled window
 cv2.namedWindow(
     WINDOW,
     cv2.WINDOW_NORMAL
@@ -51,46 +70,110 @@ cv2.namedWindow(
     | cv2.WINDOW_FREERATIO,
 )
 
-cv2.resizeWindow(WINDOW, 960, 540)
+cv2.resizeWindow(
+    WINDOW,
+    960,
+    540,
+)
 
-print("Connected to raw camera on UDP 5600")
-print("Window is freely resizable.")
-print("Press q to close.")
+print(
+    "Connected to raw camera on UDP 5600"
+)
 
-def read_exact(n):
-    chunks = []
-    remaining = n
+print(
+    "Resolution is detected from each JPEG frame."
+)
 
-    while remaining > 0:
-        chunk = proc.stdout.read(remaining)
+print(
+    "Window is freely resizable."
+)
+
+print(
+    "Press q to close."
+)
+
+buffer = bytearray()
+
+JPEG_SOI = b"\xff\xd8"
+JPEG_EOI = b"\xff\xd9"
+
+
+def next_jpeg():
+    while True:
+        start = buffer.find(
+            JPEG_SOI
+        )
+
+        if start >= 0:
+            end = buffer.find(
+                JPEG_EOI,
+                start + 2,
+            )
+
+            if end >= 0:
+                end += 2
+
+                jpeg = bytes(
+                    buffer[start:end]
+                )
+
+                del buffer[:end]
+
+                return jpeg
+
+            if start > 0:
+                del buffer[:start]
+
+        chunk = proc.stdout.read(
+            65536
+        )
 
         if not chunk:
             return None
 
-        chunks.append(chunk)
-        remaining -= len(chunk)
+        buffer.extend(
+            chunk
+        )
 
-    return b"".join(chunks)
+        if len(buffer) > 16 * 1024 * 1024:
+            newest_start = buffer.rfind(
+                JPEG_SOI
+            )
+
+            if newest_start > 0:
+                del buffer[:newest_start]
+            else:
+                buffer.clear()
+
 
 try:
     while True:
-        raw = read_exact(FRAME_BYTES)
+        encoded = next_jpeg()
 
-        if raw is None:
+        if encoded is None:
             break
 
-        frame = np.frombuffer(
-            raw,
-            dtype=np.uint8,
-        ).reshape(
-            HEIGHT,
-            WIDTH,
-            3,
+        frame = cv2.imdecode(
+            np.frombuffer(
+                encoded,
+                dtype=np.uint8,
+            ),
+            cv2.IMREAD_COLOR,
         )
 
-        cv2.imshow(WINDOW, frame)
+        if frame is None:
+            continue
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        cv2.imshow(
+            WINDOW,
+            frame,
+        )
+
+        if (
+            cv2.waitKey(1)
+            & 0xFF
+            == ord("q")
+        ):
             break
 
 finally:
@@ -100,6 +183,8 @@ finally:
         proc.terminate()
 
     try:
-        proc.wait(timeout=2)
+        proc.wait(
+            timeout=2
+        )
     except subprocess.TimeoutExpired:
         proc.kill()

@@ -126,8 +126,11 @@ YUP_TO_ZUP = torch.tensor(
 
 @dataclass(frozen=True)
 class SonicCalibrationProfile:
-    gravity_file: Path
-    reference_file: Path
+    gravity_file: Path | None
+    reference_file: Path | None
+
+    alignment_mode: str = "fixed_v1"
+    session_alignment_file: Path | None = None
 
     expected_reference_sha256: str | None = None
     expected_camera: str | None = None
@@ -142,8 +145,10 @@ class SonicCalibrationProfile:
     @classmethod
     def from_paths(
         cls,
-        gravity_file,
-        reference_file,
+        gravity_file=None,
+        reference_file=None,
+        alignment_mode="fixed_v1",
+        session_alignment_file=None,
         expected_reference_sha256=None,
         expected_camera=None,
         gravity_result_key="result",
@@ -152,9 +157,54 @@ class SonicCalibrationProfile:
         gravity_up_camera_key="gravity_up_left",
         gravity_from_camera_key="R_gravity_from_left",
     ):
+        if alignment_mode not in (
+            "fixed_v1",
+            "session_v2",
+        ):
+            raise ValueError(
+                "Unsupported alignment mode: "
+                f"{alignment_mode!r}"
+            )
+
+        if (
+            alignment_mode == "fixed_v1"
+            and (
+                gravity_file is None
+                or reference_file is None
+            )
+        ):
+            raise ValueError(
+                "fixed_v1 requires gravity_file "
+                "and reference_file"
+            )
+
+        if (
+            alignment_mode == "session_v2"
+            and session_alignment_file is None
+        ):
+            raise ValueError(
+                "session_v2 requires "
+                "session_alignment_file"
+            )
+
         return cls(
-            gravity_file=Path(gravity_file),
-            reference_file=Path(reference_file),
+            gravity_file=(
+                Path(gravity_file)
+                if gravity_file is not None
+                else None
+            ),
+            reference_file=(
+                Path(reference_file)
+                if reference_file is not None
+                else None
+            ),
+            alignment_mode=alignment_mode,
+            session_alignment_file=(
+                Path(session_alignment_file)
+                if session_alignment_file
+                is not None
+                else None
+            ),
             expected_reference_sha256=(
                 expected_reference_sha256
             ),
@@ -285,6 +335,153 @@ def build_calibrated_R_c2gv(
 
     return R_c2gv.to(
         device
+    )
+
+
+SESSION_ALIGNMENT_FORMAT_VERSION = 1
+
+
+def load_session_R_c2gv(
+    profile: SonicCalibrationProfile,
+    device: str | torch.device,
+) -> tuple[torch.Tensor, float]:
+
+    path = profile.session_alignment_file
+
+    if path is None:
+        raise RuntimeError(
+            "session_v2 profile has no "
+            "session alignment file"
+        )
+
+    with np.load(
+        path,
+        allow_pickle=False,
+    ) as z:
+
+        required = (
+            "format_version",
+            "alignment_mode",
+            "R_c2gv",
+        )
+
+        missing = [
+            key
+            for key in required
+            if key not in z.files
+        ]
+
+        if missing:
+            raise RuntimeError(
+                "Session alignment missing keys: "
+                f"{missing}"
+            )
+
+        format_version = int(
+            np.asarray(
+                z["format_version"]
+            ).item()
+        )
+
+        alignment_mode = str(
+            np.asarray(
+                z["alignment_mode"]
+            ).item()
+        )
+
+        R_c2gv_np = np.asarray(
+            z["R_c2gv"],
+            dtype=np.float64,
+        )
+
+        reference_smooth = (
+            float(
+                np.asarray(
+                    z[
+                        "smoothing_history_weight"
+                    ]
+                ).item()
+            )
+            if (
+                "smoothing_history_weight"
+                in z.files
+            )
+            else 0.8
+        )
+
+    if (
+        format_version
+        != SESSION_ALIGNMENT_FORMAT_VERSION
+    ):
+        raise RuntimeError(
+            "Unsupported session alignment "
+            "format version: "
+            f"{format_version}"
+        )
+
+    if alignment_mode != "session_v2":
+        raise RuntimeError(
+            "Session alignment mode mismatch: "
+            f"{alignment_mode!r}"
+        )
+
+    if R_c2gv_np.shape != (3, 3):
+        raise RuntimeError(
+            "Session R_c2gv must have shape "
+            f"(3, 3), got {R_c2gv_np.shape}"
+        )
+
+    if not np.all(
+        np.isfinite(
+            R_c2gv_np
+        )
+    ):
+        raise RuntimeError(
+            "Session R_c2gv contains "
+            "non-finite values"
+        )
+
+    gram = (
+        R_c2gv_np.T
+        @ R_c2gv_np
+    )
+
+    if not np.allclose(
+        gram,
+        np.eye(3),
+        atol=1e-4,
+    ):
+        raise RuntimeError(
+            "Session R_c2gv is not "
+            "orthonormal"
+        )
+
+    determinant = float(
+        np.linalg.det(
+            R_c2gv_np
+        )
+    )
+
+    if not np.isclose(
+        determinant,
+        1.0,
+        atol=1e-4,
+    ):
+        raise RuntimeError(
+            "Session R_c2gv determinant "
+            "must be +1, got "
+            f"{determinant}"
+        )
+
+    R_c2gv = torch.tensor(
+        R_c2gv_np,
+        dtype=torch.float32,
+        device=device,
+    )
+
+    return (
+        R_c2gv,
+        reference_smooth,
     )
 
 
@@ -548,108 +745,152 @@ class SonicSMPLBridge:
             device
         )
 
-        for path in (
-            profile.gravity_file,
-            profile.reference_file,
-        ):
+        if profile.alignment_mode == "fixed_v1":
+            if (
+                profile.gravity_file is None
+                or profile.reference_file is None
+            ):
+                raise RuntimeError(
+                    "fixed_v1 profile is missing "
+                    "legacy calibration paths"
+                )
+
+            for path in (
+                profile.gravity_file,
+                profile.reference_file,
+            ):
+                if not path.exists():
+                    raise FileNotFoundError(
+                        path
+                    )
+
+            if (
+                profile.expected_reference_sha256
+                is not None
+            ):
+                actual = _sha256(
+                    profile.reference_file
+                )
+
+                if (
+                    actual
+                    != profile.expected_reference_sha256
+                ):
+                    raise RuntimeError(
+                        "Calibration reference SHA mismatch: "
+                        f"{actual}"
+                    )
+
+            self.R_c2gv = (
+                build_calibrated_R_c2gv(
+                    profile,
+                    self.device,
+                )
+            )
+
+            with np.load(
+                profile.reference_file,
+                allow_pickle=False,
+            ) as z:
+                R_ref = np.asarray(
+                    z["R_c2gv"],
+                    dtype=np.float64,
+                )
+
+                camera = (
+                    str(
+                        np.asarray(
+                            z["camera"]
+                        ).item()
+                    )
+                    if "camera" in z.files
+                    else None
+                )
+
+                reference_smooth = (
+                    float(
+                        np.asarray(
+                            z[
+                                "smoothing_history_weight"
+                            ]
+                        )
+                    )
+                    if (
+                        "smoothing_history_weight"
+                        in z.files
+                    )
+                    else 0.8
+                )
+
+            R_now = (
+                self.R_c2gv
+                .detach()
+                .cpu()
+                .numpy()
+            )
+
+            err = float(
+                np.max(
+                    np.abs(
+                        R_now
+                        - R_ref
+                    )
+                )
+            )
+
+            if err > 1e-6:
+                raise RuntimeError(
+                    "Derived calibration does not "
+                    "match reference profile: "
+                    f"max error={err}"
+                )
+
+            if (
+                profile.expected_camera
+                is not None
+                and camera
+                != profile.expected_camera
+            ):
+                raise RuntimeError(
+                    "Calibration camera mismatch: "
+                    f"{camera!r}"
+                )
+
+            self.camera = camera
+
+        elif profile.alignment_mode == "session_v2":
+            path = (
+                profile.session_alignment_file
+            )
+
+            if path is None:
+                raise RuntimeError(
+                    "session_v2 profile has no "
+                    "session alignment path"
+                )
+
             if not path.exists():
                 raise FileNotFoundError(
                     path
                 )
 
-        if (
-            profile.expected_reference_sha256
-            is not None
-        ):
-            actual = _sha256(
-                profile.reference_file
-            )
-
-            if (
-                actual
-                != profile.expected_reference_sha256
-            ):
-                raise RuntimeError(
-                    "Calibration reference SHA mismatch: "
-                    f"{actual}"
-                )
-
-        self.R_c2gv = (
-            build_calibrated_R_c2gv(
+            (
+                self.R_c2gv,
+                reference_smooth,
+            ) = load_session_R_c2gv(
                 profile,
                 self.device,
             )
-        )
 
-        with np.load(
-            profile.reference_file,
-            allow_pickle=False,
-        ) as z:
-            R_ref = np.asarray(
-                z["R_c2gv"],
-                dtype=np.float64,
-            )
+            # A V2 session is intentionally not
+            # locked to a specific camera identity.
+            self.camera = None
 
-            camera = (
-                str(
-                    np.asarray(
-                        z["camera"]
-                    ).item()
-                )
-                if "camera" in z.files
-                else None
-            )
-
-            reference_smooth = (
-                float(
-                    np.asarray(
-                        z[
-                            "smoothing_history_weight"
-                        ]
-                    )
-                )
-                if (
-                    "smoothing_history_weight"
-                    in z.files
-                )
-                else 0.8
-            )
-
-        R_now = (
-            self.R_c2gv
-            .detach()
-            .cpu()
-            .numpy()
-        )
-
-        err = float(
-            np.max(
-                np.abs(
-                    R_now
-                    - R_ref
-                )
-            )
-        )
-
-        if err > 1e-6:
+        else:
             raise RuntimeError(
-                "Derived calibration does not "
-                "match reference profile: "
-                f"max error={err}"
+                "Unsupported alignment mode: "
+                f"{profile.alignment_mode!r}"
             )
-
-        if (
-            profile.expected_camera
-            is not None
-            and camera
-            != profile.expected_camera
-        ):
-            raise RuntimeError(
-                "Calibration camera mismatch: "
-                f"{camera!r}"
-            )
-
-        self.camera = camera
 
         self.history_weight = (
             reference_smooth

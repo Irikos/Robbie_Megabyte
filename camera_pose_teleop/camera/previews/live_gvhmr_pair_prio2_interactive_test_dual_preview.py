@@ -104,9 +104,36 @@ OUT_PREFIX = Path(
 )
 
 
-WIDTH = 1280
-HEIGHT = 720
-CAPTURE_FPS = 30
+WIDTH = int(
+    os.environ.get(
+        "LIVE_GVHMR_WIDTH",
+        "1280",
+    )
+)
+
+HEIGHT = int(
+    os.environ.get(
+        "LIVE_GVHMR_HEIGHT",
+        "720",
+    )
+)
+
+CAPTURE_FPS = float(
+    os.environ.get(
+        "LIVE_GVHMR_FPS",
+        "30",
+    )
+)
+
+CAMERA_INPUT_FORMAT = os.environ.get(
+    "LIVE_GVHMR_INPUT_FORMAT",
+    "mjpeg",
+)
+
+CAMERA_FOURCC = os.environ.get(
+    "LIVE_GVHMR_FOURCC",
+    "MJPG",
+)
 
 # FFmpeg continues capturing at 30 Hz.
 # Only delivery into the neural frontend is rate-limited.
@@ -1366,7 +1393,7 @@ class LatestFrameCamera:
     """
     Background FFmpeg/V4L2 latest-frame reader.
 
-    FFmpeg acquires 1280x720 MJPEG directly from V4L2,
+    FFmpeg acquires the launcher-resolved V4L2 profile,
     decodes to BGR24, and writes raw frames to stdout.
 
     The inference loop still consumes only the newest frame.
@@ -1407,6 +1434,23 @@ class LatestFrameCamera:
 
         self.reader_error = None
 
+        # Raw preview always leaves this process as MJPEG.
+        # If the camera itself is MJPEG, packet copy preserves
+        # the previous low-overhead path. If the selected camera
+        # is YUYV, only the preview branch is JPEG-encoded.
+        if CAMERA_INPUT_FORMAT == "mjpeg":
+            preview_codec_args = [
+                "-c:v",
+                "copy",
+            ]
+        else:
+            preview_codec_args = [
+                "-c:v",
+                "mjpeg",
+                "-q:v",
+                "5",
+            ]
+
         cmd = [
             "ffmpeg",
             "-hide_banner",
@@ -1417,7 +1461,7 @@ class LatestFrameCamera:
             "v4l2",
 
             "-input_format",
-            "mjpeg",
+            CAMERA_INPUT_FORMAT,
 
             "-framerate",
             str(
@@ -1448,13 +1492,12 @@ class LatestFrameCamera:
             "pipe:1",
 
             # Output 2: preview from the SAME camera capture.
-            # The original MJPEG packets are copied to localhost,
-            # so ffplay does NOT open the D435i itself.
+            # The transport is always MJPEG so the viewer does
+            # not need to know the camera's native input format.
             "-map",
             "0:v:0",
 
-            "-c:v",
-            "copy",
+            *preview_codec_args,
 
             "-f",
             "mjpeg",
@@ -1547,7 +1590,8 @@ class LatestFrameCamera:
             "camera negotiated: "
             f"{WIDTH}x{HEIGHT} "
             f"{float(CAPTURE_FPS):.3f} fps "
-            "'MJPG' via FFmpeg -> BGR24"
+            f"'{CAMERA_FOURCC}'/{CAMERA_INPUT_FORMAT} "
+            "via FFmpeg -> BGR24"
         )
 
 
@@ -2416,6 +2460,86 @@ def main():
         "kp_bbox_updates": 0,
     }
 
+    # ----------------------------------------------------
+    # V2 STARTUP FULL-BODY FRAMING GATE
+    #
+    # Uses the existing real ViTPose-17 2D observations.
+    # It is intentionally latched off once one fresh,
+    # continuously well-framed startup history is built.
+    #
+    # fixed_v1 never enables this flag.
+    # ----------------------------------------------------
+
+    framing_gate_enabled = (
+        os.environ.get(
+            "LIVE_GVHMR_FRAMING_GATE",
+            "0",
+        )
+        .strip()
+        .lower()
+        in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+    )
+
+    framing_gate = None
+
+    framing_state = {
+        "startup_complete":
+            not framing_gate_enabled,
+
+        "ready_announced":
+            False,
+
+        "last_reason":
+            None,
+
+        "last_print_s":
+            -1.0e9,
+    }
+
+    if framing_gate_enabled:
+        from framing_gate import (
+            FullBodyFramingGate,
+        )
+
+        framing_gate = (
+            FullBodyFramingGate(
+                image_width=WIDTH,
+                image_height=HEIGHT,
+                confidence_threshold=float(
+                    os.environ.get(
+                        "LIVE_GVHMR_FRAMING_CONFIDENCE",
+                        "0.5",
+                    )
+                ),
+                consecutive_good_frames=int(
+                    os.environ.get(
+                        "LIVE_GVHMR_FRAMING_GOOD_FRAMES",
+                        "8",
+                    )
+                ),
+            )
+        )
+
+        print()
+        print(
+            "FULL-BODY FRAMING CHECK: ENABLED"
+        )
+
+        print(
+            "Using existing ViTPose-17 2D "
+            "visibility evidence."
+        )
+
+        print(
+            "Calibration will not begin until "
+            "framing is stable."
+        )
+
     window = deque(
         maxlen=HISTORY
     )
@@ -2677,6 +2801,110 @@ def main():
                 1024,
             )
         )
+
+        # -------------------------------------------------
+        # V2 STARTUP FRAMING OBSERVATION
+        #
+        # Important:
+        # This checks REAL 2D ViTPose observations, not
+        # inferred GVHMR/SMPL joints.
+        # -------------------------------------------------
+
+        if (
+            framing_gate is not None
+            and not framing_state[
+                "startup_complete"
+            ]
+        ):
+            framing_result = (
+                framing_gate.observe(
+                    kp2d.numpy()
+                )
+            )
+
+            framing_now = (
+                time.monotonic()
+            )
+
+            if not framing_result.ready:
+                # No partly-framed samples may survive into
+                # the future 30-frame startup history.
+                window.clear()
+
+                framing_state[
+                    "ready_announced"
+                ] = False
+
+                reason_changed = (
+                    framing_result.reason
+                    != framing_state[
+                        "last_reason"
+                    ]
+                )
+
+                print_due = (
+                    framing_now
+                    - framing_state[
+                        "last_print_s"
+                    ]
+                    >= 0.75
+                )
+
+                if (
+                    reason_changed
+                    or print_due
+                ):
+                    print()
+                    print(
+                        "FULL-BODY FRAMING: NOT READY"
+                    )
+
+                    print(
+                        framing_result.reason
+                    )
+
+                    print(
+                        "Stable observations: "
+                        f"{framing_result.good_streak}/"
+                        f"{framing_result.required_streak}"
+                    )
+
+                    print(
+                        "Calibration has NOT started."
+                    )
+
+                    framing_state[
+                        "last_reason"
+                    ] = (
+                        framing_result.reason
+                    )
+
+                    framing_state[
+                        "last_print_s"
+                    ] = framing_now
+
+                return None
+
+            if not framing_state[
+                "ready_announced"
+            ]:
+                print()
+                print(
+                    "FULL-BODY FRAMING: STABLE"
+                )
+
+                print(
+                    "Building a fresh "
+                    f"{HISTORY}-frame GVHMR history..."
+                )
+
+                framing_state[
+                    "ready_announced"
+                ] = True
+
+                framing_state[
+                    "last_reason"
+                ] = None
 
         # GENMO keypoint-derived bbox update.
         #
@@ -3195,9 +3423,20 @@ def main():
             "causal window..."
         )
 
+        prefill_timeout_s = (
+            float(
+                os.environ.get(
+                    "LIVE_GVHMR_FRAMING_TIMEOUT_S",
+                    "120.0",
+                )
+            )
+            if framing_gate_enabled
+            else 20.0
+        )
+
         prefill_deadline = (
             time.monotonic()
-            + 20.0
+            + prefill_timeout_s
         )
 
         while (
@@ -3270,6 +3509,38 @@ def main():
             raise RuntimeError(
                 "Could not fill a valid "
                 "30-sample human window."
+            )
+
+        if (
+            framing_gate is not None
+            and not framing_state[
+                "startup_complete"
+            ]
+        ):
+            framing_state[
+                "startup_complete"
+            ] = True
+
+            print()
+            print(
+                "========================================"
+            )
+
+            print(
+                "FULL-BODY FRAMING: PASS"
+            )
+
+            print(
+                f"Fresh GVHMR history: "
+                f"{len(window)}/{HISTORY}"
+            )
+
+            print(
+                "Startup framing gate is now latched."
+            )
+
+            print(
+                "========================================"
             )
 
         print()
@@ -3482,7 +3753,7 @@ def main():
                 }
             )
 
-            phase = "FREE LIVE TELEOP"
+            phase = "LIVE TRACKING"
 
             if phase != last_phase:
                 print()

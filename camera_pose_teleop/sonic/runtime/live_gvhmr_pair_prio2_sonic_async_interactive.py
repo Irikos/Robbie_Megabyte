@@ -36,6 +36,11 @@ DEFAULT_REFERENCE = (
     / "calibration/reference/F_LEFT_HMR2_CALIBRATED_ROOT.npz"
 )
 
+DEFAULT_SESSION_ALIGNMENT = (
+    PROJECT_ROOT
+    / ".runtime/calibration/session_alignment.npz"
+)
+
 DEFAULT_REFERENCE_SHA = (
     "b06f8a293f34ee7b07f09227bdba8a18a"
     "1937a604038bc9edd88a9c27627c075"
@@ -117,6 +122,22 @@ def parse_wrapper_args():
     ap.add_argument(
         "--sonic-topic",
         default="pose",
+    )
+
+    ap.add_argument(
+        "--alignment-mode",
+        choices=(
+            "fixed_v1",
+            "session_v2",
+        ),
+        default="fixed_v1",
+    )
+
+    ap.add_argument(
+        "--session-alignment",
+        default=str(
+            DEFAULT_SESSION_ALIGNMENT
+        ),
     )
 
     ap.add_argument(
@@ -205,13 +226,25 @@ def main():
         args.calibration_reference
     ).expanduser().resolve()
 
-    for path in (
+    session_alignment_file = Path(
+        args.session_alignment
+    ).expanduser().resolve()
+
+    required_paths = [
         base_path,
         sonic_root,
         publisher_source,
-        gravity_file,
-        reference_file,
-    ):
+    ]
+
+    if args.alignment_mode == "fixed_v1":
+        required_paths.extend(
+            [
+                gravity_file,
+                reference_file,
+            ]
+        )
+
+    for path in required_paths:
         if not path.exists():
             raise RuntimeError(
                 f"Required path missing: {path}"
@@ -242,7 +275,9 @@ def main():
         )
 
     if (
-        args.expected_reference_sha
+        args.alignment_mode
+        == "fixed_v1"
+        and args.expected_reference_sha
         and sha256(
             reference_file
         )
@@ -271,6 +306,28 @@ def main():
             app_dir,
         )
 
+    alignment_dir = str(
+        PROJECT_ROOT
+        / "alignment"
+    )
+
+    if alignment_dir not in sys.path:
+        sys.path.insert(
+            0,
+            alignment_dir,
+        )
+
+    retargeting_dir = str(
+        PROJECT_ROOT
+        / "retargeting"
+    )
+
+    if retargeting_dir not in sys.path:
+        sys.path.insert(
+            0,
+            retargeting_dir,
+        )
+
     from gvhmr_smpl24_adapter import (
         GVHMRSMPL24Adapter,
     )
@@ -278,6 +335,14 @@ def main():
     from sonic_smpl_bridge import (
         SonicCalibrationProfile,
         SonicSMPLBridge,
+    )
+
+    from session_v2_runtime import (
+        SessionV2AlignmentController,
+    )
+
+    from session_v2_bridge_gate import (
+        SessionV2BridgeGate,
     )
 
     print(
@@ -316,14 +381,26 @@ def main():
     )
 
     print(
-        "gravity file:",
-        gravity_file,
+        "alignment mode:",
+        args.alignment_mode,
     )
 
-    print(
-        "calibration reference:",
-        reference_file,
-    )
+    if args.alignment_mode == "fixed_v1":
+        print(
+            "gravity file:",
+            gravity_file,
+        )
+
+        print(
+            "calibration reference:",
+            reference_file,
+        )
+
+    else:
+        print(
+            "session alignment:",
+            session_alignment_file,
+        )
 
     if args.self_check:
         print(
@@ -331,36 +408,60 @@ def main():
         )
         return
 
-    profile = (
-        SonicCalibrationProfile
-        .from_paths(
-            gravity_file=gravity_file,
-            reference_file=reference_file,
-            expected_reference_sha256=(
-                args.expected_reference_sha
-                or None
-            ),
-            expected_camera=(
-                args.expected_camera
-                or None
-            ),
-            gravity_result_key=(
-                args.gravity_result_key
-            ),
-            gravity_expected_result=(
-                args.gravity_result_value
-            ),
-            camera_from_gravity_key=(
-                args.camera_from_gravity_key
-            ),
-            gravity_up_camera_key=(
-                args.gravity_up_camera_key
-            ),
-            gravity_from_camera_key=(
-                args.gravity_from_camera_key
-            ),
+    def make_calibration_profile():
+        return (
+            SonicCalibrationProfile
+            .from_paths(
+                gravity_file=gravity_file,
+                reference_file=reference_file,
+                alignment_mode=(
+                    args.alignment_mode
+                ),
+                session_alignment_file=(
+                    session_alignment_file
+                ),
+                expected_reference_sha256=(
+                    args.expected_reference_sha
+                    or None
+                ),
+                expected_camera=(
+                    args.expected_camera
+                    or None
+                ),
+                gravity_result_key=(
+                    args.gravity_result_key
+                ),
+                gravity_expected_result=(
+                    args.gravity_result_value
+                ),
+                camera_from_gravity_key=(
+                    args.camera_from_gravity_key
+                ),
+                gravity_up_camera_key=(
+                    args.gravity_up_camera_key
+                ),
+                gravity_from_camera_key=(
+                    args.gravity_from_camera_key
+                ),
+            )
         )
-    )
+
+    # fixed_v1 uses the existing protected calibration
+    # immediately.
+    #
+    # session_v2 deliberately does NOT construct its
+    # profile until THIS run has produced a new alignment
+    # artifact.
+    profile = None
+
+    if (
+        args.alignment_mode
+        == "fixed_v1"
+    ):
+        profile = (
+            make_calibration_profile()
+        )
+
 
     spec = (
         importlib.util
@@ -433,6 +534,14 @@ def main():
     runtime = {
         "adapter": None,
         "bridge": None,
+        "alignment_controller": None,
+        "alignment_gate": None,
+        "alignment_state": (
+            "not_used"
+            if args.alignment_mode
+            == "fixed_v1"
+            else "collecting"
+        ),
         "worker_thread": None,
         "worker_error": None,
 
@@ -470,74 +579,242 @@ def main():
         def sonic_worker():
             adapter = None
             bridge = None
+            alignment_controller = None
+            alignment_gate = None
 
             try:
-                # Create AND use these objects in this worker.
-                # In particular, the ZMQ socket never crosses
-                # thread ownership.
+                # Adapter is created and used only in this
+                # worker, preserving CUDA/thread ownership.
                 adapter = (
                     GVHMRSMPL24Adapter(
                         gvhmr_root=Path(
                             os.environ.get(
                                 "LIVE_GVHMR_GV",
-                                str(PROJECT_ROOT / ".deps/GVHMR"),
+                                str(
+                                    PROJECT_ROOT
+                                    / ".deps/GVHMR"
+                                ),
                             )
                         ),
                         device="cuda",
                     )
                 )
 
-                bridge = SonicSMPLBridge(
-                    profile=profile,
-                    device="cuda",
-                    history_weight=float(os.environ.get("SONIC_EMA_WEIGHT", "0.0")),
-                    sonic_root=sonic_root,
-                    publisher_source_dir=(
-                        publisher_source
-                    ),
-                    port=args.sonic_port,
-                    topic=args.sonic_topic,
-                    enable_publisher=(
-                        args.sonic_mode
-                        == "publish"
-                    ),
-                )
-
                 runtime[
                     "adapter"
                 ] = adapter
 
-                runtime[
-                    "bridge"
-                ] = bridge
+                def create_sonic_bridge():
+                    bridge_profile = profile
 
-                print(
-                    "SMPL24 adapter worker: READY"
-                )
+                    if bridge_profile is None:
+                        # session_v2 reaches here only after
+                        # THIS run has successfully written
+                        # session_alignment.npz.
+                        bridge_profile = (
+                            make_calibration_profile()
+                        )
 
-                print(
-                    "F calibration camera:",
-                    bridge.camera,
-                )
-
-                print(
-                    "SONIC EMA history weight:",
-                    bridge.history_weight,
-                )
-
-                if (
-                    args.sonic_mode
-                    == "publish"
-                ):
-                    print(
-                        "Protocol-v3 publisher worker bound to "
-                        f"tcp://*:{args.sonic_port} "
-                        f"topic={args.sonic_topic}"
+                    return SonicSMPLBridge(
+                        profile=bridge_profile,
+                        device="cuda",
+                        history_weight=float(
+                            os.environ.get(
+                                "SONIC_EMA_WEIGHT",
+                                "0.0",
+                            )
+                        ),
+                        sonic_root=sonic_root,
+                        publisher_source_dir=(
+                            publisher_source
+                        ),
+                        port=args.sonic_port,
+                        topic=args.sonic_topic,
+                        enable_publisher=(
+                            args.sonic_mode
+                            == "publish"
+                        ),
                     )
 
+                if (
+                    args.alignment_mode
+                    == "fixed_v1"
+                ):
+                    # ------------------------------
+                    # Protected V1 startup path.
+                    # ------------------------------
+                    bridge = (
+                        create_sonic_bridge()
+                    )
+
+                    runtime[
+                        "bridge"
+                    ] = bridge
+
+                    print(
+                        "SMPL24 adapter worker: READY"
+                    )
+
+                    print(
+                        "F calibration camera:",
+                        bridge.camera,
+                    )
+
+                    print(
+                        "SONIC EMA history weight:",
+                        bridge.history_weight,
+                    )
+
+                    if (
+                        args.sonic_mode
+                        == "publish"
+                    ):
+                        print(
+                            "Protocol-v3 publisher worker "
+                            "bound to "
+                            f"tcp://*:{args.sonic_port} "
+                            f"topic={args.sonic_topic}"
+                        )
+
+                else:
+                    # ------------------------------
+                    # V2 startup.
+                    #
+                    # Adapter/controller are ready,
+                    # but there is intentionally NO
+                    # SONIC bridge or publisher yet.
+                    # ------------------------------
+
+                    K_runtime = (
+                        base.estimate_K(
+                            base.WIDTH,
+                            base.HEIGHT,
+                        )
+                    )
+
+                    if torch.is_tensor(
+                        K_runtime
+                    ):
+                        K_runtime = (
+                            K_runtime
+                            .detach()
+                            .cpu()
+                            .numpy()
+                        )
+
+                    else:
+                        K_runtime = (
+                            np.asarray(
+                                K_runtime,
+                                dtype=np.float32,
+                            )
+                        )
+
+                    session_json_file = (
+                        session_alignment_file
+                        .with_suffix(
+                            ".json"
+                        )
+                    )
+
+                    alignment_controller = (
+                        SessionV2AlignmentController(
+                            npz_path=(
+                                session_alignment_file
+                            ),
+                            json_path=(
+                                session_json_file
+                            ),
+                            image_width=(
+                                int(base.WIDTH)
+                            ),
+                            image_height=(
+                                int(base.HEIGHT)
+                            ),
+                            K_fullimg=(
+                                K_runtime
+                            ),
+                            intrinsics_source=(
+                                "gvhmr_estimate_K"
+                            ),
+                            smoothing_history_weight=float(
+                                os.environ.get(
+                                    "SONIC_EMA_WEIGHT",
+                                    "0.0",
+                                )
+                            ),
+                            min_duration_s=2.0,
+                            max_duration_s=5.0,
+                            min_frames=20,
+                        )
+                    )
+
+                    alignment_gate = (
+                        SessionV2BridgeGate(
+                            controller=(
+                                alignment_controller
+                            ),
+                            bridge_factory=(
+                                create_sonic_bridge
+                            ),
+                        )
+                    )
+
+                    runtime[
+                        "alignment_controller"
+                    ] = alignment_controller
+
+                    runtime[
+                        "alignment_gate"
+                    ] = alignment_gate
+
+                    runtime[
+                        "alignment_state"
+                    ] = "collecting"
+
+                    print(
+                        "SMPL24 adapter worker: READY"
+                    )
+
+                    print()
+                    print(
+                        "============================================================"
+                    )
+                    print(
+                        "CAMERA POSE TELEOP V2 "
+                        "— NEUTRAL ALIGNMENT"
+                    )
+                    print(
+                        "============================================================"
+                    )
+                    print(
+                        "Stand neutral. "
+                        "Keep your full body visible."
+                    )
+                    print(
+                        "NO TELEOP DATA IS BEING PUBLISHED."
+                    )
+                    print(
+                        "SONIC bridge: NOT CREATED"
+                    )
+                    print(
+                        "Publisher: NOT CREATED"
+                    )
+                    print(
+                        "============================================================"
+                    )
+
+                # This event means WORKER STARTUP READY.
+                #
+                # In V2 it intentionally does NOT mean
+                # alignment/bridge/publisher ready.
                 runtime[
                     "ready"
                 ].set()
+
+                last_alignment_print_s = (
+                    float("-inf")
+                )
 
                 while True:
                     cond = runtime[
@@ -546,7 +823,8 @@ def main():
 
                     with cond:
                         while (
-                            runtime["pending"] is None
+                            runtime["pending"]
+                            is None
                             and not runtime["stop"]
                         ):
                             cond.wait(
@@ -554,14 +832,19 @@ def main():
                             )
 
                         if (
-                            runtime["pending"] is None
+                            runtime["pending"]
+                            is None
                             and runtime["stop"]
                         ):
                             break
 
-                        generation, flat_cpu, queued_at = (
-                            runtime["pending"]
-                        )
+                        (
+                            generation,
+                            flat_cpu,
+                            queued_at,
+                        ) = runtime[
+                            "pending"
+                        ]
 
                         runtime[
                             "pending"
@@ -581,7 +864,6 @@ def main():
                         * 1000.0
                     )
 
-                    # One tiny H2D transfer:
                     # 63 + 10 + 3 + 3 = 79 floats.
                     flat_gpu = flat_cpu.to(
                         device="cuda",
@@ -604,10 +886,6 @@ def main():
 
                         offset += dim
 
-                    bridge_start = (
-                        time.perf_counter()
-                    )
-
                     with torch.inference_mode():
                         joints24 = (
                             adapter.joints24(
@@ -615,6 +893,169 @@ def main():
                             )
                         )
 
+                    # ==========================================
+                    # V2 CALIBRATION GATE
+                    # ==========================================
+                    if (
+                        args.alignment_mode
+                        == "session_v2"
+                        and bridge is None
+                    ):
+                        joints24_cpu = (
+                            joints24
+                            .detach()
+                            .to(
+                                device="cpu",
+                                dtype=torch.float32,
+                            )
+                            .numpy()
+                        )
+
+                        # Adapter normally returns (24,3),
+                        # but safely unwrap singleton batch dims.
+                        while (
+                            joints24_cpu.ndim
+                            > 2
+                            and joints24_cpu.shape[0]
+                            == 1
+                        ):
+                            joints24_cpu = (
+                                joints24_cpu[0]
+                            )
+
+                        alignment_now = (
+                            time.perf_counter()
+                        )
+
+                        (
+                            alignment_status,
+                            maybe_bridge,
+                            bridge_created_now,
+                        ) = (
+                            alignment_gate
+                            .process_alignment_frame(
+                                joints24_cpu,
+                                timestamp_s=(
+                                    alignment_now
+                                ),
+                            )
+                        )
+
+                        runtime[
+                            "alignment_state"
+                        ] = (
+                            alignment_status.state
+                        )
+
+                        elapsed = (
+                            alignment_status
+                            .elapsed_s
+                        )
+
+                        if (
+                            alignment_status.state
+                            != "collecting"
+                            or (
+                                elapsed
+                                - last_alignment_print_s
+                            )
+                            >= 0.5
+                        ):
+                            print()
+                            print(
+                                alignment_status.message
+                            )
+
+                            last_alignment_print_s = (
+                                elapsed
+                            )
+
+                        if (
+                            alignment_status.state
+                            == "failed"
+                        ):
+                            runtime[
+                                "worker_error"
+                            ] = (
+                                "Camera Pose Teleop V2 "
+                                "alignment failed: "
+                                + alignment_status.message
+                                .replace(
+                                    "\n",
+                                    " | ",
+                                )
+                            )
+
+                            print()
+                            print(
+                                "SONIC bridge remains absent."
+                            )
+                            print(
+                                "Publisher remains absent."
+                            )
+                            print(
+                                "Restart Camera Pose Teleop "
+                                "to retry alignment."
+                            )
+
+                            break
+
+                        if bridge_created_now:
+                            bridge = maybe_bridge
+
+                            runtime[
+                                "bridge"
+                            ] = bridge
+
+                            runtime[
+                                "alignment_state"
+                            ] = "ready"
+
+                            print()
+                            print(
+                                "SONIC bridge: CREATED"
+                            )
+
+                            print(
+                                "SONIC EMA history weight:",
+                                bridge.history_weight,
+                            )
+
+                            if (
+                                bridge.publisher
+                                is not None
+                            ):
+                                print(
+                                    "Protocol-v3 publisher "
+                                    "worker bound to "
+                                    f"tcp://*:"
+                                    f"{args.sonic_port} "
+                                    f"topic="
+                                    f"{args.sonic_topic}"
+                                )
+
+                            # Critical:
+                            # do not teleoperate from the
+                            # final calibration frame.
+                            # Teleop starts with the NEXT fresh
+                            # GVHMR result.
+                            continue
+
+                        # Still collecting:
+                        # no conversion and no publishing.
+                        continue
+
+                    if bridge is None:
+                        raise RuntimeError(
+                            "Internal error: SONIC bridge "
+                            "missing outside V2 calibration"
+                        )
+
+                    bridge_start = (
+                        time.perf_counter()
+                    )
+
+                    with torch.inference_mode():
                         fields = bridge.convert(
                             joints24,
                             params_last[

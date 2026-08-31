@@ -184,7 +184,6 @@ third_party/cache/
 .idea/
 *.swp
 *.swo
-.DS_Store
 Thumbs.db
 
 nohup.out
