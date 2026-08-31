@@ -149,7 +149,7 @@ def test_tracker_uses_dictionary_spatial_index_and_caps_aging():
     assert objects[0]["aging_cap"] == 40.0
 
 
-def test_lidar_support_preserves_object_and_verified_clearing_removes_it():
+def test_lidar_support_preserves_object_and_visible_miss_removes_it():
     tracker = SemanticChairTracker(confirmations=3, merge_distance_m=0.45)
     pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
     for frame in range(3):
@@ -160,15 +160,16 @@ def test_lidar_support_preserves_object_and_verified_clearing_removes_it():
         {"x": 1.0 + 0.02 * (index % 3), "y": -0.04 + 0.04 * (index // 3), "z": 0.24}
         for index in range(9)
     ]
-    tracker.update_frame([], supporting_lidar, pose, 1.0)
+    away_pose = {"x": 0.0, "y": 0.0, "yaw": np.pi}
+    tracker.update_frame([], supporting_lidar, away_pose, 1.0)
     supported = tracker.snapshot()[0]
     assert supported["aging_value"] > initial
     assert supported["lidar_supported"] is True
 
-    # Decay (9/frame) is faster than growth (6/frame), but only because raw
-    # LiDAR returns behind the old volume prove that its coordinate is empty.
+    # A missing observation at a visible coordinate decreases aging even when
+    # the LiDAR produces no return behind the old chair.
     for frame in range(20):
-        tracker.update_frame([], _clearing_returns(), pose, 2.0 + frame * 0.25)
+        tracker.update_frame([], [], pose, 2.0 + frame * 0.25)
         if not tracker.snapshot():
             break
     assert tracker.snapshot() == []
@@ -187,10 +188,10 @@ def test_unobservable_object_is_not_penalized_and_moved_chair_gets_new_id():
     assert tracker.snapshot()[0]["aging_value"] == original["aging_value"]
 
     # The new coordinate is outside the association gate. It becomes chair 2;
-    # the old coordinate is simultaneously cleared by LiDAR and disappears.
+    # the visible old coordinate loses aging even without LiDAR clearing rays.
     for frame in range(3):
         tracker.update_frame(
-            [_observation(2.0, 0.0)], _clearing_returns(x=2.0), forward_pose,
+            [_observation(2.0, 0.0)], [], forward_pose,
             5.0 + frame * 0.25,
         )
     objects = tracker.snapshot()

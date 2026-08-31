@@ -450,21 +450,24 @@ class SemanticChairTracker:
         for key, track in list(self._tracks.items()):
             if key in matched:
                 continue
-            support, visible, cleared = self._lidar_evidence(track, lidar_points or [], sensor_pose)
+            support, visible, _ = self._lidar_evidence(track, lidar_points or [], sensor_pose)
             before = float(track["aging"])
-            if support >= 4:
-                track["aging"] = min(self.aging_cap, before + 1.0)
-                track["last_lidar_seen"] = now
-                track["lidar_supported"] = True
-                track["lidar_confidence"] = min(100.0, track["lidar_confidence"] + 3.0)
-            elif cleared:
+            if visible:
                 track["aging"] = max(0.0, before - self.visible_miss_decay)
                 track["visible_misses"] += 1
                 track["lidar_supported"] = False
                 track["lidar_confidence"] = max(0.0, track["lidar_confidence"] - 10.0)
-            # A point is penalized only with ray-clearing evidence. Merely being
-            # inside the nominal FOV may still mean that it is occluded.
-            # Outside the current field of view is unknown, not negative evidence.
+            elif support >= 4:
+                track["aging"] = min(self.aging_cap, before + 1.0)
+                track["last_lidar_seen"] = now
+                track["lidar_supported"] = True
+                track["lidar_confidence"] = min(100.0, track["lidar_confidence"] + 3.0)
+            # The requested behavior is intentionally simple: if the saved
+            # coordinate is in the forward camera view but no chair/toilet
+            # observation matched it in this frame, its aging decreases. This
+            # deliberately takes precedence over LiDAR support so that floor or
+            # background returns cannot keep a removed chair alive. Outside the
+            # view remains unknown and may still receive genuine LiDAR support.
             if track["id"] is None and now - track["last_seen"] > 2.0:
                 track["aging"] = 0.0
             if track["aging"] <= 0.0:
