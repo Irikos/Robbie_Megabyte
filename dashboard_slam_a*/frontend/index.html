@@ -198,14 +198,19 @@
         </div>
         <div id="car-agent-pose" class="car-agent-note">Poziție hartă: —</div>
         <div class="car-agent-note">
-          Transformare: originea <code>odom_car</code> exprimată în cadrul hărții.
+          Transformare manuală: originea <code>car_map</code> exprimată în harta G1.
         </div>
         <div class="car-agent-grid">
-          <input id="car-tf-x" type="number" step="0.01" value="0" placeholder="TF X (m)" title="X al originii odom_car în hartă" />
-          <input id="car-tf-y" type="number" step="0.01" value="0" placeholder="TF Y (m)" title="Y al originii odom_car în hartă" />
-          <input id="car-tf-yaw" type="number" step="1" value="0" placeholder="TF yaw (°)" title="Yaw odom_car față de hartă" />
+          <input id="car-tf-x" type="number" step="0.01" value="0" placeholder="TF X (m)" title="X al originii car_map în harta G1" />
+          <input id="car-tf-y" type="number" step="0.01" value="0" placeholder="TF Y (m)" title="Y al originii car_map în harta G1" />
+          <input id="car-tf-yaw" type="number" step="1" value="0" placeholder="TF yaw (°)" title="Yaw car_map față de harta G1" />
         </div>
-        <button class="btn btn-full" onclick="saveCarTransform()" style="background:#0e7490; color:white;">Aplică transformarea map → odom_car</button>
+        <button class="btn btn-full" onclick="saveCarTransform()" style="background:#0e7490; color:white;">Aplică transformarea car_map → harta G1</button>
+        <label class="car-agent-note" style="display:flex; align-items:center; gap:7px;">
+          <input id="car-map-visible" type="checkbox" checked onchange="toggleCarMapLayer()" />
+          Afișează harta mașinii
+        </label>
+        <div id="car-map-status" class="car-agent-note">Hartă mașină: aștept /map.</div>
         <div class="car-agent-note">Țintă pentru mașină, introdusă în coordonatele hărții:</div>
         <div class="car-agent-grid">
           <input id="car-goal-x" type="number" step="0.1" placeholder="Goal X (m)" />
@@ -512,8 +517,9 @@ const S = {
   routeLine: null, routePoints: null,
   dynamicCostmapMesh: null,
   carGroup: null, carVisual: null, carFallback: null,
-  carScanMesh: null, carPathLine: null,
+  carMapMesh: null, carScanMesh: null, carPathLine: null,
   carGoalMarker: null, carGoalArrow: null, semanticChairGroup: null,
+  semanticChairVisuals: new Map(),
   loadedMapMesh: null,
   rawSlamPoints: [], rawLoadedMapPoints: [],
   visibleSlamPoints: 0, visibleLoadedMapPoints: 0,
@@ -683,6 +689,13 @@ function finiteCarInputs(ids) {
   return values;
 }
 
+function toggleCarMapLayer() {
+  if (!S.carMapMesh) return;
+  const visible = Boolean(document.getElementById('car-map-visible')?.checked);
+  const count = S.carMapMesh.geometry.getAttribute('position')?.count || 0;
+  S.carMapMesh.visible = visible && count > 0;
+}
+
 function updateCarState(message) {
   const status = document.getElementById('car-agent-status');
   status.textContent = message.connected ? '● Mașină conectată' : '● Mașină deconectată';
@@ -716,6 +729,25 @@ function updateCarState(message) {
       'position', new THREE.Float32BufferAttribute(positions, 3)
     );
     S.carScanMesh.geometry.computeBoundingSphere();
+  }
+  if (S.carMapMesh && Array.isArray(message.map_points)) {
+    const positions = [];
+    message.map_points.forEach(point => {
+      if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
+        const mapped = worldToThree(point.x, point.y);
+        positions.push(mapped.tx, 0.025, mapped.tz);
+      }
+    });
+    S.carMapMesh.geometry.setAttribute(
+      'position', new THREE.Float32BufferAttribute(positions, 3)
+    );
+    S.carMapMesh.geometry.computeBoundingSphere();
+    const resolution = Number(message.map_resolution || 0.05);
+    S.carMapMesh.material.size = Math.max(0.035, Math.min(0.14, resolution * 1.25));
+    toggleCarMapLayer();
+    const occupied = Number(message.map_occupied_count || positions.length / 3);
+    document.getElementById('car-map-status').textContent =
+      `Hartă mașină: ${occupied} celule ocupate · ${resolution.toFixed(3)} m/celulă · cadru ${message.map_frame || 'map'}`;
   }
   if (S.carPathLine && Array.isArray(message.path)) {
     const positions = [];
@@ -751,7 +783,7 @@ async function saveCarTransform() {
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || 'Transformare respinsă');
     updateCarState(data);
-    result.textContent = 'Transformarea map → odom_car a fost aplicată.';
+    result.textContent = 'Transformarea car_map → harta G1 a fost aplicată.';
   } catch (error) {
     result.textContent = `Eroare transformare: ${error.message || error}`;
   }
@@ -768,10 +800,41 @@ async function sendCarGoal() {
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || 'Goal respins');
     renderCarGoal({x, y, yaw: yaw_deg * Math.PI / 180});
+    const carMapGoal = data.car_map_goal || data.odom_goal;
     result.textContent =
-      `Goal trimis · odom_car X=${data.odom_goal.x.toFixed(2)}, Y=${data.odom_goal.y.toFixed(2)}, yaw=${(data.odom_goal.yaw * 180 / Math.PI).toFixed(1)}°`;
+      `Goal trimis · car_map X=${carMapGoal.x.toFixed(2)}, Y=${carMapGoal.y.toFixed(2)}, yaw=${(carMapGoal.yaw * 180 / Math.PI).toFixed(1)}°`;
   } catch (error) {
     result.textContent = `Eroare goal: ${error.message || error}`;
+  }
+}
+
+async function previewCarPath(goal) {
+  const result = document.getElementById('car-agent-result');
+  if (S.carPathLine) S.carPathLine.visible = false;
+  try {
+    const response = await fetch(API_BASE + '/api/car/path/preview', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        x:goal.x, y:goal.y, yaw_deg:goal.yaw * 180 / Math.PI,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Cererea traseului a fost respinsă');
+    }
+  } catch (error) {
+    result.textContent = `Eroare preview traseu: ${error.message || error}`;
+  }
+}
+
+function updateCarPathStatus(message) {
+  const result = document.getElementById('car-agent-result');
+  if (message.status === 'planning') {
+    result.textContent = 'Nav2 calculează traseul mașinii...';
+  } else if (message.status === 'ready') {
+    result.textContent = `Traseu mașină afișat · ${Number(message.points || 0)} puncte.`;
+  } else if (message.status === 'error') {
+    result.textContent = `Eroare planner mașină: ${message.error || 'necunoscută'}`;
   }
 }
 
@@ -782,26 +845,44 @@ function renderCarGoal(goal) {
   S.carGoalMarker.visible = true;
 }
 
-function semanticLabelSprite(text) {
+function semanticAgingColor(remainingSeconds, lifespanSeconds) {
+  const ratio=Math.max(0,Math.min(1,remainingSeconds/Math.max(0.1,lifespanSeconds)));
+  return ratio>0.50?'#c084fc':ratio>0.25?'#f59e0b':'#ef4444';
+}
+
+function updateSemanticLabelSprite(sprite, text, remainingSeconds, lifespanSeconds) {
+  if (!sprite?.userData?.canvas) return;
+  const canvas=sprite.userData.canvas,context=canvas.getContext('2d');
+  const remaining=Math.max(0,Number(remainingSeconds)||0);
+  const lifespan=Math.max(0.1,Number(lifespanSeconds)||10);
+  const ratio=Math.max(0,Math.min(1,remaining/lifespan));
+  const color=semanticAgingColor(remaining,lifespan);
+  context.clearRect(0,0,canvas.width,canvas.height);
+  context.fillStyle='rgba(15, 5, 30, 0.94)'; context.strokeStyle=color; context.lineWidth=5;
+  context.fillRect(4,4,canvas.width-8,canvas.height-8); context.strokeRect(4,4,canvas.width-8,canvas.height-8);
+  context.fillStyle='#ffffff'; context.font='bold 30px Inter, sans-serif';
+  context.textAlign='left'; context.textBaseline='middle'; context.fillText(text,18,34);
+  context.fillStyle=color; context.font='bold 25px JetBrains Mono, monospace';
+  context.textAlign='right'; context.fillText(`AGING ${remaining.toFixed(1)}s`,canvas.width-18,35);
+  context.fillStyle='rgba(255,255,255,0.16)'; context.fillRect(18,70,canvas.width-36,17);
+  context.fillStyle=color; context.fillRect(18,70,(canvas.width-36)*ratio,17);
+  sprite.material.map.needsUpdate=true;
+  sprite.userData.remainingSeconds=remaining;
+}
+
+function semanticLabelSprite(text, remainingSeconds=10, lifespanSeconds=10) {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 64;
-  const context = canvas.getContext('2d');
-  context.fillStyle = 'rgba(30, 10, 55, 0.90)';
-  context.strokeStyle = '#c084fc';
-  context.lineWidth = 3;
-  context.fillRect(3, 3, 250, 58);
-  context.strokeRect(3, 3, 250, 58);
-  context.fillStyle = '#ffffff';
-  context.font = 'bold 27px Inter, sans-serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(text, 128, 33);
+  canvas.width = 512;
+  canvas.height = 96;
   const texture = new THREE.CanvasTexture(canvas);
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map:texture, transparent:true, depthTest:false,
   }));
-  sprite.scale.set(0.78, 0.20, 1);
+  sprite.userData.canvas=canvas;
+  sprite.userData.labelText=text;
+  sprite.userData.lifespanSeconds=lifespanSeconds;
+  updateSemanticLabelSprite(sprite,text,remainingSeconds,lifespanSeconds);
+  sprite.scale.set(1.55, 0.29, 1);
   sprite.renderOrder = 20;
   return sprite;
 }
@@ -817,6 +898,7 @@ function clearSemanticChairScene() {
     });
   });
   S.semanticChairGroup.clear();
+  S.semanticChairVisuals.clear();
 }
 
 function renderSemanticChairs(message) {
@@ -833,8 +915,10 @@ function renderSemanticChairs(message) {
   status.style.color = '#d8b4fe';
   if (!S.semanticChairGroup) return;
   clearSemanticChairScene();
+  const lifespan=Math.max(1,Number(message.lifespan_s)||10);
 
   objects.forEach(object => {
+    const visualObjects=[];
     const points = Array.isArray(object.points) ? object.points : [];
     const positions = [];
     const colors = [];
@@ -860,6 +944,7 @@ function renderSemanticChairs(message) {
         })
       );
       S.semanticChairGroup.add(cloud);
+      visualObjects.push(cloud);
     }
 
     const minimum = object.bounds?.min;
@@ -881,16 +966,49 @@ function renderSemanticChairs(message) {
     );
     volume.position.set(mappedCenter.tx, centerZ, mappedCenter.tz);
     S.semanticChairGroup.add(volume);
+    visualObjects.push(volume);
+    const remaining=Math.max(0,Number(object.expires_in_s ?? lifespan));
+    const agingColor=semanticAgingColor(remaining,lifespan);
+    const boxMaterial=new THREE.LineBasicMaterial({color:agingColor,transparent:true,opacity:0.98});
     const box = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(sizeX, sizeZ, sizeY)),
-      new THREE.LineBasicMaterial({color:0xc084fc, transparent:true, opacity:0.90})
+      boxMaterial
     );
     box.position.set(mappedCenter.tx, centerZ, mappedCenter.tz);
     S.semanticChairGroup.add(box);
-    const label = semanticLabelSprite(object.name || `chair ${object.id}`);
+    visualObjects.push(box);
+    const labelText=object.name || `chair ${object.id}`;
+    const label = semanticLabelSprite(labelText,remaining,lifespan);
     label.position.set(mappedCenter.tx, maximum.z + 0.18, mappedCenter.tz);
     S.semanticChairGroup.add(label);
+    visualObjects.push(label);
+    S.semanticChairVisuals.set(String(object.id),{
+      label,labelText,boxMaterial,objects:visualObjects,
+      initialRemaining:remaining,lifespan,receivedAt:performance.now(),
+    });
   });
+}
+
+function updateSemanticChairAgingDisplay() {
+  if (!S.semanticChairVisuals?.size) return;
+  const now=performance.now(); let visibleCount=0,minRemaining=Infinity;
+  S.semanticChairVisuals.forEach(visual=>{
+    const elapsed=(now-visual.receivedAt)/1000;
+    const remaining=Math.max(0,visual.initialRemaining-elapsed);
+    const visible=remaining>0;
+    visual.objects.forEach(object=>{object.visible=visible;});
+    if (!visible) return;
+    visibleCount+=1; minRemaining=Math.min(minRemaining,remaining);
+    updateSemanticLabelSprite(visual.label,visual.labelText,remaining,visual.lifespan);
+    visual.boxMaterial.color.set(semanticAgingColor(remaining,visual.lifespan));
+    visual.boxMaterial.opacity=remaining<=2?0.65+0.35*(Math.floor(remaining*5)%2):0.98;
+  });
+  const status=document.getElementById('semantic-chair-status');
+  if (status) {
+    status.textContent=visibleCount
+      ? `🪑 ${visibleCount} ${visibleCount===1?'scaun semantic':'scaune semantice'} · următorul expiră în ${minRemaining.toFixed(1)}s`
+      : '🪑 0 obiecte semantice';
+  }
 }
 
 /** Singurul loc din care se mișcă/rotește marcatorul robotului. */
@@ -972,6 +1090,8 @@ function initWS() {
       updateCarState(msg);
     } else if (msg.type === 'car_goal') {
       renderCarGoal(msg.map_goal);
+    } else if (msg.type === 'car_path_status') {
+      updateCarPathStatus(msg);
     } else if (msg.type === 'semantic_chairs') {
       renderSemanticChairs(msg);
     } else if (msg.type === 'map_reset') {
@@ -1684,6 +1804,15 @@ function init3D() {
     'Modelul GLB al mașinii nu s-a încărcat; folosesc fallback-ul:', error
   ));
 
+  S.carMapMesh = new THREE.Points(
+    new THREE.BufferGeometry(),
+    new THREE.PointsMaterial({
+      color:0xfb7185, size:0.06, sizeAttenuation:true,
+      transparent:true, opacity:0.68,
+    })
+  );
+  S.carMapMesh.visible = false;
+  S.scene.add(S.carMapMesh);
   S.carScanMesh = new THREE.Points(
     new THREE.BufferGeometry(),
     new THREE.PointsMaterial({color:0x22d3ee, size:0.075, sizeAttenuation:true})
@@ -2400,7 +2529,8 @@ function onCarGoalUp() {
   endCarGoalDrag();
   toggleCarGoalTool(false);
   document.getElementById('car-agent-result').textContent =
-    'Goal selectat. Apasă „Trimite goal pose” pentru a porni mașina.';
+    'Goal selectat. Solicit preview Nav2; mașina nu a pornit.';
+  previewCarPath(goal);
 }
 
 function endCarGoalDrag() {
@@ -2962,6 +3092,7 @@ document.getElementById('nav-executor').value = 'native_1102';
 setTimeout(() => { init3D(); updateMapViewFilters(); }, 100);
 initWS(); refreshMapList(); refreshNavigationQueue(); refreshNavigationSensorReadiness(); refreshYoloStatus(); refreshCarStatus();
 setInterval(refreshNavigationSensorReadiness, 1000);
+setInterval(updateSemanticChairAgingDisplay, 100);
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.getElementById('camera-modal').classList.contains('open')) {
     closeCameraModal();

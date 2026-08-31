@@ -307,12 +307,19 @@ car_state = {
     "last_seen": 0.0,
     "odom_pose": None,
     "map_pose": None,
+    "scan_source_points": [],
     "scan_points": [],
+    "path_source": [],
     "path": [],
+    "map_source_points": [],
+    "map_points": [],
+    "map_resolution": 0.0,
+    "map_occupied_count": 0,
+    "map_frame": None,
 }
 semantic_chair_tracker = SemanticChairTracker(
     confirmations=3, merge_distance_m=0.70, voxel_size_m=0.025,
-    lifespan_s=30.0, max_voxels=10000,
+    lifespan_s=10.0, max_voxels=10000,
 )
 semantic_chair_lock = threading.Lock()
 semantic_chair_map_path: Optional[str] = None
@@ -682,6 +689,7 @@ def _semantic_chair_payload() -> dict:
         "type": "semantic_chairs",
         "objects": objects,
         "count": len(objects),
+        "lifespan_s": semantic_chair_tracker.lifespan_s,
         "map_path": map_path,
         "calibration_available": lidar_camera_calibration is not None,
         "calibration_error": semantic_calibration_error,
@@ -1398,7 +1406,7 @@ def _yaw_quaternion(yaw: float) -> dict:
 
 
 def _car_odom_pose_to_map(pose: dict) -> dict:
-    """T_map_odom * pose_odom, cu transformarea configurată din UI."""
+    """T_g1_map_car_map * pose_car_map, configured manually in the UI."""
     x = float(pose["x"])
     y = float(pose["y"])
     yaw = float(pose.get("yaw", 0.0))
@@ -1412,7 +1420,7 @@ def _car_odom_pose_to_map(pose: dict) -> dict:
 
 
 def _car_map_pose_to_odom(pose: dict) -> dict:
-    """Inversa T_map_odom, folosită înainte de publicarea unui goal al mașinii."""
+    """Inverse T_g1_map_car_map, used for goals sent to the car map."""
     dx = float(pose["x"]) - car_transform["x"]
     dy = float(pose["y"]) - car_transform["y"]
     theta = car_transform["yaw"]
@@ -1424,12 +1432,18 @@ def _car_map_pose_to_odom(pose: dict) -> dict:
     }
 
 
-def _car_public_state(include_scan: bool = True, include_path: bool = True) -> dict:
+def _car_public_state(
+    include_scan: bool = True,
+    include_path: bool = True,
+    include_map: bool = True,
+) -> dict:
     state = {
         "type": "car_state",
         "connected": car_state["connected"],
         "last_seen": car_state["last_seen"],
         "pose": car_state["map_pose"],
+        "car_map_pose": car_state["odom_pose"],
+        # Backward-compatible alias retained for existing clients.
         "odom_pose": car_state["odom_pose"],
         "transform": {
             **car_transform,
@@ -1440,7 +1454,45 @@ def _car_public_state(include_scan: bool = True, include_path: bool = True) -> d
         state["scan_points"] = car_state["scan_points"]
     if include_path:
         state["path"] = car_state["path"]
+    if include_map:
+        state["map_points"] = car_state["map_points"]
+        state["map_resolution"] = car_state["map_resolution"]
+        state["map_occupied_count"] = car_state["map_occupied_count"]
+        state["map_frame"] = car_state["map_frame"]
     return state
+
+
+def _car_source_points_to_g1_map(points: List[dict]) -> List[dict]:
+    mapped_points = []
+    for point in points:
+        try:
+            mapped = _car_odom_pose_to_map({
+                "x": float(point["x"]),
+                "y": float(point["y"]),
+                "yaw": 0.0,
+            })
+        except (KeyError, TypeError, ValueError):
+            continue
+        if math.isfinite(mapped["x"]) and math.isfinite(mapped["y"]):
+            mapped_points.append({"x": mapped["x"], "y": mapped["y"]})
+    return mapped_points
+
+
+def _refresh_car_spatial_layers() -> None:
+    source_pose = car_state.get("odom_pose")
+    car_state["map_pose"] = (
+        _car_odom_pose_to_map(source_pose) if source_pose else None
+    )
+    car_state["scan_points"] = _car_source_points_to_g1_map(
+        car_state.get("scan_source_points") or []
+    )
+    car_state["path"] = [
+        _car_odom_pose_to_map(pose)
+        for pose in (car_state.get("path_source") or [])
+    ]
+    car_state["map_points"] = _car_source_points_to_g1_map(
+        car_state.get("map_source_points") or []
+    )
 
 
 def _car_update_odom(data: dict) -> None:
@@ -1457,7 +1509,22 @@ def _car_update_odom(data: dict) -> None:
     car_state["map_pose"] = _car_odom_pose_to_map(pose)
 
 
+def _car_update_scan_points(data: dict) -> None:
+    source_points = []
+    for point in (data.get("points") or [])[:1200]:
+        try:
+            x = float(point["x"])
+            y = float(point["y"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if math.isfinite(x) and math.isfinite(y):
+            source_points.append({"x": x, "y": y})
+    car_state["scan_source_points"] = source_points
+    car_state["scan_points"] = _car_source_points_to_g1_map(source_points)
+
+
 def _car_update_scan(data: dict) -> None:
+    """Compatibility path for older bridges that still send raw LaserScan."""
     odom_pose = car_state.get("odom_pose")
     ranges = data.get("ranges")
     if not odom_pose or not isinstance(ranges, list):
@@ -1468,7 +1535,7 @@ def _car_update_scan(data: dict) -> None:
     range_max = float(data.get("range_max", 100.0))
     step = max(1, math.ceil(len(ranges) / 1200))
     cos_pose, sin_pose = math.cos(odom_pose["yaw"]), math.sin(odom_pose["yaw"])
-    points = []
+    source_points = []
     for index in range(0, len(ranges), step):
         distance = float(ranges[index])
         if not math.isfinite(distance) or distance < range_min or distance > range_max:
@@ -1478,16 +1545,16 @@ def _car_update_scan(data: dict) -> None:
         local_y = distance * math.sin(angle)
         odom_x = odom_pose["x"] + cos_pose * local_x - sin_pose * local_y
         odom_y = odom_pose["y"] + sin_pose * local_x + cos_pose * local_y
-        mapped = _car_odom_pose_to_map({"x": odom_x, "y": odom_y, "yaw": 0.0})
-        points.append({"x": mapped["x"], "y": mapped["y"]})
-    car_state["scan_points"] = points
+        source_points.append({"x": odom_x, "y": odom_y})
+    car_state["scan_source_points"] = source_points
+    car_state["scan_points"] = _car_source_points_to_g1_map(source_points)
 
 
 def _car_update_path(data: dict) -> None:
     poses = data.get("poses")
     if not isinstance(poses, list):
         return
-    mapped_path = []
+    source_path = []
     step = max(1, math.ceil(len(poses) / 2000))
     for item in poses[::step]:
         try:
@@ -1497,10 +1564,53 @@ def _car_update_path(data: dict) -> None:
                 "y": float(position["y"]),
                 "yaw": _yaw_from_quaternion(item.get("orientation") or {}),
             }
-            mapped_path.append(_car_odom_pose_to_map(odom_pose))
+            source_path.append(odom_pose)
         except (KeyError, TypeError, ValueError):
             continue
-    car_state["path"] = mapped_path
+    car_state["path_source"] = source_path
+    car_state["path"] = [_car_odom_pose_to_map(pose) for pose in source_path]
+
+
+def _car_update_map(data: dict) -> None:
+    width = int(data.get("width", 0))
+    height = int(data.get("height", 0))
+    resolution = float(data.get("resolution", 0.0))
+    occupied_indices = data.get("occupied_indices")
+    if (
+        width <= 0 or height <= 0 or resolution <= 0.0
+        or not isinstance(occupied_indices, list)
+    ):
+        raise ValueError("hartă OccupancyGrid invalidă")
+    origin = data.get("origin") or {}
+    origin_position = origin.get("position") or {}
+    origin_orientation = origin.get("orientation") or {}
+    origin_x = float(origin_position.get("x", 0.0))
+    origin_y = float(origin_position.get("y", 0.0))
+    origin_yaw = _yaw_from_quaternion(origin_orientation)
+    cos_origin, sin_origin = math.cos(origin_yaw), math.sin(origin_yaw)
+
+    # Keep map traffic/rendering bounded while retaining occupied-wall geometry.
+    step = max(1, math.ceil(len(occupied_indices) / 60000))
+    source_points = []
+    for raw_index in occupied_indices[::step]:
+        try:
+            index = int(raw_index)
+        except (TypeError, ValueError):
+            continue
+        if index < 0 or index >= width * height:
+            continue
+        row, column = divmod(index, width)
+        local_x = (column + 0.5) * resolution
+        local_y = (row + 0.5) * resolution
+        source_points.append({
+            "x": origin_x + cos_origin * local_x - sin_origin * local_y,
+            "y": origin_y + sin_origin * local_x + cos_origin * local_y,
+        })
+    car_state["map_source_points"] = source_points
+    car_state["map_points"] = _car_source_points_to_g1_map(source_points)
+    car_state["map_resolution"] = resolution * step
+    car_state["map_occupied_count"] = len(occupied_indices)
+    car_state["map_frame"] = str(data.get("frame_id") or "map")
 
 
 @app.websocket("/ws")
@@ -1580,13 +1690,21 @@ async def car_websocket_endpoint(ws: WebSocket):
                 data = message.get("data") or {}
                 if topic == "/scan_odom":
                     _car_update_odom(data)
-                    public_state = _car_public_state(False, False)
+                    public_state = _car_public_state(False, False, False)
+                elif topic == "/scan_points":
+                    _car_update_scan_points(data)
+                    public_state = _car_public_state(True, False, False)
                 elif topic == "/scan":
                     _car_update_scan(data)
-                    public_state = _car_public_state(True, False)
+                    public_state = _car_public_state(True, False, False)
                 elif topic == "/path":
                     _car_update_path(data)
-                    public_state = _car_public_state(False, True)
+                    public_state = _car_public_state(False, True, False)
+                elif topic == "/map":
+                    _car_update_map(data)
+                    public_state = _car_public_state(False, False, True)
+                elif topic == "/path_status":
+                    public_state = {"type": "car_path_status", **data}
                 else:
                     continue
                 car_state["last_seen"] = time.time()
@@ -1628,9 +1746,8 @@ async def set_car_transform(request: Request):
             status_code=400,
         )
     car_transform.update(values)
-    if car_state.get("odom_pose"):
-        car_state["map_pose"] = _car_odom_pose_to_map(car_state["odom_pose"])
-    public_state = _car_public_state(False, False)
+    _refresh_car_spatial_layers()
+    public_state = _car_public_state()
     await broadcast(public_state)
     return {"success": True, **public_state}
 
@@ -1662,6 +1779,7 @@ async def send_car_goal(request: Request):
     odom_goal = _car_map_pose_to_odom(map_goal)
     payload = {
         "type": "goal_pose",
+        "request_id": secrets.token_urlsafe(8),
         "position": {"x": odom_goal["x"], "y": odom_goal["y"], "z": 0.0},
         "orientation": _yaw_quaternion(odom_goal["yaw"]),
     }
@@ -1675,12 +1793,63 @@ async def send_car_goal(request: Request):
     await broadcast({
         "type": "car_goal",
         "map_goal": map_goal,
+        "car_map_goal": odom_goal,
         "odom_goal": odom_goal,
     })
     return {
         "success": True,
         "map_goal": map_goal,
+        "car_map_goal": odom_goal,
         "odom_goal": odom_goal,
+    }
+
+
+@app.post("/api/car/path/preview")
+async def preview_car_path(request: Request):
+    """Ask the car planner for a path without publishing a navigation goal."""
+    if car_ws is None or not car_state["connected"]:
+        return JSONResponse(
+            {"success": False, "error": "Mașina nu este conectată"},
+            status_code=409,
+        )
+    body = await request.json()
+    try:
+        map_goal = {
+            "x": float(body["x"]),
+            "y": float(body["y"]),
+            "yaw": math.radians(float(body.get("yaw_deg", 0.0))),
+        }
+    except (KeyError, TypeError, ValueError):
+        return JSONResponse(
+            {"success": False, "error": "Țintă invalidă"}, status_code=400,
+        )
+    if not all(math.isfinite(value) for value in map_goal.values()):
+        return JSONResponse(
+            {"success": False, "error": "Ținta trebuie să fie finită"},
+            status_code=400,
+        )
+    car_map_goal = _car_map_pose_to_odom(map_goal)
+    request_id = secrets.token_urlsafe(8)
+    payload = {
+        "type": "compute_path",
+        "request_id": request_id,
+        "position": {
+            "x": car_map_goal["x"], "y": car_map_goal["y"], "z": 0.0,
+        },
+        "orientation": _yaw_quaternion(car_map_goal["yaw"]),
+    }
+    try:
+        await car_ws.send_text(json.dumps(payload))
+    except Exception as exc:
+        return JSONResponse(
+            {"success": False, "error": f"Cererea traseului a eșuat: {exc}"},
+            status_code=503,
+        )
+    return {
+        "success": True,
+        "request_id": request_id,
+        "map_goal": map_goal,
+        "car_map_goal": car_map_goal,
     }
 
 @app.post("/api/slam/clear")

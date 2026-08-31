@@ -69,7 +69,7 @@ RECONNECT_INTERVAL_SEC = 3.0
 
 class WsBridgeNode(Node):
     def __init__(self):
-        super().__init__('ws_bridge_node')
+        super().__init__('ws_bridge_v2')
 
         # Thread-safe queue: ROS callbacks -> asyncio ws loop
         self._out_queue: "queue.Queue[str]" = queue.Queue(maxsize=100)
@@ -110,7 +110,7 @@ class WsBridgeNode(Node):
         threading.Thread(target=self._run_ws_loop, daemon=True).start()
 
         self.get_logger().info(
-            f'ws_bridge_node started, target server: {WS_URL}; '
+            f'ws_bridge_v2 started, target server: {WS_URL}; '
             f'map frame: {MAP_FRAME}; path topic: {PATH_TOPIC}'
         )
 

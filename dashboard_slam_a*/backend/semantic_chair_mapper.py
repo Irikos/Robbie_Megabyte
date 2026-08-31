@@ -218,7 +218,7 @@ class SemanticChairTracker:
         confirmations: int = 3,
         merge_distance_m: float = 0.70,
         voxel_size_m: float = 0.025,
-        lifespan_s: float = 30.0,
+        lifespan_s: float = 10.0,
         max_voxels: int = 10000,
     ):
         self.confirmations = max(1, int(confirmations))

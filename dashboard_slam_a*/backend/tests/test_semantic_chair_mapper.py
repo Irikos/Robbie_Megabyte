@@ -121,19 +121,23 @@ def test_tracker_confirms_three_frames_deduplicates_and_numbers_stably():
     assert [item["name"] for item in objects] == ["chair 1", "chair 2"]
 
 
-def test_confirmed_chair_expires_30_seconds_after_last_observation():
+def test_confirmed_chair_expires_10_seconds_after_last_observation_and_resets():
     tracker = SemanticChairTracker(
         confirmations=3,
         merge_distance_m=0.70,
-        lifespan_s=30.0,
+        lifespan_s=10.0,
     )
     tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.0)
     tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.2)
     tracker.observe(_chair_points(1.0, 2.0), 0.82, observed_at=10.4)
 
-    assert tracker.expire(observed_at=40.4) is False
+    assert tracker.expire(observed_at=20.4) is False
     assert len(tracker.snapshot()) == 1
-    assert tracker.expire(observed_at=40.401) is True
+    # A new observation resets aging to a fresh 10-second lifespan.
+    tracker.observe(_chair_points(1.0, 2.0), 0.90, observed_at=20.4)
+    assert tracker.expire(observed_at=30.4) is False
+    assert len(tracker.snapshot()) == 1
+    assert tracker.expire(observed_at=30.401) is True
     assert tracker.snapshot() == []
 
 
@@ -144,7 +148,8 @@ def test_server_and_frontend_wire_semantic_chairs():
     assert "def _process_semantic_chairs(" in server
     assert "deduplicate_chair_detections" in server
     assert "semantic_chair_aging_loop" in server
-    assert "lifespan_s=30.0" in server
+    assert "lifespan_s=10.0" in server
+    assert '"lifespan_s": semantic_chair_tracker.lifespan_s' in server
     assert '@app.get("/api/semantic/chairs")' in server
     assert "function renderSemanticChairs(message)" in frontend
     assert "semanticLabelSprite" in frontend

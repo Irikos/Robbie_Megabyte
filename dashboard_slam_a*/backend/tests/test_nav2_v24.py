@@ -172,6 +172,55 @@ def test_car_map_odom_transform_round_trip(monkeypatch):
     assert reconstructed["yaw"] == pytest.approx(odom_pose["yaw"])
 
 
+def test_car_occupancy_map_and_scan_follow_manual_map_transform(monkeypatch):
+    import server
+
+    monkeypatch.setitem(server.car_transform, "x", 10.0)
+    monkeypatch.setitem(server.car_transform, "y", -3.0)
+    monkeypatch.setitem(server.car_transform, "yaw", math.pi / 2.0)
+    server.car_state["scan_source_points"] = []
+    server.car_state["map_source_points"] = []
+
+    server._car_update_scan_points({"points": [{"x": 2.0, "y": 1.0}]})
+    server._car_update_map({
+        "frame_id": "map",
+        "width": 4,
+        "height": 3,
+        "resolution": 0.5,
+        "origin": {
+            "position": {"x": 1.0, "y": 2.0},
+            "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+        },
+        "occupied_indices": [0, 6],
+    })
+
+    assert len(server.car_state["scan_points"]) == 1
+    assert server.car_state["scan_points"][0] == pytest.approx({
+        "x": 9.0,
+        "y": -1.0,
+    })
+    # Cell 0 center is (1.25, 2.25) in car_map, then the manual 90° TF.
+    assert server.car_state["map_points"][0] == pytest.approx({
+        "x": 7.75,
+        "y": -1.75,
+    })
+    assert server.car_state["map_occupied_count"] == 2
+
+    monkeypatch.setitem(server.car_transform, "x", 0.0)
+    monkeypatch.setitem(server.car_transform, "y", 0.0)
+    monkeypatch.setitem(server.car_transform, "yaw", 0.0)
+    server._refresh_car_spatial_layers()
+    assert len(server.car_state["scan_points"]) == 1
+    assert server.car_state["scan_points"][0] == pytest.approx({
+        "x": 2.0,
+        "y": 1.0,
+    })
+    assert server.car_state["map_points"][0] == pytest.approx({
+        "x": 1.25,
+        "y": 2.25,
+    })
+
+
 def test_car_bridge_and_dashboard_protocol_are_wired():
     root = Path(__file__).parents[1]
     server = (root / "server.py").read_text(encoding="utf-8")
@@ -183,14 +232,28 @@ def test_car_bridge_and_dashboard_protocol_are_wired():
     assert '@app.websocket("/ws/car")' in server
     assert '@app.post("/api/car/transform")' in server
     assert '@app.post("/api/car/goal")' in server
+    assert '@app.post("/api/car/path/preview")' in server
     assert '"type": "goal_pose"' in server
+    assert '"type": "compute_path"' in server
     assert "3003/ws/car" in bridge
+    assert "OccupancyGrid" in bridge
+    assert "TransformListener" in bridge
+    assert "ComputePathToPose" in bridge
+    assert "'/compute_path_to_pose'" in bridge
+    assert "Time.from_msg(stamp)" in bridge
+    assert "'/scan_points'" in bridge
+    assert "msg.header.frame_id = MAP_FRAME" in bridge
     assert 'id="car-tf-x"' in frontend
     assert 'id="car-goal-x"' in frontend
     assert "function updateCarState(message)" in frontend
     assert 'id="car-pick-goal-btn"' in frontend
     assert "function onCarGoalMove(event)" in frontend
+    assert "function previewCarPath(goal)" in frontend
+    assert "previewCarPath(goal);" in frontend
+    assert "function updateCarPathStatus(message)" in frontend
     assert "_carGoalDrag.yaw = Math.atan2(dy, dx)" in frontend
+    assert 'id="car-map-visible"' in frontend
+    assert "S.carMapMesh" in frontend
     assert "THREE.GLTFLoader" in frontend
     assert "/static/assets/g1/25042_Perseverance.glb" in frontend
     assert (root.parent / "frontend" / "assets" / "g1" / "25042_Perseverance.glb").is_file()
