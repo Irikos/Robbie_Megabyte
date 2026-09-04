@@ -230,12 +230,23 @@ def test_car_bridge_and_dashboard_protocol_are_wired():
     )
 
     assert '@app.websocket("/ws/car")' in server
+    car_endpoint = server.split('@app.websocket("/ws/car")', 1)[1].split(
+        '@app.get("/api/car/status")', 1
+    )[0]
+    assert "_valid_control_token" not in car_endpoint
+    assert "Token car bridge invalid" not in car_endpoint
     assert '@app.post("/api/car/transform")' in server
     assert '@app.post("/api/car/goal")' in server
+    assert '@app.post("/api/car/initial_pose")' in server
     assert '@app.post("/api/car/path/preview")' in server
     assert '"type": "goal_pose"' in server
     assert '"type": "compute_path"' in server
     assert "3003/ws/car" in bridge
+    assert '"/plan,/received_global_plan,/path"' in bridge
+    assert "'source_topic': source_topic" in bridge
+    assert "PoseWithCovarianceStamped" in bridge
+    assert "INITIAL_POSE_TOPIC" in bridge
+    assert "'initial_pose'" in bridge
     assert "OccupancyGrid" in bridge
     assert "TransformListener" in bridge
     assert "ComputePathToPose" in bridge
@@ -245,6 +256,10 @@ def test_car_bridge_and_dashboard_protocol_are_wired():
     assert "msg.header.frame_id = MAP_FRAME" in bridge
     assert 'id="car-tf-x"' in frontend
     assert 'id="car-goal-x"' in frontend
+    assert 'id="car-pick-pose-btn"' in frontend
+    assert "function toggleCarPoseTool(force)" in frontend
+    assert "function sendCarInitialPose(pose)" in frontend
+    assert 'id="car-path-live-status"' in frontend
     assert "function updateCarState(message)" in frontend
     assert 'id="car-pick-goal-btn"' in frontend
     assert "function onCarGoalMove(event)" in frontend

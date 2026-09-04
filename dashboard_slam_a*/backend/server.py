@@ -305,7 +305,7 @@ car_ws: Optional[WebSocket] = None
 car_transform = {"x": 0.0, "y": 0.0, "yaw": 0.0}
 car_alignment = {
     "status": "idle",
-    "message": "Aștept harta mașinii și o hartă PCD G1 încărcată.",
+    "message": "Încarcă ambele hărți, apoi pornește alinierea din buton.",
     "trigger": None,
     "updated_at": 0.0,
 }
@@ -325,13 +325,15 @@ car_state = {
     "scan_points": [],
     "path_source": [],
     "path": [],
+    "path_topic": None,
+    "path_updated_at": 0.0,
+    "path_point_count": 0,
     "map_source_points": [],
     "map_points": [],
     "map_resolution": 0.0,
     "map_native_resolution": 0.0,
     "map_occupied_count": 0,
     "map_frame": None,
-    "map_signature": None,
 }
 semantic_chair_tracker = SemanticChairTracker(
     confirmations=3, merge_distance_m=0.45, voxel_size_m=0.025,
@@ -1500,6 +1502,9 @@ def _car_public_state(
         state["scan_points"] = car_state["scan_points"]
     if include_path:
         state["path"] = car_state["path"]
+        state["path_topic"] = car_state["path_topic"]
+        state["path_updated_at"] = car_state["path_updated_at"]
+        state["path_point_count"] = car_state["path_point_count"]
     if include_map:
         state["map_points"] = car_state["map_points"]
         state["map_resolution"] = car_state["map_resolution"]
@@ -1615,10 +1620,13 @@ def _car_update_path(data: dict) -> None:
             continue
     car_state["path_source"] = source_path
     car_state["path"] = [_car_odom_pose_to_map(pose) for pose in source_path]
+    car_state["path_topic"] = str(data.get("source_topic") or "/path")
+    car_state["path_updated_at"] = float(data.get("received_at") or time.time())
+    car_state["path_point_count"] = len(source_path)
 
 
-def _car_update_map(data: dict) -> bool:
-    """Update the car OccupancyGrid and report whether its geometry changed."""
+def _car_update_map(data: dict) -> None:
+    """Update the car OccupancyGrid used for display and optional alignment."""
     width = int(data.get("width", 0))
     height = int(data.get("height", 0))
     resolution = float(data.get("resolution", 0.0))
@@ -1635,17 +1643,6 @@ def _car_update_map(data: dict) -> bool:
     origin_y = float(origin_position.get("y", 0.0))
     origin_yaw = _yaw_from_quaternion(origin_orientation)
     cos_origin, sin_origin = math.cos(origin_yaw), math.sin(origin_yaw)
-    signature_step = max(1, len(occupied_indices) // 64)
-    signature_sample = tuple(
-        str(value) for value in occupied_indices[::signature_step][:64]
-    )
-    signature = (
-        width, height, round(resolution, 6),
-        round(origin_x, 4), round(origin_y, 4), round(origin_yaw, 4),
-        len(occupied_indices), signature_sample,
-    )
-    changed = signature != car_state.get("map_signature")
-
     # Keep map traffic/rendering bounded while retaining occupied-wall geometry.
     step = max(1, math.ceil(len(occupied_indices) / 60000))
     source_points = []
@@ -1669,8 +1666,6 @@ def _car_update_map(data: dict) -> bool:
     car_state["map_native_resolution"] = resolution
     car_state["map_occupied_count"] = len(occupied_indices)
     car_state["map_frame"] = str(data.get("frame_id") or "map")
-    car_state["map_signature"] = signature
-    return changed
 
 
 def _project_g1_pcd_for_car_alignment(map_path: str) -> List[tuple]:
@@ -1776,7 +1771,7 @@ async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
         car_alignment.clear()
         car_alignment.update({
             "status": "aligned",
-            "message": "Hărțile au fost aliniate automat.",
+            "message": "Hărțile au fost potrivite la cererea operatorului.",
             "trigger": trigger,
             "updated_at": time.time(),
             **result,
@@ -1797,18 +1792,6 @@ async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
         public_state = _car_public_state(False, False, False)
         await broadcast(public_state)
         return {"success": False, "error": str(exc), **public_state}
-
-
-def _schedule_car_auto_alignment(trigger: str) -> bool:
-    global car_auto_align_task
-    if car_auto_align_task is not None and not car_auto_align_task.done():
-        return False
-    if not _resolve_map_path(loaded_map_path):
-        return False
-    if len(car_state.get("map_source_points") or []) < 20:
-        return False
-    car_auto_align_task = asyncio.create_task(_run_car_auto_alignment(trigger))
-    return True
 
 
 @app.websocket("/ws")
@@ -1863,12 +1846,9 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.websocket("/ws/car")
 async def car_websocket_endpoint(ws: WebSocket):
-    """Canal dedicat bridge-ului ROS 2 al mașinii."""
+    """Canal dedicat bridge-ului ROS 2 al mașinii, fără autentificare."""
     global car_ws
     await ws.accept()
-    if not _valid_control_token(ws.query_params.get("token")):
-        await ws.close(code=1008, reason="Token car bridge invalid")
-        return
     previous = car_ws
     car_ws = ws
     if previous is not None and previous is not ws:
@@ -1899,20 +1879,17 @@ async def car_websocket_endpoint(ws: WebSocket):
                     _car_update_path(data)
                     public_state = _car_public_state(False, True, False)
                 elif topic == "/map":
-                    map_changed = _car_update_map(data)
+                    _car_update_map(data)
                     public_state = _car_public_state(False, False, True)
                 elif topic == "/path_status":
                     public_state = {"type": "car_path_status", **data}
+                elif topic == "/initial_pose_status":
+                    public_state = {"type": "car_initial_pose_status", **data}
                 else:
                     continue
                 car_state["last_seen"] = time.time()
                 public_state["last_seen"] = car_state["last_seen"]
                 await broadcast(public_state)
-                if (
-                    topic == "/map" and map_changed
-                    and car_alignment.get("status") not in {"aligned", "manual"}
-                ):
-                    _schedule_car_auto_alignment("car_map_update")
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
                 print(f"[car] mesaj invalid: {exc}")
     except WebSocketDisconnect:
@@ -1969,7 +1946,7 @@ async def auto_align_car_maps():
         return JSONResponse(
             {
                 "success": False,
-                "error": "Alinierea automată rulează deja.",
+                "error": "Potrivirea hărților rulează deja.",
                 **_car_public_state(False, False, False),
             },
             status_code=409,
@@ -2032,6 +2009,62 @@ async def send_car_goal(request: Request):
         "map_goal": map_goal,
         "car_map_goal": odom_goal,
         "odom_goal": odom_goal,
+    }
+
+
+@app.post("/api/car/initial_pose")
+async def set_car_initial_pose(request: Request):
+    """Publish a dashboard-map pose estimate into the car's AMCL map frame."""
+    if car_ws is None or not car_state["connected"]:
+        return JSONResponse(
+            {"success": False, "error": "Mașina nu este conectată"},
+            status_code=409,
+        )
+    body = await request.json()
+    try:
+        dashboard_pose = {
+            "x": float(body["x"]),
+            "y": float(body["y"]),
+            "yaw": math.radians(float(body.get("yaw_deg", 0.0))),
+        }
+    except (KeyError, TypeError, ValueError):
+        return JSONResponse(
+            {"success": False, "error": "Poziție inițială invalidă"},
+            status_code=400,
+        )
+    if not all(math.isfinite(value) for value in dashboard_pose.values()):
+        return JSONResponse(
+            {"success": False, "error": "Poziția trebuie să fie finită"},
+            status_code=400,
+        )
+    car_map_pose = _car_map_pose_to_odom(dashboard_pose)
+    request_id = secrets.token_urlsafe(8)
+    payload = {
+        "type": "initial_pose",
+        "request_id": request_id,
+        "position": {
+            "x": car_map_pose["x"], "y": car_map_pose["y"], "z": 0.0,
+        },
+        "orientation": _yaw_quaternion(car_map_pose["yaw"]),
+    }
+    try:
+        await car_ws.send_text(json.dumps(payload))
+    except Exception as exc:
+        return JSONResponse(
+            {"success": False, "error": f"Trimiterea poziției a eșuat: {exc}"},
+            status_code=503,
+        )
+    await broadcast({
+        "type": "car_initial_pose",
+        "request_id": request_id,
+        "map_pose": dashboard_pose,
+        "car_map_pose": car_map_pose,
+    })
+    return {
+        "success": True,
+        "request_id": request_id,
+        "map_pose": dashboard_pose,
+        "car_map_pose": car_map_pose,
     }
 
 
@@ -2398,7 +2431,6 @@ async def load_robot_map(body: dict = Body({})):
         )
         _set_slam_mode("localization" if localization_armed else "idle")
         local_map["initial_pose_preserved"] = localization_armed
-        _schedule_car_auto_alignment("g1_map_loaded")
         return {
             "success": True,
             "output": (

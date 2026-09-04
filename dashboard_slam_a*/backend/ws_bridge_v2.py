@@ -5,7 +5,7 @@ ws_bridge_node.py
 Simple ROS2 node:
   - Subscribes (statically) to:
       /scan_odom  (nav_msgs/msg/Odometry)
-      /path       (nav_msgs/msg/Path)
+      /plan, /received_global_plan, /path (nav_msgs/msg/Path)
       /scan       (sensor_msgs/msg/LaserScan)
       /map        (nav_msgs/msg/OccupancyGrid)
     and forwards map-frame data as JSON over a WebSocket connection.
@@ -48,7 +48,7 @@ from rclpy.time import Time
 from nav_msgs.msg import OccupancyGrid, Odometry, Path
 from nav2_msgs.action import ComputePathToPose
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 from tf2_ros import Buffer, TransformException, TransformListener
 
 import websockets
@@ -60,7 +60,13 @@ WS_URL = os.environ.get(
 )
 WS_TOKEN = os.environ.get("G1_DASHBOARD_TOKEN", "")
 GOAL_POSE_TOPIC = "/goal_pose"
-PATH_TOPIC = os.environ.get("CAR_PATH_TOPIC", "/path")
+INITIAL_POSE_TOPIC = os.environ.get("CAR_INITIAL_POSE_TOPIC", "/initialpose")
+PATH_TOPICS = tuple(dict.fromkeys(
+    topic.strip() for topic in os.environ.get(
+        "CAR_PATH_TOPICS",
+        os.environ.get("CAR_PATH_TOPIC", "/plan,/received_global_plan,/path"),
+    ).split(",") if topic.strip()
+))
 MAP_FRAME = os.environ.get("CAR_MAP_FRAME", "map")
 BASE_FRAME = os.environ.get("CAR_BASE_FRAME", "scan")
 RECONNECT_INTERVAL_SEC = 3.0
@@ -76,6 +82,9 @@ class WsBridgeNode(Node):
 
         # Publisher for goal poses coming FROM the websocket server
         self._goal_pose_pub = self.create_publisher(PoseStamped, GOAL_POSE_TOPIC, 10)
+        self._initial_pose_pub = self.create_publisher(
+            PoseWithCovarianceStamped, INITIAL_POSE_TOPIC, 10
+        )
         self._compute_path_client = ActionClient(
             self, ComputePathToPose, '/compute_path_to_pose'
         )
@@ -94,7 +103,14 @@ class WsBridgeNode(Node):
 
         # ---- Static subscriptions ----------------------------------
         self.create_subscription(Odometry, '/scan_odom', self.scan_odom_callback, 10)
-        self.create_subscription(Path, PATH_TOPIC, self.path_callback, 10)
+        self._path_subscriptions = [
+            self.create_subscription(
+                Path, topic,
+                lambda msg, source_topic=topic: self.path_callback(msg, source_topic),
+                10,
+            )
+            for topic in PATH_TOPICS
+        ]
         self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
         map_qos = QoSProfile(
             depth=1,
@@ -111,7 +127,7 @@ class WsBridgeNode(Node):
 
         self.get_logger().info(
             f'ws_bridge_v2 started, target server: {WS_URL}; '
-            f'map frame: {MAP_FRAME}; path topic: {PATH_TOPIC}'
+            f'map frame: {MAP_FRAME}; path topics: {", ".join(PATH_TOPICS)}'
         )
 
     # ---- Static callbacks -------------------------------------------
@@ -137,7 +153,7 @@ class WsBridgeNode(Node):
             'angular_velocity': {'x': ang.x, 'y': ang.y, 'z': ang.z},
         })
 
-    def path_callback(self, msg: Path):
+    def path_callback(self, msg: Path, source_topic: str = "/path"):
         source_frame = msg.header.frame_id or MAP_FRAME
         frame_transform = None
         if source_frame != MAP_FRAME:
@@ -157,6 +173,8 @@ class WsBridgeNode(Node):
             })
         self._enqueue('/path', {
             'frame_id': MAP_FRAME,
+            'source_topic': source_topic,
+            'received_at': time.time(),
             'poses': poses,
         })
 
@@ -370,7 +388,7 @@ class WsBridgeNode(Node):
         """
         try:
             command_type = data.get('type', 'goal_pose')
-            if command_type not in {'goal_pose', 'compute_path'}:
+            if command_type not in {'goal_pose', 'compute_path', 'initial_pose'}:
                 self.get_logger().warn(f'Comandă WS necunoscută: {command_type}')
                 return
             pos = data['position']
@@ -387,6 +405,23 @@ class WsBridgeNode(Node):
             msg.pose.orientation.z = float(ori.get('z', 0.0))
             msg.pose.orientation.w = float(ori.get('w', 1.0))
 
+            if command_type == 'initial_pose':
+                initial = PoseWithCovarianceStamped()
+                initial.header = msg.header
+                initial.pose.pose = msg.pose
+                initial.pose.covariance[0] = 0.25
+                initial.pose.covariance[7] = 0.25
+                initial.pose.covariance[35] = 0.06853891945200942
+                self._initial_pose_pub.publish(initial)
+                self._enqueue('/initial_pose_status', {
+                    'status': 'published',
+                    'request_id': data.get('request_id'),
+                    'topic': INITIAL_POSE_TOPIC,
+                })
+                self.get_logger().info(
+                    f'Published 2D pose estimate to {INITIAL_POSE_TOPIC}'
+                )
+                return
             if command_type == 'goal_pose':
                 self._goal_pose_pub.publish(msg)
                 self.get_logger().info(f'Published goal pose to {GOAL_POSE_TOPIC}')
@@ -436,7 +471,7 @@ class WsBridgeNode(Node):
     def _path_result(self, future, request_id):
         try:
             path = future.result().result.path
-            self.path_callback(path)
+            self.path_callback(path, '/compute_path_to_pose/result')
             self._enqueue('/path_status', {
                 'status': 'ready',
                 'request_id': request_id,

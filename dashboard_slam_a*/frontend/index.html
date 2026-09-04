@@ -198,9 +198,9 @@
         </div>
         <div id="car-agent-pose" class="car-agent-note">Poziție hartă: —</div>
         <div class="car-agent-note">
-          Alinierea pornește automat când sunt disponibile harta <code>/map</code> a mașinii și PCD-ul G1.
+          După încărcarea hărții <code>/map</code> a mașinii și a PCD-ului G1, pornește alinierea manual din buton.
         </div>
-        <button class="btn btn-full" onclick="autoAlignCarMaps()" style="background:#16a34a; color:white;">✦ Aliniază automat car_map → harta G1</button>
+        <button class="btn btn-full" onclick="autoAlignCarMaps()" style="background:#16a34a; color:white;">✦ Potrivește car_map → harta G1</button>
         <div id="car-alignment-status" class="car-agent-note">Aliniere: aștept cele două hărți.</div>
         <div class="car-agent-note">Corecție manuală / fallback:</div>
         <div class="car-agent-grid">
@@ -214,6 +214,15 @@
           Afișează harta mașinii
         </label>
         <div id="car-map-status" class="car-agent-note">Hartă mașină: aștept /map.</div>
+        <div id="car-path-live-status" class="car-agent-note">Traiectorie live: aștept /plan.</div>
+        <div class="car-agent-note">Poziție inițială AMCL a mașinii, în harta afișată:</div>
+        <div class="car-agent-grid">
+          <input id="car-pose-x" type="number" step="0.1" placeholder="Pose X (m)" />
+          <input id="car-pose-y" type="number" step="0.1" placeholder="Pose Y (m)" />
+          <input id="car-pose-yaw" type="number" step="5" value="0" placeholder="Yaw (°)" />
+        </div>
+        <button id="car-pick-pose-btn" class="btn btn-full" onclick="toggleCarPoseTool()" style="background:#ea580c; color:white;">🧭 2D Pose Estimate: click + drag</button>
+        <button class="btn btn-full" onclick="sendCarInitialPoseFromInputs()" style="background:#c2410c; color:white;">Trimite poziția inițială către AMCL</button>
         <div class="car-agent-note">Țintă pentru mașină, introdusă în coordonatele hărții:</div>
         <div class="car-agent-grid">
           <input id="car-goal-x" type="number" step="0.1" placeholder="Goal X (m)" />
@@ -521,7 +530,9 @@ const S = {
   dynamicCostmapMesh: null,
   carGroup: null, carVisual: null, carFallback: null,
   carMapMesh: null, carScanMesh: null, carPathLine: null,
-  carGoalMarker: null, carGoalArrow: null, semanticChairGroup: null,
+  carGoalMarker: null, carGoalArrow: null,
+  carPoseEstimateMarker: null, carPoseEstimateArrow: null,
+  semanticChairGroup: null,
   semanticChairVisuals: new Map(),
   loadedMapMesh: null,
   rawSlamPoints: [], rawLoadedMapPoints: [],
@@ -783,7 +794,19 @@ function updateCarState(message) {
     S.carPathLine.geometry.setAttribute(
       'position', new THREE.Float32BufferAttribute(positions, 3)
     );
+    S.carPathLine.geometry.computeBoundingSphere();
     S.carPathLine.visible = positions.length >= 6;
+    const sourceTopic = String(message.path_topic || '/path');
+    S.carPathLine.material.color.setHex(
+      sourceTopic === '/compute_path_to_pose/result' ? 0xfacc15 : 0x22d3ee
+    );
+    const updateTime = Number(message.path_updated_at || 0);
+    const timeLabel = updateTime
+      ? new Date(updateTime * 1000).toLocaleTimeString()
+      : '—';
+    document.getElementById('car-path-live-status').textContent = positions.length >= 6
+      ? `Traiectorie live: ${sourceTopic} · ${positions.length / 3} puncte · actualizată ${timeLabel}`
+      : `Traiectorie live: ${sourceTopic} a publicat un traseu gol · ${timeLabel}`;
   }
 }
 
@@ -832,8 +855,50 @@ async function autoAlignCarMaps() {
     result.textContent =
       `Aliniere aplicată · X=${Number(transform.x).toFixed(2)} m · Y=${Number(transform.y).toFixed(2)} m · yaw=${Number(transform.yaw_deg).toFixed(1)}°`;
   } catch (error) {
-    result.textContent = `Eroare aliniere automată: ${error.message || error}`;
+    result.textContent = `Eroare la potrivirea hărților: ${error.message || error}`;
   }
+}
+
+async function sendCarInitialPoseFromInputs() {
+  try {
+    const [x, y, yaw_deg] = finiteCarInputs([
+      'car-pose-x', 'car-pose-y', 'car-pose-yaw'
+    ]);
+    return sendCarInitialPose({x, y, yaw:yaw_deg * Math.PI / 180});
+  } catch (error) {
+    document.getElementById('car-agent-result').textContent =
+      `Eroare 2D Pose Estimate: ${error.message || error}`;
+  }
+}
+
+async function sendCarInitialPose(pose) {
+  const result = document.getElementById('car-agent-result');
+  renderCarPoseEstimate(pose);
+  result.textContent = 'Trimit poziția inițială către AMCL-ul mașinii…';
+  try {
+    const response = await fetch(API_BASE + '/api/car/initial_pose', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        x:pose.x, y:pose.y, yaw_deg:pose.yaw * 180 / Math.PI,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Poziția inițială a fost respinsă');
+    }
+    const carPose = data.car_map_pose;
+    result.textContent =
+      `2D Pose Estimate trimis · car_map X=${carPose.x.toFixed(2)}, Y=${carPose.y.toFixed(2)}, yaw=${(carPose.yaw * 180 / Math.PI).toFixed(1)}°`;
+  } catch (error) {
+    result.textContent = `Eroare 2D Pose Estimate: ${error.message || error}`;
+  }
+}
+
+function renderCarPoseEstimate(pose) {
+  if (!pose || !S.carPoseEstimateMarker) return;
+  const position = worldToThree(pose.x, pose.y);
+  S.carPoseEstimateMarker.position.set(position.tx, 0.055, position.tz);
+  S.carPoseEstimateMarker.visible = true;
 }
 
 async function sendCarGoal() {
@@ -1140,6 +1205,12 @@ function initWS() {
       renderCarGoal(msg.map_goal);
     } else if (msg.type === 'car_path_status') {
       updateCarPathStatus(msg);
+    } else if (msg.type === 'car_initial_pose') {
+      renderCarPoseEstimate(msg.map_pose);
+    } else if (msg.type === 'car_initial_pose_status') {
+      document.getElementById('car-agent-result').textContent = msg.status === 'published'
+        ? `✅ 2D Pose Estimate publicat pe ${msg.topic || '/initialpose'}. Aștept AMCL.`
+        : `Stare 2D Pose Estimate: ${msg.status || 'necunoscută'}`;
     } else if (msg.type === 'semantic_chairs') {
       renderSemanticChairs(msg);
     } else if (msg.type === 'map_reset') {
@@ -1885,6 +1956,19 @@ function init3D() {
   );
   S.carGoalArrow.visible = false;
   S.scene.add(S.carGoalArrow);
+  S.carPoseEstimateMarker = new THREE.Mesh(
+    new THREE.RingGeometry(0.16, 0.27, 28),
+    new THREE.MeshBasicMaterial({color:0xf97316, side:THREE.DoubleSide})
+  );
+  S.carPoseEstimateMarker.rotation.x = -Math.PI / 2;
+  S.carPoseEstimateMarker.visible = false;
+  S.scene.add(S.carPoseEstimateMarker);
+  S.carPoseEstimateArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0.07, 0),
+    1.0, 0xf97316, 0.28, 0.18
+  );
+  S.carPoseEstimateArrow.visible = false;
+  S.scene.add(S.carPoseEstimateArrow);
   S.semanticChairGroup = new THREE.Group();
   S.scene.add(S.semanticChairGroup);
   if (latestSemanticChairMessage) renderSemanticChairs(latestSemanticChairMessage);
@@ -2462,13 +2546,16 @@ window.addEventListener('keydown', event => {
 let _poseTool = false;
 let _goalTool = false;
 let _carGoalTool = false;
+let _carPoseTool = false;
 let _drag = null;                 // { x, y, yaw } în coordonate LUME
 let _carGoalDrag = null;
+let _carPoseDrag = null;
 const DRAG_MIN_DIST = 0.15;       // m sub care nu considerăm că s-a tras
 
 function togglePoseTool(force) {
   if (force !== false && _goalTool) toggleGoalTool(false);
   if (force !== false && _carGoalTool) toggleCarGoalTool(false);
+  if (force !== false && _carPoseTool) toggleCarPoseTool(false);
   _poseTool = (force === undefined) ? !_poseTool : force;
   const btn = document.getElementById('init-pose-btn');
   const canvas = document.getElementById('canvas-3d');
@@ -2500,6 +2587,7 @@ function toggleGoalTool(force) {
   if (_goalTool) {
     togglePoseTool(false);
     toggleCarGoalTool(false);
+    toggleCarPoseTool(false);
     button.textContent = '✅ Click pe punctul B (Esc anulează)';
     button.style.background = '#dc2626';
     canvas.style.cursor = 'crosshair';
@@ -2519,6 +2607,7 @@ function toggleCarGoalTool(force) {
   if (_carGoalTool) {
     togglePoseTool(false);
     toggleGoalTool(false);
+    toggleCarPoseTool(false);
     button.textContent = '✅ Click + drag pentru orientare (Esc anulează)';
     button.style.background = '#dc2626';
     canvas.style.cursor = 'crosshair';
@@ -2536,6 +2625,89 @@ function toggleCarGoalTool(force) {
     window.removeEventListener('pointerup', onCarGoalUp);
     endCarGoalDrag();
   }
+}
+
+function toggleCarPoseTool(force) {
+  _carPoseTool = (force === undefined) ? !_carPoseTool : force;
+  const button = document.getElementById('car-pick-pose-btn');
+  const canvas = document.getElementById('canvas-3d');
+  if (_carPoseTool) {
+    togglePoseTool(false);
+    toggleGoalTool(false);
+    toggleCarGoalTool(false);
+    button.textContent = '✅ Click + drag pentru poziția AMCL (Esc anulează)';
+    button.style.background = '#dc2626';
+    canvas.style.cursor = 'crosshair';
+    canvas.addEventListener('pointerdown', onCarPoseDown);
+    canvas.addEventListener('pointermove', onCarPoseMove);
+    canvas.addEventListener('pointerup', onCarPoseUp);
+    window.addEventListener('pointerup', onCarPoseUp);
+  } else {
+    button.textContent = '🧭 2D Pose Estimate: click + drag';
+    button.style.background = '#ea580c';
+    canvas.style.cursor = '';
+    canvas.removeEventListener('pointerdown', onCarPoseDown);
+    canvas.removeEventListener('pointermove', onCarPoseMove);
+    canvas.removeEventListener('pointerup', onCarPoseUp);
+    window.removeEventListener('pointerup', onCarPoseUp);
+    endCarPoseDrag();
+  }
+}
+
+function onCarPoseDown(event) {
+  if (event.button !== 0) return;
+  const point = pickGround(event);
+  if (!point) return;
+  event.preventDefault();
+  if (S.controls) S.controls.enabled = false;
+  const currentYaw = Number(document.getElementById('car-pose-yaw').value || 0);
+  _carPoseDrag = {
+    x:point.x, y:point.y,
+    yaw:Number.isFinite(currentYaw) ? currentYaw * Math.PI / 180 : 0,
+  };
+  renderCarPoseEstimate(_carPoseDrag);
+  drawCarPoseArrow(_carPoseDrag, 0.6);
+}
+
+function onCarPoseMove(event) {
+  if (!_carPoseDrag) return;
+  const point = pickGround(event);
+  if (!point) return;
+  const dx = point.x - _carPoseDrag.x;
+  const dy = point.y - _carPoseDrag.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance >= DRAG_MIN_DIST) _carPoseDrag.yaw = Math.atan2(dy, dx);
+  drawCarPoseArrow(_carPoseDrag, Math.max(0.6, distance));
+  document.getElementById('car-agent-result').textContent =
+    `Pose hartă X=${_carPoseDrag.x.toFixed(2)}, Y=${_carPoseDrag.y.toFixed(2)}, yaw=${(_carPoseDrag.yaw * 180 / Math.PI).toFixed(1)}° — eliberează pentru trimitere`;
+}
+
+function onCarPoseUp() {
+  if (!_carPoseDrag) return;
+  const pose = {..._carPoseDrag};
+  document.getElementById('car-pose-x').value = pose.x.toFixed(2);
+  document.getElementById('car-pose-y').value = pose.y.toFixed(2);
+  document.getElementById('car-pose-yaw').value =
+    (pose.yaw * 180 / Math.PI).toFixed(1);
+  renderCarPoseEstimate(pose);
+  endCarPoseDrag();
+  toggleCarPoseTool(false);
+  sendCarInitialPose(pose);
+}
+
+function endCarPoseDrag() {
+  _carPoseDrag = null;
+  if (S.carPoseEstimateArrow) S.carPoseEstimateArrow.visible = false;
+  if (S.controls) S.controls.enabled = true;
+}
+
+function drawCarPoseArrow(pose, length) {
+  if (!S.carPoseEstimateArrow) return;
+  const position = worldToThree(pose.x, pose.y);
+  S.carPoseEstimateArrow.position.set(position.tx, 0.07, position.tz);
+  S.carPoseEstimateArrow.setDirection(headingVector(pose.yaw));
+  S.carPoseEstimateArrow.setLength(length, 0.28, 0.18);
+  S.carPoseEstimateArrow.visible = true;
 }
 
 function onCarGoalDown(event) {
@@ -2927,6 +3099,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'escape' && _poseTool) { togglePoseTool(false); return; }
   if (k === 'escape' && _goalTool) { toggleGoalTool(false); return; }
   if (k === 'escape' && _carGoalTool) { toggleCarGoalTool(false); return; }
+  if (k === 'escape' && _carPoseTool) { toggleCarPoseTool(false); return; }
   if (!TELEOP_KEYS.includes(k)) return;
   // Nu interceptăm dacă utilizatorul SCRIE într-un câmp de text.
   // Atenție: slider-ele (input type="range") păstrează focusul după click,
