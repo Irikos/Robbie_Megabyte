@@ -137,9 +137,9 @@ class SimulationStackSupervisor:
                 "--control-port",
                 "5611",
                 "--width",
-                "640",
+                "1152",
                 "--height",
-                "400",
+                "720",
             ],
 
             "relay": [

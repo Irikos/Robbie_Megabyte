@@ -269,6 +269,27 @@ function applyCameraPreviewStatus(
         raw.live
     );
 
+    // D15X_WINDOW_LIVE_LEDS
+    // Bind the existing workspace header LEDs to the actual
+    // preview states rather than leaving them decorative.
+    document
+        .getElementById(
+            "keypointCameraView"
+        )
+        ?.classList.toggle(
+            "feed-live",
+            state.keypointLive
+        );
+
+    document
+        .getElementById(
+            "rawCameraView"
+        )
+        ?.classList.toggle(
+            "feed-live",
+            state.rawLive
+        );
+
     const cameraReady = (
         data.camera?.state === "ready"
     );
@@ -457,6 +478,15 @@ function applyMujocoPreviewStatus(
     state.mujocoLive = Boolean(
         preview.live
     );
+
+    document
+        .querySelector(
+            "#view-live .workspace-tile.mujoco-panel"
+        )
+        ?.classList.toggle(
+            "feed-live",
+            state.mujocoLive
+        );
 
     const image = document.getElementById(
         "mujocoImage"
@@ -1944,8 +1974,12 @@ function updateDemoControlStrip(
 
     setDemoState(
         "demoAlignState",
-        data.alignment
-        || "OFF"
+        stackActive
+            ? (
+                data.alignment
+                || "OFF"
+            )
+            : "OFF"
     );
 
 

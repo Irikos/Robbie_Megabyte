@@ -10263,3 +10263,83 @@ body.reference-stitch
         -4px
         !important;
 }
+
+/* ============================================================
+   D15X — REAL WINDOW LIVE LED STATES
+   ============================================================ */
+
+/*
+ * Default state for every workspace header:
+ * no live frames -> amber.
+ */
+body.reference-stitch
+#view-live
+.workspace-tile
+.workspace-tile-header::before,
+
+body.reference-stitch
+#view-live
+.workspace-tile
+.camera-feed-label::before,
+
+body.reference-stitch
+#view-live
+.workspace-tile.mujoco-panel
+> .panel-header::before {
+    background:
+        var(--st-amber)
+        !important;
+
+    box-shadow:
+        0 0 7px
+        rgba(245, 158, 11, 0.60)
+        !important;
+
+    opacity:
+        1
+        !important;
+}
+
+
+/*
+ * Raw Camera live.
+ */
+body.reference-stitch
+#view-live
+#rawCameraView.feed-live
+.camera-feed-label::before,
+
+/*
+ * Keypoint Camera live.
+ */
+body.reference-stitch
+#view-live
+#keypointCameraView.feed-live
+.camera-feed-label::before,
+
+/*
+ * MuJoCo preview live.
+ */
+body.reference-stitch
+#view-live
+.workspace-tile.mujoco-panel.feed-live
+> .panel-header::before,
+
+/*
+ * Physical G1 camera live.
+ *
+ * d11bSyncRobotCamera already owns robot-camera-live.
+ */
+body.reference-stitch
+#view-live
+.workspace-tile.robot-camera-panel.robot-camera-live
+> .workspace-tile-header::before {
+    background:
+        var(--st-green-bright)
+        !important;
+
+    box-shadow:
+        0 0 8px
+        rgba(161, 212, 148, 0.70)
+        !important;
+}

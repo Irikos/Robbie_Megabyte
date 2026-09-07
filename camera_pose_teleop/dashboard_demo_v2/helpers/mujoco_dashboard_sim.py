@@ -352,13 +352,13 @@ def main():
     parser.add_argument(
         "--width",
         type=int,
-        default=640,
+        default=1152,
     )
 
     parser.add_argument(
         "--height",
         type=int,
-        default=400,
+        default=720,
     )
 
     args = parser.parse_args()
@@ -405,8 +405,9 @@ def main():
     # --------------------------------------------------------
     # Dashboard presentation camera.
     #
-    # 640x400 is intentionally 16:10 and remains inside
-    # MuJoCo's existing 640x480 offscreen limit.
+    # 1152x720 preserves the dashboard's 16:10 presentation
+    # while remaining inside the G1 scene's existing
+    # 1280x720 MuJoCo offscreen framebuffer.
     #
     # This is NOT tied to the human-camera dimensions.
     # --------------------------------------------------------
