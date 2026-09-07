@@ -1,0 +1,1730 @@
+
+/* ============================================================
+   D14E — Exact Stitch visual transplant
+   SOURCE: exported Stitch code.html + screen.png
+   VISUAL ONLY — loaded after the existing dashboard CSS.
+   ============================================================ */
+
+:root {
+    --st-page: #141414;
+    --st-shell: #1c1c1c;
+    --st-card: #161616;
+    --st-panel-head: #212121;
+    --st-control: #272622;
+    --st-control-2: #2b2a26;
+    --st-border: #333333;
+    --st-border-2: #3d3c38;
+    --st-border-3: #44423c;
+    --st-green: #8ecb7f;
+    --st-green-bright: #a1d494;
+    --st-emerald: #10b981;
+    --st-emerald-bright: #34d399;
+    --st-amber: #f59e0b;
+    --st-text: #e2e2e2;
+    --st-muted: #a1a1aa;
+    --st-muted-2: #71717a;
+    --st-sidebar: 288px;
+}
+
+html,
+body {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    background: var(--st-page) !important;
+}
+
+body.reference-stitch {
+    box-sizing: border-box !important;
+    padding: 16px !important;
+    overflow: hidden !important;
+    color: var(--st-text) !important;
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+    user-select: none;
+}
+
+body.reference-stitch *,
+body.reference-stitch *::before,
+body.reference-stitch *::after {
+    box-sizing: border-box;
+}
+
+body.reference-stitch .app-shell {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: grid !important;
+    grid-template-columns: var(--st-sidebar) minmax(0, 1fr) !important;
+    grid-template-rows: 64px minmax(0, 1fr) !important;
+    column-gap: 12px !important;
+    row-gap: 12px !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* ---------------------------- top header ---------------------------- */
+
+body.reference-stitch .topbar {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    position: relative !important;
+    z-index: 20 !important;
+    width: 100% !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    overflow: visible !important;
+    border: 1px solid var(--st-border) !important;
+    border-radius: 12px !important;
+    background: var(--st-shell) !important;
+    box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.50),
+        0 0 15px rgba(255, 255, 255, 0.02) !important;
+}
+
+body.reference-stitch .topbar::before,
+body.reference-stitch .topbar::after {
+    display: none !important;
+    content: none !important;
+}
+
+body.reference-stitch #systemBadge {
+    display: none !important;
+}
+
+.rv-brand-cluster {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 220px;
+}
+
+.rv-brand-emblem {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--st-border-3);
+    border-radius: 12px;
+    background: #31302b;
+    box-shadow: inset 0 1px 8px rgba(0,0,0,.28);
+}
+
+.rv-brand-emblem > svg {
+    width: 24px;
+    height: 24px;
+    color: var(--st-amber);
+    transition: transform 700ms ease;
+}
+
+.rv-brand-emblem:hover > svg {
+    transform: rotate(45deg);
+}
+
+.rv-brand-online-dot {
+    position: absolute;
+    right: -2px;
+    top: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--st-emerald);
+}
+
+.rv-brand-online-dot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--st-emerald-bright);
+    animation: st-ping 1.7s cubic-bezier(0,0,.2,1) infinite;
+}
+
+body.reference-stitch .topbar .brand {
+    display: block !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+body.reference-stitch .topbar .brand-mark {
+    display: none !important;
+}
+
+body.reference-stitch .topbar .brand-title {
+    color: var(--st-green-bright) !important;
+    font-size: 16px !important;
+    line-height: 20px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+}
+
+body.reference-stitch .topbar .sidebar-footer {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-height: 0 !important;
+    margin: 2px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--st-emerald-bright) !important;
+    font-family: "Space Mono", monospace !important;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    letter-spacing: .06em !important;
+    text-transform: uppercase !important;
+}
+
+body.reference-stitch .topbar .sidebar-footer .status-dot {
+    width: 6px !important;
+    height: 6px !important;
+    flex: 0 0 6px !important;
+    background: var(--st-emerald-bright) !important;
+    box-shadow: none !important;
+}
+
+body.reference-stitch .topbar .sidebar-footer #backendText {
+    font-size: 10px !important;
+    color: var(--st-emerald-bright) !important;
+    white-space: nowrap !important;
+}
+
+.rv-center-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.rv-center-title .rv-flourish {
+    width: 32px;
+    height: 16px;
+    flex: 0 0 32px;
+}
+
+.rv-center-title .rv-flourish.flip {
+    transform: scaleX(-1);
+}
+
+.rv-center-title .rv-title-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 999px;
+    background: var(--st-emerald-bright);
+    box-shadow: 0 0 12px rgba(16,185,129,.8);
+    animation: st-soft-pulse 2s ease-in-out infinite;
+}
+
+body.reference-stitch #pageTitle {
+    margin: 0 !important;
+    color: white !important;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
+    font-size: 18px !important;
+    line-height: 24px !important;
+    font-weight: 600 !important;
+    letter-spacing: .06em !important;
+    text-transform: uppercase !important;
+    text-shadow: none !important;
+}
+
+body.reference-stitch .bacalbasa-system-switch {
+    position: relative !important;
+    z-index: 10 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+    padding: 4px !important;
+    margin: 0 !important;
+    border: 1px solid var(--st-border-2) !important;
+    border-radius: 12px !important;
+    background: #22211e !important;
+    box-shadow: inset 0 1px 5px rgba(0,0,0,.2) !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment {
+    height: 31px !important;
+    min-height: 31px !important;
+    margin: 0 !important;
+    padding: 0 13px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
+    font-size: 12px !important;
+    line-height: 16px !important;
+    font-weight: 700 !important;
+    letter-spacing: .05em !important;
+    box-shadow: none !important;
+    transition:
+        background 200ms ease,
+        color 200ms ease,
+        transform 100ms ease !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment:active {
+    transform: scale(.95);
+}
+
+body.reference-stitch .bacalbasa-system-segment-primary {
+    min-width: 0 !important;
+    background: var(--st-green) !important;
+    color: #0f2e0c !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment-primary:hover:not(:disabled) {
+    background: var(--st-green-bright) !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment-stop {
+    min-width: 0 !important;
+    padding-left: 11px !important;
+    padding-right: 11px !important;
+    background: transparent !important;
+    color: #fbbf24 !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment-stop:hover:not(:disabled) {
+    background: #31302b !important;
+    color: #fcd34d !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment:disabled {
+    opacity: .42 !important;
+}
+
+/* ---------------------------- workspace ---------------------------- */
+
+body.reference-stitch .sidebar {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: var(--st-sidebar) !important;
+    min-width: var(--st-sidebar) !important;
+    max-width: var(--st-sidebar) !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    border: 1px solid var(--st-border) !important;
+    border-radius: 12px !important;
+    background: var(--st-shell) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, .50) !important;
+}
+
+body.reference-stitch .sidebar > .brand,
+body.reference-stitch .sidebar > .sidebar-footer {
+    display: none !important;
+}
+
+body.reference-stitch .main {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+}
+
+body.reference-stitch .main > .topbar {
+    display: none !important;
+}
+
+body.reference-stitch .view {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+body.reference-stitch #view-live.active {
+    display: block !important;
+}
+
+body.reference-stitch #view-logs.active {
+    display: block !important;
+    overflow: hidden !important;
+}
+
+body.reference-stitch .live-grid,
+body.reference-stitch .live-media-grid {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+}
+
+body.reference-stitch .demo-control-strip {
+    display: none !important;
+}
+
+body.reference-stitch #mediaWorkspace {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ---------------------------- sidebar nav ---------------------------- */
+
+body.reference-stitch .sidebar nav {
+    width: 100% !important;
+    margin: 2px 0 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+body.reference-stitch .nav-item {
+    width: 100% !important;
+    min-height: 32px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: #a1a1aa !important;
+    font-size: 12px !important;
+    line-height: 16px !important;
+    font-weight: 500 !important;
+    letter-spacing: .025em !important;
+    text-align: left !important;
+    box-shadow: none !important;
+}
+
+body.reference-stitch .nav-item:hover {
+    background: #31302b !important;
+    color: #e4e4e7 !important;
+}
+
+body.reference-stitch .nav-item.active {
+    background: #4e8d44 !important;
+    color: #0d220b !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,.18) !important;
+}
+
+.rv-nav-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+}
+
+/* ---------------------------- sidebar cards ---------------------------- */
+
+body.reference-stitch .design-sidebar-sections {
+    display: contents !important;
+}
+
+body.reference-stitch .design-side-card,
+body.reference-stitch .robot-modes-card {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 12px !important;
+    border: 1px solid #2e2e2e !important;
+    border-radius: 12px !important;
+    background: var(--st-card) !important;
+    box-shadow: none !important;
+}
+
+body.reference-stitch .design-side-card strong,
+body.reference-stitch .robot-modes-header > strong,
+body.reference-stitch .d12n-status-heading,
+body.reference-stitch .robot-mode-group-label {
+    color: #a1a1aa !important;
+    font-family: "Space Mono", monospace !important;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+}
+
+/* target select */
+body.reference-stitch .system-target-field {
+    width: 100% !important;
+}
+
+body.reference-stitch #systemTargetSelect {
+    width: 100% !important;
+    height: 30px !important;
+    margin: 0 !important;
+    padding: 0 34px 0 12px !important;
+    border: 1px solid var(--st-border-3) !important;
+    border-radius: 8px !important;
+    background: var(--st-control-2) !important;
+    color: white !important;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,.20) !important;
+}
+
+/* connection badge */
+body.reference-stitch .d12n-connection-row {
+    width: 100% !important;
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    border-radius: 8px !important;
+    font-family: "Space Mono", monospace !important;
+}
+
+body.reference-stitch .d12n-connection-row.d12n-disconnected {
+    border: 1px solid rgba(234,179,8,.72) !important;
+    background: #2d291e !important;
+    color: #fcd34d !important;
+}
+
+body.reference-stitch .d12n-connection-row.d12n-connected {
+    border: 1px solid rgba(142,203,127,.45) !important;
+    background: #233022 !important;
+    color: #9dd090 !important;
+}
+
+body.reference-stitch .d12n-connection-row::before {
+    width: 6px !important;
+    height: 6px !important;
+    flex: 0 0 6px !important;
+}
+
+body.reference-stitch .d12n-connection-row::after {
+    font-family: "Space Mono", monospace !important;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+}
+
+body.reference-stitch .robot-connection-toggle {
+    width: 100% !important;
+    min-height: 30px !important;
+    height: 30px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    border: 1px solid #40643b !important;
+    border-radius: 8px !important;
+    background: #233022 !important;
+    color: #9dd090 !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,.16) !important;
+}
+
+body.reference-stitch .robot-connection-toggle[data-state="connected"] {
+    border-color: var(--st-border-3) !important;
+    background: #272622 !important;
+    color: #d4d4d8 !important;
+}
+
+/* status lines */
+body.reference-stitch .design-status-list,
+body.reference-stitch .design-sidebar-status {
+    font-size: 12px !important;
+}
+
+body.reference-stitch .design-status-row {
+    min-height: 22px !important;
+    font-size: 12px !important;
+}
+
+body.reference-stitch .design-status-row strong {
+    font-family: "Space Mono", monospace !important;
+    font-size: 10px !important;
+}
+
+/* display settings */
+body.reference-stitch .design-toggle-row,
+body.reference-stitch .design-display-row {
+    min-height: 28px !important;
+    color: #d4d4d8 !important;
+    font-size: 12px !important;
+}
+
+/* robot modes */
+body.reference-stitch .robot-modes-card {
+    padding: 12px !important;
+}
+
+body.reference-stitch .robot-modes-header {
+    min-height: 20px !important;
+    margin: 0 0 10px !important;
+}
+
+body.reference-stitch .robot-mode-refresh {
+    height: 22px !important;
+    min-height: 22px !important;
+    padding: 0 8px !important;
+    border: 1px solid var(--st-border-3) !important;
+    border-radius: 4px !important;
+    background: #2d2c28 !important;
+    color: #d4d4d8 !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+}
+
+body.reference-stitch .robot-mode-status {
+    width: 100% !important;
+    min-height: 30px !important;
+    margin: 0 0 9px !important;
+    padding: 0 10px !important;
+    border: 1px solid var(--st-border-2) !important;
+    border-radius: 8px !important;
+    background: var(--st-control) !important;
+}
+
+body.reference-stitch .robot-mode-status span {
+    color: #a1a1aa !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+}
+
+body.reference-stitch .robot-mode-status strong {
+    color: var(--st-green) !important;
+    font-family: "Space Mono", monospace !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+}
+
+body.reference-stitch .robot-mode-ownership {
+    display: none !important;
+}
+
+body.reference-stitch .robot-mode-grid {
+    width: 100% !important;
+    margin: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+}
+
+body.reference-stitch .robot-mode-group-label {
+    grid-column: 1 / -1 !important;
+    margin: 2px 0 1px !important;
+    padding: 0 !important;
+}
+
+body.reference-stitch .robot-mode-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 31px !important;
+    height: 31px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--st-border-2) !important;
+    border-radius: 6px !important;
+    background: var(--st-control) !important;
+    color: #a1a1aa !important;
+    font-size: 11px !important;
+    line-height: 15px !important;
+    font-weight: 500 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+}
+
+body.reference-stitch .robot-mode-button:hover:not(:disabled) {
+    border-color: #4b4943 !important;
+    background: #33312c !important;
+    color: #e4e4e7 !important;
+}
+
+body.reference-stitch .robot-mode-button.danger {
+    border-color: var(--st-border-2) !important;
+    background: var(--st-control) !important;
+    color: #a1a1aa !important;
+}
+
+body.reference-stitch .robot-mode-button:disabled,
+body.reference-stitch .robot-mode-refresh:disabled {
+    opacity: .42 !important;
+}
+
+/* ---------------------------- media cards ---------------------------- */
+
+body.reference-stitch #mediaWorkspace > *,
+body.reference-stitch .workspace-tile,
+body.reference-stitch .live-media-grid > .panel {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--st-border) !important;
+    border-radius: 12px !important;
+    background: var(--st-shell) !important;
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, .55) !important;
+    /* D14F: legacy dashboard owns tile movement transitions. */
+}
+
+body.reference-stitch #mediaWorkspace > *:hover,
+body.reference-stitch .workspace-tile:hover {
+    border-color: rgba(16,185,129,.40) !important;
+}
+
+body.reference-stitch #mediaWorkspace > *::after,
+body.reference-stitch .workspace-tile::after,
+body.reference-stitch .live-media-grid > .panel::after {
+    display: none !important;
+    content: none !important;
+}
+
+body.reference-stitch #view-live .workspace-tile-header,
+body.reference-stitch #view-live .panel-header,
+body.reference-stitch #view-live .camera-feed-label {
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--st-border) !important;
+    border-radius: 0 !important;
+    background: var(--st-panel-head) !important;
+}
+
+body.reference-stitch #view-live .workspace-tile-header::before,
+body.reference-stitch #view-live .panel-header::before,
+body.reference-stitch #view-live .camera-feed-label::before {
+    content: "" !important;
+    display: block !important;
+    width: 8px !important;
+    height: 8px !important;
+    flex: 0 0 8px !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    background: var(--st-emerald-bright) !important;
+    box-shadow: none !important;
+    animation: st-soft-pulse 2s ease-in-out infinite;
+}
+
+body.reference-stitch #view-live .workspace-tile-header::after,
+body.reference-stitch #view-live .panel-header::after,
+body.reference-stitch #view-live .camera-feed-label::after {
+    display: none !important;
+    content: none !important;
+}
+
+body.reference-stitch #view-live .workspace-tile-header strong,
+body.reference-stitch #view-live .workspace-tile-header span,
+body.reference-stitch #view-live .panel-header h2,
+body.reference-stitch #view-live .panel-header strong,
+body.reference-stitch #view-live .camera-feed-label strong {
+    margin: 0 !important;
+    color: #f4f4f5 !important;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
+    font-size: 12px !important;
+    line-height: 16px !important;
+    font-weight: 600 !important;
+    letter-spacing: .05em !important;
+    text-transform: uppercase !important;
+}
+
+body.reference-stitch #view-live .workspace-tile-header {
+    justify-content: flex-start !important;
+}
+
+body.reference-stitch #view-live .workspace-tile-header > button,
+body.reference-stitch #view-live .workspace-tile-header .workspace-tile-control {
+    margin-left: auto !important;
+}
+
+.rv-header-ornament {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: var(--st-amber);
+}
+
+body.reference-stitch .camera-stage,
+body.reference-stitch .mujoco-stage,
+body.reference-stitch .robot-camera-stage,
+body.reference-stitch .workspace-tile-body,
+body.reference-stitch .camera-feed .camera-stage {
+    min-height: 0 !important;
+    background: var(--st-page) !important;
+}
+
+body.reference-stitch .camera-image,
+body.reference-stitch #mujocoImage,
+body.reference-stitch .robot-camera-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+body.reference-stitch [hidden] {
+    display: none !important;
+}
+
+/* ---------------------------- placeholder ---------------------------- */
+
+body.reference-stitch .camera-placeholder,
+body.reference-stitch .unified-preview-placeholder,
+body.reference-stitch .robot-camera-placeholder {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    text-align: center !important;
+    color: #a1a1aa !important;
+    background: transparent !important;
+}
+
+body.reference-stitch .camera-placeholder[hidden],
+body.reference-stitch .unified-preview-placeholder[hidden],
+body.reference-stitch .robot-camera-placeholder[hidden] {
+    display: none !important;
+}
+
+body.reference-stitch .camera-icon,
+body.reference-stitch .robot-camera-placeholder-icon {
+    display: none !important;
+}
+
+body.reference-stitch .camera-placeholder strong,
+body.reference-stitch .unified-preview-placeholder strong,
+body.reference-stitch .robot-camera-placeholder strong {
+    margin: 12px 0 0 !important;
+    color: #e4e4e7 !important;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    font-weight: 600 !important;
+    letter-spacing: .025em !important;
+}
+
+body.reference-stitch .camera-placeholder > span:not(.robot-camera-placeholder-icon),
+body.reference-stitch .unified-preview-placeholder > span,
+body.reference-stitch .robot-camera-placeholder > span:not(.robot-camera-placeholder-icon) {
+    margin-top: 4px !important;
+    color: #a1a1aa !important;
+    font-family: "Space Mono", monospace !important;
+    font-size: 12px !important;
+    line-height: 17px !important;
+    font-weight: 400 !important;
+}
+
+/* Exact reticle geometry from exported code.html */
+.rv-reticle {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    flex: 0 0 112px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rv-reticle svg {
+    overflow: visible;
+}
+
+.rv-reticle .rv-outer {
+    position: absolute;
+    inset: 0;
+    width: 112px;
+    height: 112px;
+    color: rgba(16,185,129,.40);
+}
+
+.rv-reticle .rv-inner {
+    position: absolute;
+    inset: 8px;
+    width: 96px;
+    height: 96px;
+    color: rgba(245,158,11,.45);
+}
+
+.rv-reticle.raw .rv-inner {
+    inset: 4px;
+    width: 104px;
+    height: 104px;
+}
+
+.rv-reticle-core {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(16,185,129,.40);
+    border-radius: 999px;
+    background: rgba(2,44,34,.40);
+    box-shadow: 0 0 20px rgba(16,185,129,.25);
+}
+
+.rv-reticle-core svg {
+    width: 32px;
+    height: 32px;
+    color: var(--st-emerald-bright);
+}
+
+.rv-reticle.sim .rv-reticle-core svg {
+    width: 28px;
+    height: 28px;
+}
+
+.reticle-spin {
+    animation: st-spin 30s linear infinite;
+    transform-origin: 50% 50%;
+}
+
+.reticle-spin-rev {
+    animation: st-spin-rev 35s linear infinite;
+    transform-origin: 50% 50%;
+}
+
+.reticle-pulse {
+    animation: st-reticle-pulse 4s ease-in-out infinite;
+}
+
+/* logs remain functional, only recolored */
+body.reference-stitch .d10e-terminal-shell,
+body.reference-stitch .d10e-terminal-header,
+body.reference-stitch #view-logs .panel {
+    border-color: var(--st-border) !important;
+    background: var(--st-shell) !important;
+    border-radius: 12px !important;
+}
+
+/* scrollbar copied from export */
+body.reference-stitch ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+body.reference-stitch ::-webkit-scrollbar-track {
+    background: #23221f;
+}
+
+body.reference-stitch ::-webkit-scrollbar-thumb {
+    background: #3d3c38;
+    border-radius: 4px;
+}
+
+body.reference-stitch ::-webkit-scrollbar-thumb:hover {
+    background: #504e49;
+}
+
+@keyframes st-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes st-spin-rev {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+@keyframes st-reticle-pulse {
+    0%, 100% { transform: scale(1); opacity: .85; }
+    50% { transform: scale(1.05); opacity: 1; }
+}
+
+@keyframes st-soft-pulse {
+    0%, 100% { opacity: .55; }
+    50% { opacity: 1; }
+}
+
+@keyframes st-ping {
+    75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 1100px) {
+    :root {
+        --st-sidebar: 256px;
+    }
+
+    body.reference-stitch {
+        padding: 12px !important;
+    }
+
+    body.reference-stitch .app-shell {
+        column-gap: 10px !important;
+        row-gap: 10px !important;
+    }
+
+    body.reference-stitch #mediaWorkspace {
+        gap: 10px !important;
+    }
+
+    body.reference-stitch #pageTitle {
+        font-size: 15px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reticle-spin,
+    .reticle-spin-rev,
+    .reticle-pulse,
+    .rv-brand-online-dot::before,
+    .rv-title-dot {
+        animation: none !important;
+    }
+}
+
+/* ============================================================
+   D14G — ORIGINAL DRAG OWNER + REQUESTED POLISH
+
+   IMPORTANT:
+   - original app.js owns drag/reorder functionality
+   - original style.css owns drag/reorder animation
+   - this block never sets transform/transition/display/position
+     on movable media tiles
+   ============================================================ */
+
+/* Equal 2x2 tracks, while leaving tile movement mechanics alone. */
+body.reference-stitch #mediaWorkspace {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr))
+        !important;
+
+    grid-template-rows:
+        repeat(2, minmax(0, 1fr))
+        !important;
+
+    align-items: stretch !important;
+    justify-items: stretch !important;
+}
+
+body.reference-stitch #mediaWorkspace > * {
+    min-width: 0 !important;
+    min-height: 0 !important;
+}
+
+/*
+ * Keep the content viewport clipped, but do not force a new layout
+ * model on the draggable tiles themselves.
+ */
+body.reference-stitch .main,
+body.reference-stitch #view-live,
+body.reference-stitch #view-live .live-grid,
+body.reference-stitch #view-live .live-media-grid {
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Remove the injected icons beside Live / Logs. */
+body.reference-stitch .rv-nav-icon {
+    display: none !important;
+}
+
+/* With no icon, restore the simple exported nav spacing. */
+body.reference-stitch .nav-item {
+    gap: 0 !important;
+}
+
+/* ------------------------------------------------------------
+   Connection state spacing
+   ------------------------------------------------------------ */
+
+body.reference-stitch .d12n-connection-row {
+    margin-bottom: 9px !important;
+}
+
+body.reference-stitch .robot-connection-toggle {
+    margin-top: 0 !important;
+}
+
+/* ------------------------------------------------------------
+   All literal OFF values use one exact appearance.
+   JS only adds .rv-status-off based on displayed text.
+   ------------------------------------------------------------ */
+
+body.reference-stitch .rv-status-off {
+    color: #d4d4d8 !important;
+    font-family:
+        "Space Mono",
+        monospace
+        !important;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    font-weight: 400 !important;
+    letter-spacing: .04em !important;
+}
+
+/* ------------------------------------------------------------
+   Top-right control — match the Stitch reference crop.
+   Visual text/icons only. Existing button IDs, state and handlers
+   remain untouched.
+   ------------------------------------------------------------ */
+
+body.reference-stitch .bacalbasa-system-switch {
+    width: 166px !important;
+    height: 38px !important;
+    min-width: 166px !important;
+    min-height: 38px !important;
+
+    margin-left: auto !important;
+    padding: 4px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 4px !important;
+
+    border: 1px solid #3d3c38 !important;
+    border-radius: 12px !important;
+    background: #22211e !important;
+
+    box-shadow:
+        inset 0 1px 5px rgba(0, 0, 0, .22)
+        !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment {
+    position: relative !important;
+
+    height: 30px !important;
+    min-height: 30px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 7px !important;
+
+    border: 0 !important;
+    border-radius: 8px !important;
+
+    box-shadow: none !important;
+
+    font-size: 0 !important;
+    line-height: 1 !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment-primary {
+    width: 72px !important;
+    min-width: 72px !important;
+    flex: 0 0 72px !important;
+
+    background: #8ecb7f !important;
+    color: #0f2e0c !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-primary::before {
+    content: "";
+
+    width: 10px;
+    height: 10px;
+
+    flex: 0 0 10px;
+
+    background: #153b12;
+
+    clip-path:
+        polygon(
+            8% 64%,
+            61% 11%,
+            88% 18%,
+            93% 43%,
+            39% 94%,
+            23% 79%
+        );
+
+    transform: rotate(-5deg);
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-primary::after {
+    content: "Start";
+
+    color: #0f2e0c;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif;
+
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+body.reference-stitch .bacalbasa-system-segment-stop {
+    width: 76px !important;
+    min-width: 76px !important;
+    flex: 0 0 76px !important;
+
+    background: transparent !important;
+    color: #fbbf24 !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-stop::before {
+    content: "";
+
+    width: 8px;
+    height: 9px;
+
+    flex: 0 0 8px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #f59e0b 0 2px,
+            transparent 2px 5px,
+            #f59e0b 5px 7px,
+            transparent 7px 8px
+        );
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-stop::after {
+    content: "Stop";
+
+    color: #fbbf24;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif;
+
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-primary:hover:not(:disabled) {
+    background: #a1d494 !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-stop:hover:not(:disabled) {
+    background: #31302b !important;
+    color: #fcd34d !important;
+}
+
+body.reference-stitch .bacalbasa-system-segment:disabled {
+    opacity: .42 !important;
+}
+
+/* 900p-ish screens: only reduce outside gutters, never tile mechanics. */
+@media (max-height: 940px) {
+    body.reference-stitch {
+        padding: 10px !important;
+    }
+
+    body.reference-stitch .app-shell {
+        grid-template-rows:
+            60px minmax(0, 1fr)
+            !important;
+
+        row-gap: 10px !important;
+        column-gap: 10px !important;
+    }
+
+    body.reference-stitch .topbar {
+        height: 60px !important;
+        min-height: 60px !important;
+    }
+
+    body.reference-stitch #mediaWorkspace {
+        gap: 10px !important;
+    }
+}
+
+/* ============================================================
+   D14I — SLOT-AWARE WORKSPACE FIX
+
+   The movable workspace is:
+       #mediaWorkspace
+         -> .workspace-slot
+              -> .workspace-tile
+
+   The Stitch skin must style the TILE, never the SLOT.
+
+   app.js keeps complete ownership of:
+       drag start/move/end
+       --workspace-drag-x/y
+       slot swapping
+       FLIP animation
+       pointer capture
+   ============================================================ */
+
+/* LIVE / LOGS — absolutely no icon or pseudo-symbol. */
+body.reference-stitch
+.nav-item[data-view="live"]::before,
+body.reference-stitch
+.nav-item[data-view="logs"]::before {
+    content: none !important;
+    display: none !important;
+}
+
+body.reference-stitch
+.nav-item[data-view="live"],
+body.reference-stitch
+.nav-item[data-view="logs"] {
+    padding-left: 12px !important;
+    gap: 0 !important;
+}
+
+body.reference-stitch .rv-nav-icon {
+    display: none !important;
+}
+
+/* WORKSPACE — exactly four equal SLOT rectangles. */
+body.reference-stitch #mediaWorkspace {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr))
+        !important;
+
+    grid-template-rows:
+        repeat(2, minmax(0, 1fr))
+        !important;
+
+    gap: 12px !important;
+
+    align-items: stretch !important;
+    justify-items: stretch !important;
+
+    overflow: visible !important;
+}
+
+/*
+ * D14E incorrectly styled "#mediaWorkspace > *" as if those
+ * children were tiles. They are actually the four drop slots.
+ * Reset the slots to transparent geometry containers.
+ */
+body.reference-stitch
+#mediaWorkspace > .workspace-slot {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    align-self: stretch !important;
+    justify-self: stretch !important;
+
+    overflow: visible !important;
+
+    border: 1px solid transparent !important;
+    border-radius: 12px !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Preserve a visible drop target without changing dimensions. */
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot {
+    min-height: 0 !important;
+}
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot.workspace-slot-target {
+    border-color:
+        rgba(52, 211, 153, 0.38)
+        !important;
+
+    background:
+        rgba(16, 185, 129, 0.035)
+        !important;
+}
+
+/*
+ * TILE — every actual window fills its slot identically.
+ * No transform, transition, animation or position is set here.
+ */
+body.reference-stitch
+#mediaWorkspace
+> .workspace-slot
+> .workspace-tile {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    overflow: hidden !important;
+
+    border:
+        1px solid var(--st-border)
+        !important;
+
+    border-radius:
+        12px
+        !important;
+
+    background:
+        var(--st-shell)
+        !important;
+
+    box-shadow:
+        0 8px 20px -4px
+        rgba(0, 0, 0, .55)
+        !important;
+}
+
+/* During drag, original .workspace-dragging transform still wins. */
+body.reference-stitch
+#mediaWorkspace
+.workspace-dragging {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* EXACT SAME HEADER GEOMETRY FOR ALL FOUR WINDOWS. */
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile
+> .workspace-tile-header,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+> .camera-feed-label,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.mujoco-panel
+> .panel-header {
+    box-sizing: border-box !important;
+
+    width: 100% !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+
+    margin: 0 !important;
+    padding: 0 16px !important;
+
+    flex: 0 0 44px !important;
+
+    border: 0 !important;
+    border-bottom:
+        1px solid var(--st-border)
+        !important;
+
+    border-radius: 0 !important;
+
+    background:
+        var(--st-panel-head)
+        !important;
+
+    overflow: hidden !important;
+}
+
+/* Simulation nested header must remain a single row. */
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.mujoco-panel
+> .panel-header
+> div:first-child {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 0 !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 6px !important;
+}
+
+/* Window title is geometrically centered in every header. */
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+> .camera-feed-label
+> strong,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.mujoco-panel
+> .panel-header
+h2,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile
+> .workspace-tile-header
+> strong {
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    transform:
+        translate(-50%, -50%)
+        !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    white-space: nowrap !important;
+}
+
+/* EVERY WINDOW BODY FILLS THE SAME REMAINING HEIGHT. */
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+> .camera-stage,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.mujoco-panel
+> .mujoco-stage,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.robot-camera-panel
+> .robot-camera-stage {
+    width: 100% !important;
+
+    height:
+        calc(100% - 44px)
+        !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+
+    aspect-ratio: auto !important;
+
+    margin: 0 !important;
+}
+
+/* Camera wrapper variant. */
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+> .camera-feed,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+> .camera-views {
+    width: 100% !important;
+
+    height:
+        calc(100% - 44px)
+        !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    overflow: hidden !important;
+}
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+.camera-feed
+> .camera-stage,
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.camera-panel
+.camera-views
+.camera-stage {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-height: 0 !important;
+
+    aspect-ratio: auto !important;
+}
+
+/* START / STOP — reference geometry, centered text independent of icon. */
+body.reference-stitch
+.bacalbasa-system-switch {
+    width: 166px !important;
+    min-width: 166px !important;
+    max-width: 166px !important;
+
+    height: 38px !important;
+    min-height: 38px !important;
+
+    padding: 4px !important;
+    gap: 4px !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-primary {
+    position: relative !important;
+
+    width: 74px !important;
+    min-width: 74px !important;
+    max-width: 74px !important;
+    flex: 0 0 74px !important;
+
+    padding: 0 !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-primary::before {
+    position: absolute !important;
+
+    left: 10px !important;
+    top: 50% !important;
+
+    transform:
+        translateY(-50%)
+        rotate(-5deg)
+        !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-primary::after {
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    transform:
+        translate(-50%, -50%)
+        !important;
+
+    width: auto !important;
+
+    text-align: center !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-stop {
+    position: relative !important;
+
+    width: 76px !important;
+    min-width: 76px !important;
+    max-width: 76px !important;
+    flex: 0 0 76px !important;
+
+    padding: 0 !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-stop::before {
+    position: absolute !important;
+
+    left: 10px !important;
+    top: 50% !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+}
+
+body.reference-stitch
+.bacalbasa-system-segment-stop::after {
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    transform:
+        translate(-50%, -50%)
+        !important;
+
+    width: auto !important;
+
+    text-align: center !important;
+}
+
+@media (max-height: 940px) {
+    body.reference-stitch #mediaWorkspace {
+        grid-template-rows:
+            repeat(2, minmax(0, 1fr))
+            !important;
+
+        gap: 10px !important;
+    }
+}
