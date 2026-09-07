@@ -2677,25 +2677,49 @@ function d7hAnimateTileSwap(
         }
 
 
-        tile.animate(
-            [
-                {
-                    transform:
-                        `translate3d(${dx}px, ${dy}px, 0) scale(0.985)`,
-                },
+        /*
+         * D15T — RELEASE FINISHED FLIP TRANSFORM
+         *
+         * The original FLIP animation used fill:"both" and was
+         * never cancelled. After a swap, that completed Web
+         * Animation could continue owning the tile's transform,
+         * preventing later CSS rearrange wiggles from becoming
+         * visible.
+         *
+         * Keep the exact same FLIP animation, but release it as
+         * soon as the transition finishes.
+         */
+        const flipAnimation =
+            tile.animate(
+                [
+                    {
+                        transform:
+                            `translate3d(${dx}px, ${dy}px, 0) scale(0.985)`,
+                    },
 
+                    {
+                        transform:
+                            "translate3d(0, 0, 0) scale(1)",
+                    },
+                ],
                 {
-                    transform:
-                        "translate3d(0, 0, 0) scale(1)",
-                },
-            ],
+                    duration: 290,
+
+                    easing:
+                        "cubic-bezier(0.2, 0.85, 0.25, 1)",
+
+                    fill: "both",
+                }
+            );
+
+
+        flipAnimation.addEventListener(
+            "finish",
+            () => {
+                flipAnimation.cancel();
+            },
             {
-                duration: 290,
-
-                easing:
-                    "cubic-bezier(0.2, 0.85, 0.25, 1)",
-
-                fill: "both",
+                once: true,
             }
         );
     }
@@ -2838,19 +2862,77 @@ function d7hMoveDrag(
         );
 
 
-    const underPointer =
-        document.elementFromPoint(
-            event.clientX,
-            event.clientY
-        );
+    /*
+     * D14V — 2X2 QUADRANT DROP TARGETING
+     *
+     * The workspace always represents four logical positions:
+     *
+     *     slot 1 | slot 2
+     *     -------+-------
+     *     slot 3 | slot 4
+     *
+     * Older compaction CSS can collapse an empty slot's own
+     * bounding rectangle. Therefore destination selection must
+     * not depend on whether that slot currently contains a
+     * visible tile.
+     *
+     * Instead, map the pointer directly into one of the four
+     * workspace quadrants.
+     */
+    let target =
+        null;
 
 
-    const target =
-        underPointer
-            ?.closest(
-                ".workspace-slot"
-            )
-        || null;
+    const workspaceRect =
+        d7hWorkspace
+            ?.getBoundingClientRect();
+
+
+    if (
+        workspaceRect
+        &&
+        event.clientX >= workspaceRect.left
+        &&
+        event.clientX <= workspaceRect.right
+        &&
+        event.clientY >= workspaceRect.top
+        &&
+        event.clientY <= workspaceRect.bottom
+    ) {
+        const midX =
+            workspaceRect.left
+            +
+            workspaceRect.width / 2;
+
+
+        const midY =
+            workspaceRect.top
+            +
+            workspaceRect.height / 2;
+
+
+        const column =
+            event.clientX < midX
+                ? 0
+                : 1;
+
+
+        const row =
+            event.clientY < midY
+                ? 0
+                : 1;
+
+
+        const index =
+            row * 2 + column;
+
+
+        target =
+            d7hWorkspaceSlots[
+                index
+            ]
+            || null;
+    }
 
 
     d7hClearTargetSlot();
@@ -2992,6 +3074,8 @@ function d7hFinishDrag(
 
 
     d7hUpdateSlotVisuals();
+
+
 
     d7hAnimateTileSwap(
         before
@@ -9616,7 +9700,23 @@ function d12nRenameWindows() {
             ];
 
 
-        if (replacement) {
+        /*
+         * D14Q — IDEMPOTENT WINDOW RENAME
+         *
+         * d12nInstallObserver watches childList mutations in the
+         * workspace. Reassigning textContent when the text is
+         * already correct creates another childList mutation and
+         * can repeatedly reschedule d12nApplyLayout().
+         *
+         * Only touch the DOM when the visible text truly changes.
+         */
+        if (
+            replacement
+            &&
+            element.textContent
+                .trim()
+            !== replacement
+        ) {
             element.textContent =
                 replacement;
         }
@@ -9632,6 +9732,29 @@ function d12nRenameWindows() {
 // ------------------------------------------------------------
 
 function d12nFixWorkspaceOrder() {
+    /*
+     * D14N — PRESERVE MANUAL WORKSPACE ORDER
+     *
+     * D12N was added by the visual overhaul to establish the
+     * initial 2x2 presentation:
+     *
+     *   Raw        | Simulation
+     *   Keypoints  | Robot Camera
+     *
+     * Once the user manually drags a tile, D7H owns workspace
+     * order completely. Presentation refreshes must never move
+     * those tiles back to the canonical visual arrangement.
+     */
+    if (
+        typeof d7hWorkspaceManualLayout
+            !== "undefined"
+        &&
+        d7hWorkspaceManualLayout
+    ) {
+        return;
+    }
+
+
     const workspace =
         document.getElementById(
             "mediaWorkspace"
