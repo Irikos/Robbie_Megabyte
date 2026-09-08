@@ -197,6 +197,40 @@
           Mașină deconectată
         </div>
         <div id="car-agent-pose" class="car-agent-note">Poziție hartă: —</div>
+
+        <!-- Comutator Mod: Mapping / Localizare -->
+        <div style="border: 1px solid var(--border); border-radius: 5px; padding: 7px; background: rgba(15,23,42,0.6); display: flex; flex-direction: column; gap: 6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.72rem; font-weight:600; color:var(--text-primary);">Mod Navigare Car</span>
+            <span id="car-mode-badge" style="font-size:0.65rem; padding:2px 6px; border-radius:3px; background:#334155; color:#cbd5e1;">Oprit</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+            <button id="btn-car-mode-slam" class="btn" onclick="setCarMode('mapping')" style="background:#0284c7; color:white; font-size:0.7rem; padding:6px 2px;">
+              🗺 Mapping (SLAM)
+            </button>
+            <button id="btn-car-mode-amcl" class="btn" onclick="setCarMode('localization')" style="background:#16a34a; color:white; font-size:0.7rem; padding:6px 2px;">
+              📍 Localizare (AMCL)
+            </button>
+          </div>
+          <button id="btn-car-mode-stop" class="btn btn-full" onclick="setCarMode('stop')" style="background:#475569; color:white; font-size:0.68rem; padding:4px;">
+            ⏹ Oprește Modul Activ
+          </button>
+
+          <!-- Parametri specifici modului -->
+          <div id="car-mode-inputs" style="display:flex; flex-direction:column; gap:4px; margin-top:2px;">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="car-agent-note">Fișier Hartă (pentru Localizare):</span>
+              <input id="car-mode-map-path" type="text" value="/root/humble_ws/harta_masina_1.yaml" style="font-size:0.68rem; padding:4px; background:#0f172a; border:1px solid var(--border); color:#f8fafc; border-radius:3px;" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span class="car-agent-note">Parametri SLAM (pentru Mapping):</span>
+              <input id="car-mode-slam-params" type="text" value="/root/humble_ws/custom_params.yaml" style="font-size:0.68rem; padding:4px; background:#0f172a; border:1px solid var(--border); color:#f8fafc; border-radius:3px;" />
+            </div>
+          </div>
+          <div id="car-mode-status-text" class="car-agent-note" style="color:var(--text-secondary);">Aștept selecție mod...</div>
+        </div>
+
         <div class="car-agent-note">
           După încărcarea hărții <code>/map</code> a mașinii și a PCD-ului G1, pornește alinierea manual din buton.
         </div>
@@ -715,6 +749,9 @@ function updateCarState(message) {
   const status = document.getElementById('car-agent-status');
   status.textContent = message.connected ? '● Mașină conectată' : '● Mașină deconectată';
   status.style.color = message.connected ? '#4ade80' : '#f59e0b';
+  if (message.current_mode !== undefined) {
+    updateCarModeUI(message.current_mode, message.mode_status, message.mode_details);
+  }
   if (!carTransformInitialized && message.transform) {
     document.getElementById('car-tf-x').value = Number(message.transform.x || 0).toFixed(2);
     document.getElementById('car-tf-y').value = Number(message.transform.y || 0).toFixed(2);
@@ -947,6 +984,70 @@ function updateCarPathStatus(message) {
     result.textContent = `Traseu mașină afișat · ${Number(message.points || 0)} puncte.`;
   } else if (message.status === 'error') {
     result.textContent = `Eroare planner mașină: ${message.error || 'necunoscută'}`;
+  }
+}
+
+async function setCarMode(mode) {
+  const statusText = document.getElementById('car-mode-status-text');
+  const mapPath = document.getElementById('car-mode-map-path').value.trim();
+  const slamParams = document.getElementById('car-mode-slam-params').value.trim();
+
+  statusText.textContent = `Trimit comanda: ${mode}...`;
+  try {
+    const response = await fetch(API_BASE + '/api/car/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: mode,
+        map_file: mapPath,
+        slam_params_file: slamParams,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Comandă respinsă');
+    }
+    updateCarModeUI(data.current_mode || mode, data.mode_status || 'running', data.mode_details);
+  } catch (err) {
+    statusText.textContent = `Eroare: ${err.message || err}`;
+    statusText.style.color = '#ef4444';
+  }
+}
+
+function updateCarModeUI(currentMode, modeStatus, details) {
+  const badge = document.getElementById('car-mode-badge');
+  const statusText = document.getElementById('car-mode-status-text');
+  const btnSlam = document.getElementById('btn-car-mode-slam');
+  const btnAmcl = document.getElementById('btn-car-mode-amcl');
+  const btnStop = document.getElementById('btn-car-mode-stop');
+
+  if (!badge || !statusText) return;
+
+  btnSlam.style.outline = 'none';
+  btnAmcl.style.outline = 'none';
+  btnStop.style.outline = 'none';
+
+  if (currentMode === 'mapping') {
+    badge.textContent = '● Mapping (SLAM)';
+    badge.style.background = '#0284c7';
+    badge.style.color = '#ffffff';
+    btnSlam.style.outline = '2px solid #38bdf8';
+    statusText.textContent = `SLAM Toolbox este activ (${modeStatus || 'running'})${details ? ' · ' + details : ''}`;
+    statusText.style.color = '#38bdf8';
+  } else if (currentMode === 'localization') {
+    badge.textContent = '● Localizare (AMCL)';
+    badge.style.background = '#16a34a';
+    badge.style.color = '#ffffff';
+    btnAmcl.style.outline = '2px solid #4ade80';
+    statusText.textContent = `AMCL Localizare este activă (${modeStatus || 'running'})${details ? ' · ' + details : ''}`;
+    statusText.style.color = '#4ade80';
+  } else {
+    badge.textContent = 'Oprit';
+    badge.style.background = '#334155';
+    badge.style.color = '#cbd5e1';
+    btnStop.style.outline = '2px solid #94a3b8';
+    statusText.textContent = `Niciun mod activ (${modeStatus || 'stopped'})${details ? ' · ' + details : ''}`;
+    statusText.style.color = 'var(--text-secondary)';
   }
 }
 
@@ -1203,6 +1304,8 @@ function initWS() {
       updateCarState(msg);
     } else if (msg.type === 'car_goal') {
       renderCarGoal(msg.map_goal);
+    } else if (msg.type === 'car_mode_status') {
+      updateCarModeUI(msg.current_mode, msg.mode_status, msg.details);
     } else if (msg.type === 'car_path_status') {
       updateCarPathStatus(msg);
     } else if (msg.type === 'car_initial_pose') {

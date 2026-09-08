@@ -334,6 +334,11 @@ car_state = {
     "map_native_resolution": 0.0,
     "map_occupied_count": 0,
     "map_frame": None,
+    "current_mode": "none",
+    "mode_status": "stopped",
+    "mode_details": "",
+    "map_file": "/root/humble_ws/harta_masina_1.yaml",
+    "slam_params_file": "/root/humble_ws/custom_params.yaml",
 }
 semantic_chair_tracker = SemanticChairTracker(
     confirmations=3, merge_distance_m=0.45, voxel_size_m=0.025,
@@ -1497,6 +1502,11 @@ def _car_public_state(
             "yaw_deg": math.degrees(car_transform["yaw"]),
         },
         "alignment": dict(car_alignment),
+        "current_mode": car_state.get("current_mode", "none"),
+        "mode_status": car_state.get("mode_status", "stopped"),
+        "mode_details": car_state.get("mode_details", ""),
+        "map_file": car_state.get("map_file", "/root/humble_ws/harta_masina_1.yaml"),
+        "slam_params_file": car_state.get("slam_params_file", "/root/humble_ws/custom_params.yaml"),
     }
     if include_scan:
         state["scan_points"] = car_state["scan_points"]
@@ -1885,6 +1895,16 @@ async def car_websocket_endpoint(ws: WebSocket):
                     public_state = {"type": "car_path_status", **data}
                 elif topic == "/initial_pose_status":
                     public_state = {"type": "car_initial_pose_status", **data}
+                elif topic == "/mode_status":
+                    car_state["current_mode"] = data.get("current_mode", "none")
+                    car_state["mode_status"] = data.get("status") or data.get("mode_status", "stopped")
+                    car_state["mode_details"] = data.get("details", "")
+                    public_state = {
+                        "type": "car_mode_status",
+                        "current_mode": car_state["current_mode"],
+                        "mode_status": car_state["mode_status"],
+                        "details": car_state["mode_details"],
+                    }
                 else:
                     continue
                 car_state["last_seen"] = time.time()
@@ -2065,6 +2085,67 @@ async def set_car_initial_pose(request: Request):
         "request_id": request_id,
         "map_pose": dashboard_pose,
         "car_map_pose": car_map_pose,
+    }
+
+
+@app.post("/api/car/mode")
+async def set_car_mode(request: Request):
+    """Switch the car's navigation mode: 'mapping' (SLAM Toolbox) vs 'localization' (AMCL) vs 'stop'."""
+    if car_ws is None or not car_state["connected"]:
+        return JSONResponse(
+            {"success": False, "error": "Mașina nu este conectată la dashboard"},
+            status_code=409,
+        )
+    body = await request.json()
+    mode = str(body.get("mode", "stop")).lower().strip()
+    if mode not in {"mapping", "localization", "stop", "none", "off"}:
+        return JSONResponse(
+            {"success": False, "error": f"Mod invalid '{mode}'. Folosește 'mapping', 'localization' sau 'stop'."},
+            status_code=400,
+        )
+    map_file = body.get("map_file") or car_state.get("map_file", "/root/humble_ws/harta_masina_1.yaml")
+    slam_params_file = body.get("slam_params_file") or car_state.get("slam_params_file", "/root/humble_ws/custom_params.yaml")
+    params_file = body.get("params_file") or "/root/humble_ws/src/lab1/params/nav2_car_params.yaml"
+
+    car_state["map_file"] = map_file
+    car_state["slam_params_file"] = slam_params_file
+    car_state["current_mode"] = "none" if mode in ("stop", "none", "off") else mode
+    car_state["mode_status"] = "switching"
+    car_state["mode_details"] = f"Comandă trimisă: {mode}"
+
+    payload = {
+        "type": "car_mode",
+        "mode": mode,
+        "map_file": map_file,
+        "slam_params_file": slam_params_file,
+        "params_file": params_file,
+    }
+    try:
+        await car_ws.send_text(json.dumps(payload))
+    except Exception as exc:
+        return JSONResponse(
+            {"success": False, "error": f"Trimiterea comenzii de mod a eșuat: {exc}"},
+            status_code=503,
+        )
+    await broadcast(_car_public_state())
+    return {
+        "success": True,
+        "mode": mode,
+        "map_file": map_file,
+        "slam_params_file": slam_params_file,
+        **_car_public_state(),
+    }
+
+
+@app.get("/api/car/mode")
+async def get_car_mode():
+    return {
+        "success": True,
+        "current_mode": car_state.get("current_mode", "none"),
+        "mode_status": car_state.get("mode_status", "stopped"),
+        "mode_details": car_state.get("mode_details", ""),
+        "map_file": car_state.get("map_file", "/root/humble_ws/harta_masina_1.yaml"),
+        "slam_params_file": car_state.get("slam_params_file", "/root/humble_ws/custom_params.yaml"),
     }
 
 

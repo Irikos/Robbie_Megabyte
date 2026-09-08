@@ -33,6 +33,8 @@ import json
 import math
 import os
 import queue
+import signal
+import subprocess
 import threading
 import time
 from types import SimpleNamespace
@@ -73,12 +75,157 @@ RECONNECT_INTERVAL_SEC = 3.0
 # -------------------------------------------------------------------------
 
 
+class CarModeManager:
+    """Manages child processes for Mapping (SLAM Toolbox) vs Localization (AMCL)."""
+
+    def __init__(self, logger, enqueue_fn):
+        self._logger = logger
+        self._enqueue = enqueue_fn
+        self._process = None
+        self._current_mode = "none"       # "none" | "mapping" | "localization"
+        self._mode_status = "stopped"     # "stopped" | "running" | "error"
+        self._details = ""
+        self._lock = threading.Lock()
+        self._last_poll_time = 0.0
+
+    def get_state(self) -> dict:
+        self._check_process_alive()
+        return {
+            "current_mode": self._current_mode,
+            "mode_status": self._mode_status,
+            "details": self._details,
+        }
+
+    def broadcast_status(self):
+        self._enqueue("/mode_status", self.get_state())
+
+    def _check_process_alive(self):
+        if self._process is not None:
+            ret = self._process.poll()
+            if ret is not None:
+                if self._mode_status == "running":
+                    self._logger.warn(f"Mode process for {self._current_mode} exited (code {ret})")
+                    self._mode_status = "error" if ret != 0 else "stopped"
+                    self._details = f"Procesul a ieșit cu codul {ret}"
+                self._process = None
+
+    def periodic_check(self):
+        now = time.monotonic()
+        if now - self._last_poll_time > 1.0:
+            self._last_poll_time = now
+            prev_status = self._mode_status
+            prev_mode = self._current_mode
+            self._check_process_alive()
+            if self._mode_status != prev_status or self._current_mode != prev_mode:
+                self.broadcast_status()
+
+    def stop_current_mode(self):
+        with self._lock:
+            if self._process is not None and self._process.poll() is None:
+                self._logger.info(f"Stopping active {self._current_mode} process...")
+                try:
+                    pgid = os.getpgid(self._process.pid)
+                    os.killpg(pgid, signal.SIGINT)
+                    for _ in range(25):
+                        if self._process.poll() is not None:
+                            break
+                        time.sleep(0.1)
+                    if self._process.poll() is None:
+                        os.killpg(pgid, signal.SIGTERM)
+                        time.sleep(0.3)
+                    if self._process.poll() is None:
+                        os.killpg(pgid, signal.SIGKILL)
+                        time.sleep(0.1)
+                except Exception as exc:
+                    self._logger.warn(f"Error stopping process: {exc}")
+                self._process = None
+            self._current_mode = "none"
+            self._mode_status = "stopped"
+            self._details = "Oprit de operator"
+            self.broadcast_status()
+
+    def set_mode(self, mode: str, map_file: str = "", slam_params_file: str = "", params_file: str = ""):
+        with self._lock:
+            # 1. Terminate any currently running mode process
+            if self._process is not None and self._process.poll() is None:
+                try:
+                    pgid = os.getpgid(self._process.pid)
+                    os.killpg(pgid, signal.SIGINT)
+                    for _ in range(20):
+                        if self._process.poll() is not None:
+                            break
+                        time.sleep(0.1)
+                    if self._process.poll() is None:
+                        os.killpg(pgid, signal.SIGKILL)
+                except Exception as exc:
+                    self._logger.warn(f"Error stopping previous mode: {exc}")
+                self._process = None
+
+            mode = mode.lower().strip()
+            if mode in ("none", "stop", "off"):
+                self._current_mode = "none"
+                self._mode_status = "stopped"
+                self._details = "Oprit de operator"
+                self.broadcast_status()
+                return
+
+            # Default parameters
+            if not map_file:
+                map_file = "/root/humble_ws/harta_masina_1.yaml"
+            if not slam_params_file:
+                slam_params_file = "/root/humble_ws/custom_params.yaml"
+            if not params_file:
+                params_file = "/root/humble_ws/src/lab1/params/nav2_car_params.yaml"
+
+            if mode == "mapping":
+                cmd = [
+                    "ros2", "launch", "slam_toolbox", "online_sync_launch.py",
+                    f"slam_params_file:={slam_params_file}",
+                    "use_sim_time:=False",
+                ]
+                self._logger.info(f"Pornesc SLAM Toolbox: {' '.join(cmd)}")
+            elif mode == "localization":
+                cmd = [
+                    "ros2", "launch", "lab1", "localization_launch.py",
+                    f"params_file:={params_file}",
+                    f"map:={map_file}",
+                    "use_sim_time:=False",
+                ]
+                self._logger.info(f"Pornesc Localizare AMCL: {' '.join(cmd)}")
+            else:
+                self._logger.warn(f"Mod necunoscut: {mode}")
+                return
+
+            try:
+                log_out = open("/tmp/car_mode.log", "w")
+                self._process = subprocess.Popen(
+                    cmd,
+                    preexec_fn=os.setsid,
+                    stdout=log_out,
+                    stderr=subprocess.STDOUT,
+                )
+                self._current_mode = mode
+                self._mode_status = "running"
+                self._details = f"PID {self._process.pid}"
+                self._logger.info(f"Modul {mode} a pornit (PID {self._process.pid})")
+            except Exception as exc:
+                self._logger.error(f"Eroare la pornirea modului {mode}: {exc}")
+                self._current_mode = "none"
+                self._mode_status = "error"
+                self._details = str(exc)
+
+            self.broadcast_status()
+
+
 class WsBridgeNode(Node):
     def __init__(self):
         super().__init__('ws_bridge_v2')
 
         # Thread-safe queue: ROS callbacks -> asyncio ws loop
         self._out_queue: "queue.Queue[str]" = queue.Queue(maxsize=100)
+
+        # Manager for mapping vs localization modes
+        self._mode_manager = CarModeManager(self.get_logger(), self._enqueue)
 
         # Publisher for goal poses coming FROM the websocket server
         self._goal_pose_pub = self.create_publisher(PoseStamped, GOAL_POSE_TOPIC, 10)
@@ -243,6 +390,7 @@ class WsBridgeNode(Node):
 
     def _process_pending_tf_data(self):
         self._process_server_commands()
+        self._mode_manager.periodic_check()
         if self._pending_odom is not None:
             msg = self._pending_odom
             source_frame = msg.child_frame_id or BASE_FRAME
@@ -345,6 +493,7 @@ class WsBridgeNode(Node):
                     self.get_logger().info(f'Connected to WS server at {WS_URL}')
                     if self._latest_map_data is not None:
                         self._enqueue('/map', self._latest_map_data)
+                    self._mode_manager.broadcast_status()
                     await asyncio.gather(self._ws_sender(ws), self._ws_receiver(ws))
             except Exception as exc:
                 self.get_logger().warn(f'WS connection error: {exc}. Retrying in {RECONNECT_INTERVAL_SEC}s')
@@ -371,12 +520,21 @@ class WsBridgeNode(Node):
                 self.get_logger().warn('Coada comenzilor dashboardului este plină')
 
     def _process_server_commands(self):
-        for _ in range(3):
+        for _ in range(5):
             try:
                 data = self._server_commands.get_nowait()
             except queue.Empty:
                 return
-            self._handle_goal_pose(data)
+            command_type = data.get('type')
+            if command_type in {'goal_pose', 'compute_path', 'initial_pose'}:
+                self._handle_goal_pose(data)
+            elif command_type == 'car_mode':
+                self._mode_manager.set_mode(
+                    mode=data.get('mode', 'stop'),
+                    map_file=data.get('map_file', ''),
+                    slam_params_file=data.get('slam_params_file', ''),
+                    params_file=data.get('params_file', ''),
+                )
 
     def _handle_goal_pose(self, data: dict):
         """
@@ -481,6 +639,13 @@ class WsBridgeNode(Node):
             self._enqueue('/path_status', {
                 'status': 'error', 'request_id': request_id, 'error': str(exc),
             })
+
+    def destroy_node(self):
+        try:
+            self._mode_manager.stop_current_mode()
+        except Exception:
+            pass
+        return super().destroy_node()
 
 
 def main(args=None):
