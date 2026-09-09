@@ -33,6 +33,7 @@ import json
 import math
 import os
 import queue
+import re
 import signal
 import subprocess
 import threading
@@ -217,6 +218,135 @@ class CarModeManager:
             self.broadcast_status()
 
 
+class CarMapManager:
+    """Manages map discovery and map saving on the car."""
+
+    def __init__(self, logger, enqueue_fn):
+        self._logger = logger
+        self._enqueue = enqueue_fn
+        self._lock = threading.Lock()
+        self._is_saving = False
+
+    def scan_maps(self, search_dirs=None) -> list:
+        if search_dirs is None:
+            search_dirs = ["/root/humble_ws", "/root/humble_ws/maps"]
+        maps = []
+        seen = set()
+        for sdir in search_dirs:
+            if not os.path.isdir(sdir):
+                continue
+            try:
+                for entry in sorted(os.listdir(sdir)):
+                    if entry.endswith(".yaml") or entry.endswith(".yml"):
+                        full_path = os.path.join(sdir, entry)
+                        if "params" in entry or "nav2" in entry:
+                            continue
+                        try:
+                            base_no_ext = full_path.rsplit(".", 1)[0]
+                            has_image = (
+                                os.path.exists(base_no_ext + ".pgm") or
+                                os.path.exists(base_no_ext + ".png") or
+                                os.path.exists(base_no_ext + ".bmp")
+                            )
+                            if not has_image:
+                                with open(full_path, "r", errors="ignore") as f:
+                                    header = f.read(512)
+                                if "image:" in header or "resolution:" in header:
+                                    has_image = True
+                            if has_image and full_path not in seen:
+                                seen.add(full_path)
+                                maps.append({
+                                    "name": entry,
+                                    "path": full_path,
+                                    "mtime": os.path.getmtime(full_path),
+                                })
+                        except Exception:
+                            pass
+            except Exception as exc:
+                self._logger.warn(f"Error scanning maps in {sdir}: {exc}")
+        default_map = "/root/humble_ws/harta_masina_1.yaml"
+        if os.path.isfile(default_map) and default_map not in seen:
+            maps.insert(0, {
+                "name": "harta_masina_1.yaml",
+                "path": default_map,
+                "mtime": os.path.getmtime(default_map) if os.path.exists(default_map) else 0,
+            })
+        maps.sort(key=lambda m: m.get("mtime", 0), reverse=True)
+        return [{"name": m["name"], "path": m["path"]} for m in maps]
+
+    def broadcast_maps_list(self):
+        maps = self.scan_maps()
+        self._logger.info(f"Broadcasting {len(maps)} available car maps to dashboard")
+        self._enqueue("/car_maps_list", {"maps": maps})
+
+    def save_map_async(self, map_name: str, map_dir: str = "/root/humble_ws"):
+        with self._lock:
+            if self._is_saving:
+                self._enqueue("/save_map_status", {
+                    "status": "error",
+                    "error": "O operație de salvare este deja în desfășurare",
+                })
+                return
+            self._is_saving = True
+
+        threading.Thread(
+            target=self._run_save_map,
+            args=(map_name, map_dir),
+            daemon=True
+        ).start()
+
+    def _run_save_map(self, map_name: str, map_dir: str):
+        try:
+            if not map_name:
+                map_name = f"harta_masina_{int(time.time())}"
+            if map_name.endswith(".yaml") or map_name.endswith(".yml"):
+                map_name = map_name.rsplit(".", 1)[0]
+            clean_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', map_name)
+            os.makedirs(map_dir, exist_ok=True)
+            target_prefix = os.path.join(map_dir, clean_name)
+
+            self._logger.info(f"Saving map '{clean_name}' to {target_prefix}...")
+            self._enqueue("/save_map_status", {
+                "status": "saving",
+                "map_name": clean_name,
+                "message": f"Salvez harta pe mașină: {clean_name}...",
+            })
+
+            cmd = [
+                "ros2", "run", "nav2_map_server", "map_saver_cli",
+                "-f", target_prefix,
+                "--ros-args", "-p", "save_map_timeout:=10.0",
+            ]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            yaml_path = f"{target_prefix}.yaml"
+            if os.path.isfile(yaml_path):
+                self._logger.info(f"Map successfully saved: {yaml_path}")
+                self._enqueue("/save_map_status", {
+                    "status": "success",
+                    "map_name": clean_name,
+                    "path": yaml_path,
+                    "message": f"Harta a fost salvată cu succes: {yaml_path}",
+                })
+                self.broadcast_maps_list()
+            else:
+                err_msg = res.stderr.strip() or res.stdout.strip() or "Fișierul YAML nu a fost creat."
+                self._logger.error(f"Failed to save map: {err_msg}")
+                self._enqueue("/save_map_status", {
+                    "status": "error",
+                    "map_name": clean_name,
+                    "error": err_msg,
+                })
+        except Exception as exc:
+            self._logger.error(f"Exception during map save: {exc}")
+            self._enqueue("/save_map_status", {
+                "status": "error",
+                "error": str(exc),
+            })
+        finally:
+            with self._lock:
+                self._is_saving = False
+
+
 class WsBridgeNode(Node):
     def __init__(self):
         super().__init__('ws_bridge_v2')
@@ -226,6 +356,9 @@ class WsBridgeNode(Node):
 
         # Manager for mapping vs localization modes
         self._mode_manager = CarModeManager(self.get_logger(), self._enqueue)
+
+        # Manager for car maps discovery and saving
+        self._map_manager = CarMapManager(self.get_logger(), self._enqueue)
 
         # Publisher for goal poses coming FROM the websocket server
         self._goal_pose_pub = self.create_publisher(PoseStamped, GOAL_POSE_TOPIC, 10)
@@ -494,6 +627,7 @@ class WsBridgeNode(Node):
                     if self._latest_map_data is not None:
                         self._enqueue('/map', self._latest_map_data)
                     self._mode_manager.broadcast_status()
+                    self._map_manager.broadcast_maps_list()
                     await asyncio.gather(self._ws_sender(ws), self._ws_receiver(ws))
             except Exception as exc:
                 self.get_logger().warn(f'WS connection error: {exc}. Retrying in {RECONNECT_INTERVAL_SEC}s')
@@ -535,6 +669,13 @@ class WsBridgeNode(Node):
                     slam_params_file=data.get('slam_params_file', ''),
                     params_file=data.get('params_file', ''),
                 )
+            elif command_type == 'save_map':
+                self._map_manager.save_map_async(
+                    map_name=data.get('map_name', ''),
+                    map_dir=data.get('map_dir', '/root/humble_ws'),
+                )
+            elif command_type == 'list_maps':
+                self._map_manager.broadcast_maps_list()
 
     def _handle_goal_pose(self, data: dict):
         """

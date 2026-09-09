@@ -339,6 +339,7 @@ car_state = {
     "mode_details": "",
     "map_file": "/root/humble_ws/harta_masina_1.yaml",
     "slam_params_file": "/root/humble_ws/custom_params.yaml",
+    "available_maps": [{"name": "harta_masina_1.yaml", "path": "/root/humble_ws/harta_masina_1.yaml"}],
 }
 semantic_chair_tracker = SemanticChairTracker(
     confirmations=3, merge_distance_m=0.45, voxel_size_m=0.025,
@@ -1507,6 +1508,7 @@ def _car_public_state(
         "mode_details": car_state.get("mode_details", ""),
         "map_file": car_state.get("map_file", "/root/humble_ws/harta_masina_1.yaml"),
         "slam_params_file": car_state.get("slam_params_file", "/root/humble_ws/custom_params.yaml"),
+        "available_maps": car_state.get("available_maps", [{"name": "harta_masina_1.yaml", "path": "/root/humble_ws/harta_masina_1.yaml"}]),
     }
     if include_scan:
         state["scan_points"] = car_state["scan_points"]
@@ -1905,6 +1907,17 @@ async def car_websocket_endpoint(ws: WebSocket):
                         "mode_status": car_state["mode_status"],
                         "details": car_state["mode_details"],
                     }
+                elif topic == "/car_maps_list":
+                    car_state["available_maps"] = data.get("maps", [])
+                    public_state = {
+                        "type": "car_maps_list",
+                        "maps": car_state["available_maps"],
+                    }
+                elif topic == "/save_map_status":
+                    public_state = {
+                        "type": "car_save_map_status",
+                        **data,
+                    }
                 else:
                     continue
                 car_state["last_seen"] = time.time()
@@ -2146,7 +2159,50 @@ async def get_car_mode():
         "mode_details": car_state.get("mode_details", ""),
         "map_file": car_state.get("map_file", "/root/humble_ws/harta_masina_1.yaml"),
         "slam_params_file": car_state.get("slam_params_file", "/root/humble_ws/custom_params.yaml"),
+        "available_maps": car_state.get("available_maps", []),
     }
+
+
+@app.get("/api/car/maps")
+async def get_car_maps():
+    return {"success": True, "maps": car_state.get("available_maps", [])}
+
+
+@app.post("/api/car/maps/refresh")
+async def refresh_car_maps():
+    if car_ws is not None and car_state["connected"]:
+        try:
+            await car_ws.send_text(json.dumps({"type": "list_maps"}))
+        except Exception:
+            pass
+    return {"success": True, "maps": car_state.get("available_maps", [])}
+
+
+@app.post("/api/car/map/save")
+async def save_car_map_endpoint(request: Request):
+    """Trigger map saving on the car via WebSocket."""
+    if car_ws is None or not car_state["connected"]:
+        return JSONResponse(
+            {"success": False, "error": "Mașina nu este conectată la dashboard"},
+            status_code=409,
+        )
+    body = await request.json()
+    map_name = str(body.get("map_name", "")).strip()
+    if not map_name:
+        map_name = f"harta_masina_{int(time.time())}"
+    payload = {
+        "type": "save_map",
+        "map_name": map_name,
+        "map_dir": "/root/humble_ws",
+    }
+    try:
+        await car_ws.send_text(json.dumps(payload))
+    except Exception as exc:
+        return JSONResponse(
+            {"success": False, "error": f"Trimiterea comenzii de salvare a eșuat: {exc}"},
+            status_code=503,
+        )
+    return {"success": True, "message": f"Comandă de salvare inițiată pentru {map_name}"}
 
 
 @app.post("/api/car/path/preview")
