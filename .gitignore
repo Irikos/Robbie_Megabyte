@@ -1,0 +1,25 @@
+# ── binare grele: NU se urcă în git (rămân pe disc) ──
+*.pcd
+*.ply
+*.stl
+*.glb
+*.pgm
+*.bag
+*.db3
+*.pyc
+.DS_Store
+*.log
+*.jsonl
+
+# ── hărți / mapping (regenerabile) ──
+**/maps/
+**/partial_maps/
+
+# ── loguri ──
+**/logs/
+
+# ── build / artefacte ROS + Python ──
+**/build/
+**/install/
+**/log/
+**/__pycache__/

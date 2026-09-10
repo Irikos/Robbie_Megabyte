@@ -1,1173 +1,775 @@
-/**
- * app.js - G1 Robot Dashboard Frontend Logic
- * Handles: tabs, WebSocket, map canvas, nav goals, scheduler, custom commands
- */
+"use strict";
 
-// =========================================================================
-// CONFIG
-// =========================================================================
-const API_BASE = `http://${window.location.hostname}:8080`;
-const WS_URL   = `ws://${window.location.hostname}:8080/ws`;
+const $ = (id) => document.getElementById(id);
+const query = new URLSearchParams(window.location.search);
+const suppliedToken = query.get("token");
+if (suppliedToken) sessionStorage.setItem("g1_dashboard_token", suppliedToken);
+const token = suppliedToken || sessionStorage.getItem("g1_dashboard_token") || "";
 
-// =========================================================================
-// STATE
-// =========================================================================
-const state = {
-  ws: null,
-  wsReconnectTimer: null,
-  activeTab: 'mapping',
-  pose: { x: 0, y: 0, yaw: 0 },
-  tasks: [],
-  commands: [],
-  waypoints: JSON.parse(localStorage.getItem('g1_waypoints') || '[]'),
-  schedulerRunning: false,
-  slamActive: false,
-  robotReachable: false,
+let state = null;
+let mapPoints = [];
+let goal = null;
+let routePreview = null;
+let bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
+let lastRevision = -1;
+let viewingStoredMap = false;
+let firstMapFrame = true;
+let toastTimer = null;
+let backendOnline = false;
+let pointerInteraction = null;
+let followRobot = false;
+let stateRefreshRunning = false;
 
-  // Map canvas state
-  map: {
-    points: [],      // array of {x, y, z, intensity}
-    mapPoints: [],   // harta SLAM
-    goalPending: null,
-    goalActive: null,
-    transform: { x: 0, y: 0, scale: 40 }, // px per meter
-    dragging: false,
-    lastMouse: null,
-    tool: 'pan',     // 'pan' | 'navigate'
-    width: 0, height: 0,
-    hasData: false,
+const canvas = $("map");
+const ctx = canvas.getContext("2d", { alpha: true });
+
+function radians(degreesValue) {
+  return Number(degreesValue || 0) * Math.PI / 180;
+}
+
+function degrees(radiansValue) {
+  return Number(radiansValue || 0) * 180 / Math.PI;
+}
+
+function toast(message, error = false) {
+  const box = $("toast");
+  box.textContent = message;
+  box.className = `toast show${error ? " error" : ""}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.className = "toast"; }, 4200);
+}
+
+function log(message) {
+  const clock = new Date().toLocaleTimeString("ro-RO", { hour12: false });
+  const area = $("log");
+  area.textContent = `[${clock}] ${message}\n${area.textContent}`.slice(0, 10000);
+}
+
+async function api(path, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (token) headers["X-Dashboard-Token"] = token;
+  if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  const response = await fetch(path, { ...options, headers, cache: "no-store" });
+  let body;
+  try {
+    body = await response.json();
+  } catch (_error) {
+    throw new Error(`Răspuns HTTP invalid (${response.status})`);
   }
-};
+  if (!response.ok) throw new Error(body.detail || body.error || `HTTP ${response.status}`);
+  return body;
+}
 
-// =========================================================================
-// DOM REFS
-// =========================================================================
-const $ = id => document.getElementById(id);
-const $$ = sel => document.querySelectorAll(sel);
+function setText(id, value) {
+  $(id).textContent = value;
+}
 
-// =========================================================================
-// INIT
-// =========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-  initTabs();
-  initMap();
-  initSlamControls();
-  initNavControls();
-  initScheduler();
-  initCommands();
-  initWebSocket();
-  startStatusPolling();
-  loadWaypoints();
+function invalidateRoute(message = "Ruta nu a fost calculată") {
+  routePreview = null;
+  $("navigate").disabled = true;
+  $("route-summary").className = "route-summary";
+  setText("route-summary", message);
+  draw();
+}
 
-  // Quick commands
-  $$('.quick-cmd-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $('cmd-type').value = btn.dataset.cmd;
-      $('cmd-command').value = btn.dataset.command;
-      $('cmd-name').value = btn.dataset.name;
-    });
-  });
-});
+function ageLabel(age) {
+  if (age === null || age === undefined) return "Fără date";
+  if (age < 0.15) return "live · acum";
+  if (age < 10) return `acum ${age.toFixed(1)} s`;
+  return `vechi · ${Math.round(age)} s`;
+}
 
-// =========================================================================
-// TABS
-// =========================================================================
-function initTabs() {
-  const titles = {
-    mapping: '🗺️ Mapping SLAM',
-    navigation: '🧭 Navigare',
-    scheduler: '📋 Task Scheduler',
-    commands: '⚙️ Comenzi Custom'
+function setHealth(id, age) {
+  const dot = $(id);
+  dot.className = "status-dot";
+  dot.classList.add(age === null || age === undefined || age > 3 ? "bad" : age > 1.5 ? "warn" : "good");
+}
+
+function updateFollowButton() {
+  const button = $("follow-robot");
+  button.classList.toggle("active", followRobot);
+  button.textContent = followRobot ? "Urmărire activă" : "Urmărește robotul";
+  button.setAttribute("aria-pressed", String(followRobot));
+}
+
+function centerOnRobot() {
+  if (!state || !state.pose) return;
+  const spanX = Math.max(10, bounds.maxX - bounds.minX);
+  const spanY = Math.max(10, bounds.maxY - bounds.minY);
+  const x = Number(state.pose.x || 0);
+  const y = Number(state.pose.y || 0);
+  bounds = {
+    minX: x - spanX / 2,
+    maxX: x + spanX / 2,
+    minY: y - spanY / 2,
+    maxY: y + spanY / 2,
   };
-
-  $$('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      state.activeTab = tab;
-
-      $$('.nav-item').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      $$('.tab-content').forEach(c => c.classList.remove('active'));
-      $(`tab-${tab}`).classList.add('active');
-
-      $('page-title').textContent = titles[tab] || tab;
-
-      if (tab === 'navigation') {
-        requestAnimationFrame(() => resizeCanvas());
-      }
-    });
-  });
 }
 
-// =========================================================================
-// WEBSOCKET
-// =========================================================================
-function initWebSocket() {
-  if (state.ws) {
-    state.ws.close();
-  }
-
+async function refreshState() {
+  if (stateRefreshRunning) return;
+  stateRefreshRunning = true;
   try {
-    state.ws = new WebSocket(WS_URL);
+    const next = await api("/api/status");
+    state = next;
+    const justReconnected = !backendOnline;
+    backendOnline = true;
+    setText("connection", "Backend conectat");
+    const mapping3d = next.mapping_backend === "ros2_mid360_odom";
+    const odomAges = [next.pose_age, next.native_mapping_odom_age, next.base_odom_age]
+      .filter((value) => value !== null && value !== undefined);
+    const odomAge = mapping3d
+      ? next.base_odom_age
+      : (odomAges.length ? Math.min(...odomAges) : null);
+    const source = mapping3d ? "Mid360 3D + odometrie" : "topicuri ROS 2";
+    setText("connection-detail", `${source} · ${next.pose_source || "în așteptare"}`);
+    $("connection-dot").className = "status-dot good";
 
-    state.ws.onopen = () => {
-      updateWsStatus(true);
-      addLog('WebSocket conectat la backend.', 'success');
-      clearTimeout(state.wsReconnectTimer);
-    };
+    const mode = next.mode || "idle";
+    setText("mode-pill", mode);
+    $("mode-pill").className = `mode-pill ${mode}`;
+    const mappingActive = mode === "mapping";
+    $("start-map").disabled = mappingActive;
+    $("pause-map").disabled = !mappingActive;
+    $("stop-map").disabled = !mappingActive;
+    $("save-map").disabled = !mappingActive;
+    $("pause-map").textContent = next.mapping_paused ? "▶ Continuă" : "Ⅱ Pauză";
+    setText("rmw", next.rmw === "rmw_cyclonedds_cpp" ? "CycloneDDS" : (next.rmw || "RMW necunoscut"));
+    const robotFsm = next.robot_fsm === null || next.robot_fsm === undefined
+      ? ""
+      : ` · FSM ${next.robot_fsm}`;
+    setText("robot-mode-state", `Mod confirmat: ${next.robot_mode || "necunoscut"}${robotFsm}`);
 
-    state.ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        handleWsMessage(msg);
-      } catch (e) {
-        console.error('WS parse error:', e);
+    const pose = next.pose || { x: 0, y: 0, yaw: 0 };
+    setText("pose-x", Number(pose.x || 0).toFixed(2));
+    setText("pose-y", Number(pose.y || 0).toFixed(2));
+    setText("pose-yaw", `${degrees(pose.yaw).toFixed(1)}°`);
+    setText("cloud", next.mapping_paused ? "Pauză" : ageLabel(next.scan2d_age));
+    setText("odom", ageLabel(odomAge));
+    setText("lidar", ageLabel(next.lidar_age));
+    setText("points", Number(next.scan2d_point_count || 0).toLocaleString("ro-RO"));
+    const navigation = next.navigation || {};
+    if (["dispatching", "following", "paused", "completed", "failed"].includes(navigation.state)) {
+      const progress = navigation.waypoints
+        ? ` · waypoint ${navigation.waypoint || 0}/${navigation.waypoints}`
+        : "";
+      const remaining = navigation.remaining !== null && navigation.remaining !== undefined
+        && Number.isFinite(Number(navigation.remaining))
+        ? ` · ${Number(navigation.remaining).toFixed(2)} m până la punct`
+        : "";
+      $("route-summary").className = `route-summary${navigation.state === "failed" ? "" : " ready"}`;
+      setText("route-summary", `${navigation.message || navigation.state}${progress}${remaining}`);
+      if (["dispatching", "following", "paused", "completed"].includes(navigation.state)) {
+        $("navigate").disabled = true;
       }
-    };
-
-    state.ws.onclose = () => {
-      updateWsStatus(false);
-      state.wsReconnectTimer = setTimeout(initWebSocket, 3000);
-    };
-
-    state.ws.onerror = () => {
-      updateWsStatus(false);
-    };
-  } catch (e) {
-    console.error('WS init error:', e);
-    state.wsReconnectTimer = setTimeout(initWebSocket, 3000);
-  }
-}
-
-function handleWsMessage(msg) {
-  switch (msg.type) {
-    case 'init':
-      if (msg.tasks) renderTasks(msg.tasks);
-      if (msg.commands) renderCommands(msg.commands);
-      state.schedulerRunning = msg.running || false;
-      updateSchedulerUI();
-      break;
-
-    case 'pose_update':
-      if (msg.pose) {
-        state.pose = msg.pose;
-        updatePoseDisplay(msg.pose);
-        drawMap();
-      }
-      break;
-
-    case 'tasks_update':
-    case 'scheduler_update':
-      if (msg.tasks) renderTasks(msg.tasks);
-      if (typeof msg.running !== 'undefined') {
-        state.schedulerRunning = msg.running;
-        updateSchedulerUI();
-      }
-      break;
-
-    case 'slam_event':
-      const ev = msg.event;
-      if (ev === 'mapping_started') {
-        state.slamActive = true;
-        updateSlamUI(true);
-        addLog('SLAM Mapping pornit!', 'success');
-        showToast('SLAM Mapping pornit ✓', 'success');
-      } else if (ev === 'mapping_stopped') {
-        state.slamActive = false;
-        updateSlamUI(false);
-        addLog('SLAM Mapping oprit.', 'info');
-      } else if (ev === 'map_saved') {
-        addLog(`Harta salvată: ${msg.map_name}`, 'success');
-        showToast(`Harta "${msg.map_name}" salvată ✓`, 'success');
-        fetchMaps();
-      }
-      break;
-
-    case 'nav_event':
-      if (msg.event === 'goal_sent') {
-        const g = msg.goal;
-        state.map.goalActive = g;
-        addLog(`Goal trimis: X=${g.x.toFixed(2)}, Y=${g.y.toFixed(2)}, Yaw=${g.yaw.toFixed(0)}°`, 'success');
-        showToast('Goal de navigare trimis ✓', 'success');
-        drawMap();
-      } else if (msg.event === 'stopped') {
-        state.map.goalActive = null;
-        showToast('Robot oprit.', 'info');
-        drawMap();
-      }
-      break;
-
-    case 'pong':
-      break;
-  }
-}
-
-function sendWs(data) {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify(data));
-  }
-}
-
-// =========================================================================
-// STATUS POLLING
-// =========================================================================
-let statusInterval = null;
-function startStatusPolling() {
-  fetchStatus();
-  statusInterval = setInterval(fetchStatus, 5000);
-}
-
-async function fetchStatus() {
-  try {
-    const resp = await fetch(`${API_BASE}/api/status`);
-    if (!resp.ok) throw new Error(resp.status);
-    const data = await resp.json();
-
-    state.robotReachable = data.robot_reachable;
-    state.slamActive = data.slam_mapping_active;
-
-    // Update sidebar
-    $('robot-dot').className = 'status-dot ' + (data.robot_reachable ? 'ok' : 'err');
-    $('robot-status-text').textContent = data.robot_reachable ? 'Conectat' : 'Deconectat';
-
-    $('slam-dot').className = 'status-dot ' + (data.slam_mapping_active ? 'ok' : data.slam_relocation_active ? 'warn' : '');
-    $('slam-status-text').textContent = data.slam_mapping_active ? 'Mapping' : data.slam_relocation_active ? 'Relocalizare' : 'Oprit';
-
-    $('stat-topics').textContent = (data.ros_topics || []).length;
-    $('stat-slam-mapping').textContent = data.slam_mapping_active ? '✓ Activ' : '✗';
-    $('stat-slam-reloc').textContent = data.slam_relocation_active ? '✓ Activ' : '✗';
-
-    updateSlamUI(data.slam_mapping_active);
-  } catch (e) {
-    $('robot-dot').className = 'status-dot err';
-    $('robot-status-text').textContent = 'Eroare conexiune';
-  }
-}
-
-$('btn-refresh-status').addEventListener('click', () => {
-  fetchStatus();
-  addLog('Status actualizat manual.', 'info');
-});
-
-// =========================================================================
-// SLAM CONTROLS
-// =========================================================================
-function initSlamControls() {
-  $('btn-start-mapping').addEventListener('click', async () => {
-    addLog('Trimit comanda Start Mapping...', 'info');
-    const result = await apiPost('/api/slam/start');
-    addLog(result.success ? 'Start Mapping OK' : `Eroare: ${result.error}`,
-           result.success ? 'success' : 'error');
-  });
-
-  $('btn-stop-mapping').addEventListener('click', async () => {
-    addLog('Trimit comanda Stop Mapping...', 'info');
-    const result = await apiPost('/api/slam/stop');
-    addLog(result.success ? 'Stop Mapping OK' : `Eroare: ${result.error}`,
-           result.success ? 'success' : 'error');
-  });
-
-  $('btn-save-map').addEventListener('click', async () => {
-    const name = $('map-name-input').value.trim() || 'my_map';
-    addLog(`Salvez harta: "${name}"...`, 'info');
-    const result = await apiPost('/api/slam/save', { map_name: name });
-    addLog(result.success !== false ? `Hartă salvată: ${name}` : `Eroare: ${result.error}`,
-           result.success !== false ? 'success' : 'error');
-  });
-
-  $('btn-load-map').addEventListener('click', async () => {
-    const mapName = $('map-select').value;
-    if (!mapName) { showToast('Selectează o hartă mai întâi!', 'warning'); return; }
-    const result = await apiPost('/api/slam/load', { map_name: mapName });
-    showToast(result.success !== false ? 'Hartă încărcată ✓' : 'Eroare la încărcare', result.success !== false ? 'success' : 'error');
-  });
-
-  $('btn-start-reloc').addEventListener('click', async () => {
-    addLog('Pornesc relocalizarea...', 'info');
-    const result = await apiPost('/api/slam/relocate');
-    addLog(result.success ? 'Relocalizare pornită ✓' : `Eroare: ${result.error}`,
-           result.success ? 'success' : 'error');
-  });
-
-  $('btn-clear-log').addEventListener('click', () => {
-    $('log-container').innerHTML = '';
-    addLog('Log șters.', 'info');
-  });
-
-  fetchMaps();
-}
-
-async function fetchMaps() {
-  try {
-    const data = await apiFetch('/api/slam/maps');
-    const select = $('map-select');
-    const maps = data.maps || [];
-    select.innerHTML = '<option value="">-- Selectează o hartă --</option>';
-    maps.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m;
-      opt.textContent = m.split('/').pop();
-      select.appendChild(opt);
-    });
-  } catch (e) { /* ignore */ }
-}
-
-function updateSlamUI(active) {
-  state.slamActive = active;
-  $('slam-state-badge').textContent = active ? 'ACTIV' : 'OPRIT';
-  $('slam-state-badge').className = 'slam-state-badge' + (active ? ' active' : '');
-  $('btn-start-mapping').disabled = active;
-  $('btn-stop-mapping').disabled = !active;
-  if (active) {
-    $('map-no-data').style.display = 'none';
-    state.map.hasData = true;
-  }
-}
-
-// =========================================================================
-// MAP CANVAS
-// =========================================================================
-function initMap() {
-  const canvas = $('map-canvas');
-  const wrapper = $('map-wrapper');
-
-  // Resize observer
-  const ro = new ResizeObserver(resizeCanvas);
-  ro.observe(wrapper);
-
-  // Mouse events
-  canvas.addEventListener('mousedown', onMapMouseDown);
-  canvas.addEventListener('mousemove', onMapMouseMove);
-  canvas.addEventListener('mouseup', onMapMouseUp);
-  canvas.addEventListener('wheel', onMapWheel, { passive: false });
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
-  canvas.addEventListener('mouseleave', () => { state.map.dragging = false; });
-
-  // Tools
-  $('tool-pan').addEventListener('click', () => setMapTool('pan'));
-  $('tool-navigate').addEventListener('click', () => setMapTool('navigate'));
-  $('btn-zoom-in').addEventListener('click', () => zoomMap(1.3));
-  $('btn-zoom-out').addEventListener('click', () => zoomMap(0.77));
-  $('btn-zoom-reset').addEventListener('click', resetMapView);
-  $('btn-clear-markers').addEventListener('click', () => {
-    state.map.goalActive = null;
-    state.map.goalPending = null;
-    $('map-tooltip').style.display = 'none';
-    drawMap();
-  });
-
-  // Goal tooltip
-  $('btn-confirm-goal').addEventListener('click', confirmNavGoal);
-  $('btn-cancel-goal').addEventListener('click', () => {
-    state.map.goalPending = null;
-    $('map-tooltip').style.display = 'none';
-  });
-
-  resizeCanvas();
-
-  // Generate demo point cloud grid for testing when no real data
-  generateDemoMap();
-  drawMap();
-}
-
-function generateDemoMap() {
-  // Generate a simple demo environment for visualization testing
-  const points = [];
-  // Outer walls
-  for (let i = -5; i <= 5; i += 0.1) {
-    points.push({x: i, y: -4, z: 0.5});
-    points.push({x: i, y:  4, z: 0.5});
-    points.push({x: -5, y: i, z: 0.5});
-    points.push({x:  5, y: i, z: 0.5});
-  }
-  // Some obstacles
-  for (let i = -1; i <= 1; i += 0.1) {
-    for (let j = -1; j <= 1; j += 0.1) {
-      if (Math.random() > 0.6) points.push({x: 2 + i, y: 1 + j, z: 0.3});
-      if (Math.random() > 0.6) points.push({x: -2 + i, y: -1 + j, z: 0.3});
     }
-  }
-  state.map.points = points;
-}
-
-function resizeCanvas() {
-  const canvas = $('map-canvas');
-  const wrapper = $('map-wrapper');
-  const rect = wrapper.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  state.map.width = rect.width;
-  state.map.height = rect.height;
-
-  if (state.map.transform.x === 0 && state.map.transform.y === 0) {
-    state.map.transform.x = rect.width / 2;
-    state.map.transform.y = rect.height / 2;
-  }
-  drawMap();
-}
-
-function worldToCanvas(wx, wy) {
-  const t = state.map.transform;
-  return {
-    cx: t.x + wx * t.scale,
-    cy: t.y - wy * t.scale
-  };
-}
-
-function canvasToWorld(cx, cy) {
-  const t = state.map.transform;
-  return {
-    wx: (cx - t.x) / t.scale,
-    wy: -(cy - t.y) / t.scale
-  };
-}
-
-function drawMap() {
-  const canvas = $('map-canvas');
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-
-  // Background
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#060a12';
-  ctx.fillRect(0, 0, w, h);
-
-  // Grid
-  drawGrid(ctx, w, h);
-
-  // Point cloud (LiDAR brut)
-  if (state.map.points.length > 0) {
-    ctx.save();
-    state.map.points.forEach(pt => {
-      const {cx, cy} = worldToCanvas(pt.x, pt.y);
-      if (cx < -5 || cx > w+5 || cy < -5 || cy > h+5) return;
-      const alpha = Math.min(1, 0.6 + (pt.z || 0) * 0.2);
-      ctx.fillStyle = `rgba(79, 142, 247, ${alpha})`;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  // SLAM map points
-  if (state.map.mapPoints.length > 0) {
-    ctx.save();
-    state.map.mapPoints.forEach(pt => {
-      const {cx, cy} = worldToCanvas(pt.x, pt.y);
-      if (cx < -5 || cx > w+5 || cy < -5 || cy > h+5) return;
-      ctx.fillStyle = 'rgba(34, 211, 238, 0.7)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  // Active goal marker
-  if (state.map.goalActive) {
-    const g = state.map.goalActive;
-    const {cx, cy} = worldToCanvas(g.x, g.y);
-    drawGoalMarker(ctx, cx, cy, g.yaw || 0, '#4ade80');
-  }
-
-  // Pending goal marker
-  if (state.map.goalPending) {
-    const g = state.map.goalPending;
-    const {cx, cy} = worldToCanvas(g.x, g.y);
-    drawGoalMarker(ctx, cx, cy, 0, 'rgba(74,222,128,0.5)', true);
-  }
-
-  // Robot position
-  const {cx: rx, cy: ry} = worldToCanvas(state.pose.x, state.pose.y);
-  drawRobot(ctx, rx, ry, state.pose.yaw || 0);
-}
-
-function drawGrid(ctx, w, h) {
-  const t = state.map.transform;
-  const gridSize = t.scale; // 1m grid
-  
-  ctx.strokeStyle = 'rgba(99, 140, 255, 0.06)';
-  ctx.lineWidth = 1;
-
-  const startX = t.x % gridSize;
-  const startY = t.y % gridSize;
-
-  for (let x = startX; x < w; x += gridSize) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-  }
-  for (let x = startX - gridSize; x >= 0; x -= gridSize) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-  }
-  for (let y = startY; y < h; y += gridSize) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
-  for (let y = startY - gridSize; y >= 0; y -= gridSize) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
-
-  // Origin cross
-  const {cx: ox, cy: oy} = worldToCanvas(0, 0);
-  if (ox >= 0 && ox <= w && oy >= 0 && oy <= h) {
-    ctx.strokeStyle = 'rgba(99, 140, 255, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(ox-10, oy); ctx.lineTo(ox+10, oy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ox, oy-10); ctx.lineTo(ox, oy+10); ctx.stroke();
-  }
-}
-
-function drawRobot(ctx, cx, cy, yaw) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-yaw); // ROS yaw is CCW, canvas is CW
-
-  // Glow
-  const grd = ctx.createRadialGradient(0, 0, 2, 0, 0, 16);
-  grd.addColorStop(0, 'rgba(250, 204, 21, 0.4)');
-  grd.addColorStop(1, 'rgba(250, 204, 21, 0)');
-  ctx.fillStyle = grd;
-  ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
-
-  // Body
-  ctx.fillStyle = '#facc15';
-  ctx.beginPath();
-  ctx.arc(0, 0, 8, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Direction arrow
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath();
-  ctx.moveTo(10, 0); ctx.lineTo(3, -4); ctx.lineTo(3, 4);
-  ctx.closePath(); ctx.fill();
-
-  ctx.restore();
-}
-
-function drawGoalMarker(ctx, cx, cy, yawDeg, color, dashed = false) {
-  ctx.save();
-  ctx.translate(cx, cy);
-
-  if (dashed) {
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, 12, 0, Math.PI * 2);
-    ctx.stroke();
-  } else {
-    // Pulse ring
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, 14, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Filled dot
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, 0, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Direction
-    const rad = (yawDeg || 0) * Math.PI / 180;
-    ctx.rotate(-rad);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(14, 0);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-// Map interaction
-function onMapMouseDown(e) {
-  if (e.button === 1 || (e.button === 0 && state.map.tool === 'pan')) {
-    state.map.dragging = true;
-    state.map.lastMouse = { x: e.clientX, y: e.clientY };
-  }
-}
-
-function onMapMouseMove(e) {
-  const rect = $('map-canvas').getBoundingClientRect();
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-  const {wx, wy} = canvasToWorld(cx, cy);
-
-  $('map-cursor-pos').textContent = `X: ${wx.toFixed(2)}m  Y: ${wy.toFixed(2)}m`;
-
-  if (state.map.dragging) {
-    const dx = e.clientX - state.map.lastMouse.x;
-    const dy = e.clientY - state.map.lastMouse.y;
-    state.map.transform.x += dx;
-    state.map.transform.y += dy;
-    state.map.lastMouse = { x: e.clientX, y: e.clientY };
-    drawMap();
-  }
-}
-
-function onMapMouseUp(e) {
-  if (state.map.dragging) {
-    state.map.dragging = false;
-    return;
-  }
-
-  if (e.button === 0 && state.map.tool === 'navigate') {
-    const rect = $('map-canvas').getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
-    const {wx, wy} = canvasToWorld(cx, cy);
-    showNavTooltip(cx, cy, wx, wy);
-  }
-}
-
-function onMapWheel(e) {
-  e.preventDefault();
-  const rect = $('map-canvas').getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  const factor = e.deltaY > 0 ? 0.85 : 1.18;
-  zoomMapAt(factor, mx, my);
-}
-
-function zoomMap(factor) {
-  const cx = state.map.width / 2;
-  const cy = state.map.height / 2;
-  zoomMapAt(factor, cx, cy);
-}
-
-function zoomMapAt(factor, mx, my) {
-  const t = state.map.transform;
-  t.x = mx + (t.x - mx) * factor;
-  t.y = my + (t.y - my) * factor;
-  t.scale = Math.max(5, Math.min(500, t.scale * factor));
-  drawMap();
-}
-
-function resetMapView() {
-  state.map.transform = {
-    x: state.map.width / 2,
-    y: state.map.height / 2,
-    scale: 40
-  };
-  drawMap();
-}
-
-function setMapTool(tool) {
-  state.map.tool = tool;
-  $$('.map-tool').forEach(b => b.classList.remove('active'));
-  $(`tool-${tool}`).classList.add('active');
-  $('map-canvas').style.cursor = tool === 'navigate' ? 'crosshair' : 'grab';
-}
-
-function showNavTooltip(canvasX, canvasY, wx, wy) {
-  state.map.goalPending = { x: wx, y: wy };
-  const tooltip = $('map-tooltip');
-  $('tooltip-coords').textContent = `X: ${wx.toFixed(2)}m  Y: ${wy.toFixed(2)}m`;
-  $('tooltip-yaw').value = 0;
-
-  const wrapper = $('map-wrapper');
-  const wRect = wrapper.getBoundingClientRect();
-  let left = canvasX + 15;
-  let top = canvasY - 80;
-  if (left + 210 > wrapper.clientWidth) left = canvasX - 225;
-  if (top < 0) top = canvasY + 15;
-
-  tooltip.style.left = `${left}px`;
-  tooltip.style.top = `${top}px`;
-  tooltip.style.display = 'block';
-
-  drawMap();
-}
-
-async function confirmNavGoal() {
-  const g = state.map.goalPending;
-  if (!g) return;
-  const yawDeg = parseFloat($('tooltip-yaw').value || '0');
-  const yawRad = yawDeg * Math.PI / 180;
-
-  $('map-tooltip').style.display = 'none';
-  state.map.goalPending = null;
-  state.map.goalActive = { x: g.x, y: g.y, yaw: yawRad };
-
-  // Sincronizează cu input-urile din panoul de navigare
-  $('nav-x').value = g.x.toFixed(2);
-  $('nav-y').value = g.y.toFixed(2);
-  $('nav-yaw').value = yawDeg;
-
-  const result = await apiPost('/api/nav/goal', { x: g.x, y: g.y, yaw: yawRad });
-  $('nav-active-goal').textContent = `(${g.x.toFixed(2)}, ${g.y.toFixed(2)})`;
-  $('nav-state-chip').textContent = 'Navigând';
-  $('nav-state-chip').className = 'status-chip active';
-
-  if (result.success !== false) {
-    showToast(`Navigare spre (${g.x.toFixed(1)}, ${g.y.toFixed(1)}) ✓`, 'success');
-  } else {
-    showToast(`Eroare navigare: ${result.error || result.stderr || 'Necunoscută'}`, 'error');
-  }
-  drawMap();
-}
-
-// =========================================================================
-// NAV CONTROLS
-// =========================================================================
-function initNavControls() {
-  $('btn-send-goal').addEventListener('click', async () => {
-    const x = parseFloat($('nav-x').value || '0');
-    const y = parseFloat($('nav-y').value || '0');
-    const yawDeg = parseFloat($('nav-yaw').value || '0');
-    const yaw = yawDeg * Math.PI / 180;
-    const timeout = parseFloat($('nav-timeout').value || '30');
-
-    const result = await apiPost('/api/nav/goal', { x, y, yaw, timeout });
-    state.map.goalActive = { x, y, yaw };
-    $('nav-active-goal').textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
-    $('nav-state-chip').textContent = 'Navigând';
-    $('nav-state-chip').className = 'status-chip active';
-    drawMap();
-
-    if (result.success !== false) {
-      showToast(`Goal trimis: (${x.toFixed(1)}, ${y.toFixed(1)}) ✓`, 'success');
+    if (next.mapping_paused) {
+      $("cloud-dot").className = "status-dot warn";
     } else {
-      showToast(`Eroare: ${result.error || 'Navigare eșuată'}`, 'error');
+      setHealth("cloud-dot", next.scan2d_age);
     }
-  });
+    setHealth("odom-dot", odomAge);
+    setHealth("lidar-dot", next.lidar_age);
 
-  $('btn-stop-robot').addEventListener('click', async () => {
-    const result = await apiPost('/api/nav/stop');
-    state.map.goalActive = null;
-    $('nav-state-chip').textContent = 'Oprit';
-    $('nav-state-chip').className = 'status-chip';
-    $('nav-active-goal').textContent = '--';
-    drawMap();
-    showToast('Robot oprit ✓', 'info');
-  });
+    setText("session-name", next.session || "—");
+    setText("snapshots", next.snapshots || 0);
+    setText("last-snapshot", next.last_snapshot || "—");
+    setText("snapshot-state", next.snapshot_error ? "Eroare" : next.last_snapshot ? "Salvat la 5 s" : "În așteptare");
 
-  $('btn-save-waypoint').addEventListener('click', () => {
-    const x = parseFloat($('nav-x').value || state.pose.x);
-    const y = parseFloat($('nav-y').value || state.pose.y);
-    const yawDeg = parseFloat($('nav-yaw').value || '0');
-    const name = prompt('Numele waypoint-ului:', `WP ${state.waypoints.length + 1}`);
-    if (!name) return;
-    const wp = { id: Date.now(), name, x, y, yaw: yawDeg };
-    state.waypoints.push(wp);
-    saveWaypoints();
-    renderWaypoints();
-    showToast(`Waypoint "${name}" salvat ✓`, 'success');
-  });
+    if (justReconnected) await refreshMaps();
+
+    if (!viewingStoredMap && next.scan2d_revision !== lastRevision) {
+      lastRevision = next.scan2d_revision;
+      await refreshLivePoints();
+    } else {
+      draw();
+    }
+  } catch (error) {
+    backendOnline = false;
+    setText("connection", "Backend indisponibil");
+    setText("connection-detail", error.message);
+    $("connection-dot").className = "status-dot bad";
+  } finally {
+    stateRefreshRunning = false;
+  }
 }
 
-function loadWaypoints() {
-  state.waypoints = JSON.parse(localStorage.getItem('g1_waypoints') || '[]');
-  renderWaypoints();
-}
-
-function saveWaypoints() {
-  localStorage.setItem('g1_waypoints', JSON.stringify(state.waypoints));
-}
-
-function renderWaypoints() {
-  const list = $('waypoints-list');
-  if (state.waypoints.length === 0) {
-    list.innerHTML = '<div class="empty-state-sm">Niciun waypoint salvat.</div>';
+function fitBounds(points) {
+  if (!points.length) {
+    bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
     return;
   }
-  list.innerHTML = state.waypoints.map(wp => `
-    <div class="waypoint-item" data-id="${wp.id}">
-      <span class="waypoint-label">${escapeHtml(wp.name)}</span>
-      <span class="waypoint-coords">(${wp.x.toFixed(1)}, ${wp.y.toFixed(1)})</span>
-      <div class="waypoint-actions">
-        <button class="btn btn-ghost btn-sm" onclick="navigateToWaypoint(${wp.id})" title="Navighează">➜</button>
-        <button class="btn btn-ghost btn-sm danger" onclick="deleteWaypoint(${wp.id})" title="Șterge">✕</button>
-      </div>
-    </div>
-  `).join('');
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const point of points) {
+    minX = Math.min(minX, point[0]); maxX = Math.max(maxX, point[0]);
+    minY = Math.min(minY, point[1]); maxY = Math.max(maxY, point[1]);
+  }
+  const spanX = Math.max(maxX - minX, 2);
+  const spanY = Math.max(maxY - minY, 2);
+  const padding = Math.max(spanX, spanY) * 0.08 + 0.35;
+  bounds = { minX: minX - padding, maxX: maxX + padding, minY: minY - padding, maxY: maxY + padding };
 }
 
-window.navigateToWaypoint = async (id) => {
-  const wp = state.waypoints.find(w => w.id === id);
-  if (!wp) return;
-  const yawRad = wp.yaw * Math.PI / 180;
-  await apiPost('/api/nav/goal', { x: wp.x, y: wp.y, yaw: yawRad });
-  showToast(`Navighează spre "${wp.name}" ✓`, 'success');
-  state.map.goalActive = { x: wp.x, y: wp.y, yaw: yawRad };
-  drawMap();
-};
+function setPoints(points, shouldFit = false) {
+  mapPoints = (Array.isArray(points) ? points : [])
+    .map((raw) => [Number(raw[0]), Number(raw[1]), 0.5])
+    .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]));
+  // Încadrare o singură dată, după primul nor nevid.
+  if (mapPoints.length && (shouldFit || firstMapFrame)) fitBounds(mapPoints);
+  if (followRobot && state && state.mode === "mapping") centerOnRobot();
+  if (mapPoints.length) firstMapFrame = false;
+  setText("render-count", mapPoints.length.toLocaleString("ro-RO") + " puncte 2D");
+  $("empty-map").classList.toggle("hidden", mapPoints.length > 0);
+  draw();
+}
 
-window.deleteWaypoint = (id) => {
-  state.waypoints = state.waypoints.filter(w => w.id !== id);
-  saveWaypoints();
-  renderWaypoints();
-};
+async function refreshLivePoints() {
+  const data = await api("/api/map/scan2d?limit=30000");
+  setPoints(data.points, firstMapFrame);
+  const source = state && state.mapping_backend === "ros2_mid360_odom"
+    ? "Harta 3D stabilizată, proiectată în XY"
+    : "Aștept Mid360 + odometrie";
+  setText("viewer-subtitle", `${source} · ${Number(data.total).toLocaleString("ro-RO")} celule`);
+}
 
-// =========================================================================
-// SCHEDULER
-// =========================================================================
-function initScheduler() {
-  $('task-type-select').addEventListener('change', updateTaskParamsUI);
-  updateTaskParamsUI();
+async function viewSavedMap() {
+  const name = $("maps").value;
+  if (!name) throw new Error("Selectează mai întâi o hartă");
+  const data = await api(`/api/maps/${encodeURIComponent(name)}/scan2d?limit=70000`);
+  viewingStoredMap = true;
+  firstMapFrame = true;
+  setPoints(data.points, true);
+  setText("viewer-subtitle", `${data.name} · hartă 2D · ${Number(data.total).toLocaleString("ro-RO")} celule`);
+  return data;
+}
 
-  $('btn-add-task').addEventListener('click', addTask);
-  $('btn-run-scheduler').addEventListener('click', startScheduler);
-  $('btn-stop-scheduler').addEventListener('click', stopScheduler);
-  $('btn-reset-tasks').addEventListener('click', async () => {
-    await apiPost('/api/tasks/reset');
-    showToast('Task-uri resetate la Pending', 'info');
-  });
-  $('btn-clear-tasks').addEventListener('click', () => {
-    if (!confirm('Ștergi toate task-urile?')) return;
-    apiDelete('/api/tasks').then(() => {
-      renderTasks([]);
-      showToast('Task-uri șterse', 'info');
+async function latestPartial() {
+  const session = $("partial-sessions").value;
+  if (!session) throw new Error("Selectează mai întâi o sesiune parțială");
+  const listing = await api(`/api/partial-maps/${encodeURIComponent(session)}`);
+  const snapshots = listing.snapshots || [];
+  if (!snapshots.length) throw new Error("Sesiunea nu conține încă nicio captură PCD");
+  return { session, snapshot: snapshots[snapshots.length - 1] };
+}
+
+async function viewLatestPartial() {
+  const latest = await latestPartial();
+  const data = await api(`/api/partial-maps/${encodeURIComponent(latest.session)}/${encodeURIComponent(latest.snapshot.name)}/scan2d?limit=70000`);
+  viewingStoredMap = true;
+  firstMapFrame = true;
+  setPoints(data.points, true);
+  setText("viewer-subtitle", `${data.session} · ${data.name}.pcd · ${Number(data.total).toLocaleString("ro-RO")} puncte`);
+  return { success: true, message: `Captura ${data.name} este afișată` };
+}
+
+function viewport() {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(1, rect.width);
+  const height = Math.max(1, rect.height);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { width, height };
+}
+
+function projection(width, height) {
+  const spanX = Math.max(0.1, bounds.maxX - bounds.minX);
+  const spanY = Math.max(0.1, bounds.maxY - bounds.minY);
+  const scale = Math.min((width - 70) / spanX, (height - 70) / spanY);
+  const offsetX = (width - spanX * scale) / 2 - bounds.minX * scale;
+  const offsetY = (height - spanY * scale) / 2 + bounds.maxY * scale;
+  return {
+    scale,
+    point: (x, y) => [offsetX + x * scale, offsetY - y * scale],
+    world: (px, py) => [(px - offsetX) / scale, (offsetY - py) / scale],
+  };
+}
+
+function zoomAt(factor, pixelX, pixelY) {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(1, rect.width);
+  const height = Math.max(1, rect.height);
+  const view = projection(width, height);
+  const px = pixelX === undefined ? width / 2 : pixelX;
+  const py = pixelY === undefined ? height / 2 : pixelY;
+  const anchor = view.world(px, py);
+  const spanX = bounds.maxX - bounds.minX;
+  const spanY = bounds.maxY - bounds.minY;
+  const requested = Math.max(0.04, Math.min(25, factor));
+  const targetSpan = Math.max(spanX, spanY) * requested;
+  if (targetSpan < 0.5 || targetSpan > 500) return;
+  const ratioX = (anchor[0] - bounds.minX) / spanX;
+  const ratioY = (anchor[1] - bounds.minY) / spanY;
+  const nextSpanX = spanX * requested;
+  const nextSpanY = spanY * requested;
+  bounds = {
+    minX: anchor[0] - ratioX * nextSpanX,
+    maxX: anchor[0] + (1 - ratioX) * nextSpanX,
+    minY: anchor[1] - ratioY * nextSpanY,
+    maxY: anchor[1] + (1 - ratioY) * nextSpanY,
+  };
+  draw();
+}
+
+function setGoalAt(clientX, clientY) {
+  invalidateRoute("Destinația s-a schimbat; recalculează ruta");
+  const rect = canvas.getBoundingClientRect();
+  const view = projection(rect.width, rect.height);
+  const world = view.world(clientX - rect.left, clientY - rect.top);
+  const yaw = radians($("goal-yaw").value);
+  goal = { x: world[0], y: world[1], yaw };
+  $("goal-x").value = world[0].toFixed(2);
+  $("goal-y").value = world[1].toFixed(2);
+  draw();
+  toast(`Destinație selectată: X ${world[0].toFixed(2)}, Y ${world[1].toFixed(2)}, yaw ${degrees(yaw).toFixed(0)}°`);
+}
+
+function niceStep(span) {
+  const rough = span / 10;
+  const power = 10 ** Math.floor(Math.log10(Math.max(rough, 0.001)));
+  const ratio = rough / power;
+  return (ratio >= 5 ? 5 : ratio >= 2 ? 2 : 1) * power;
+}
+
+function draw() {
+  const { width, height } = viewport();
+  ctx.clearRect(0, 0, width, height);
+  const view = projection(width, height);
+  const step = niceStep(Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY));
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(104, 133, 171, .11)";
+  ctx.fillStyle = "rgba(131, 150, 178, .46)";
+  ctx.font = "9px ui-monospace, monospace";
+  for (let x = Math.ceil(bounds.minX / step) * step; x <= bounds.maxX + step * .01; x += step) {
+    const [px] = view.point(x, 0);
+    ctx.strokeStyle = Math.abs(x) < step * 0.01 ? "rgba(239,89,103,.30)" : "rgba(104,133,171,.11)";
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, height); ctx.stroke();
+    if (px > 4 && px < width - 28) ctx.fillText(`${Number(x.toFixed(2))}m`, px + 3, height - 8);
+  }
+  for (let y = Math.ceil(bounds.minY / step) * step; y <= bounds.maxY + step * .01; y += step) {
+    const [, py] = view.point(0, y);
+    ctx.strokeStyle = Math.abs(y) < step * 0.01 ? "rgba(83,214,139,.30)" : "rgba(104,133,171,.11)";
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(width, py); ctx.stroke();
+    if (py > 12 && py < height - 4) ctx.fillText(`${Number(y.toFixed(2))}m`, 7, py - 4);
+  }
+
+  // Proiecția XY vine din harta 3D stabilizată; browserul doar o desenează.
+  const pointSize = 2;
+  const screenCell = 1.35;
+  const visible = new Map();
+  for (const point of mapPoints) {
+    if (point[0] < bounds.minX || point[0] > bounds.maxX || point[1] < bounds.minY || point[1] > bounds.maxY) continue;
+    const projected = view.point(point[0], point[1]);
+    const key = Math.floor(projected[0] / screenCell) + ":" + Math.floor(projected[1] / screenCell);
+    if (!visible.has(key)) visible.set(key, projected);
+  }
+
+  ctx.save();
+  ctx.fillStyle = "rgba(83, 218, 245, .92)";
+  ctx.shadowColor = "rgba(34, 211, 238, .32)";
+  ctx.shadowBlur = 2;
+  for (const point of visible.values()) {
+    ctx.fillRect(point[0] - pointSize / 2, point[1] - pointSize / 2, pointSize, pointSize);
+  }
+  ctx.restore();
+
+  if (routePreview && routePreview.points.length > 1) {
+    ctx.save();
+    ctx.strokeStyle = "#a78bfa";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 5]);
+    ctx.beginPath();
+    routePreview.points.forEach((point, index) => {
+      const projected = view.point(Number(point[0]), Number(point[1]));
+      if (index === 0) ctx.moveTo(projected[0], projected[1]);
+      else ctx.lineTo(projected[0], projected[1]);
     });
-  });
+    ctx.stroke();
+    ctx.restore();
+  }
 
-  // Load initial tasks
-  apiFetch('/api/tasks').then(data => {
-    if (data.tasks) renderTasks(data.tasks);
-    if (typeof data.running !== 'undefined') {
-      state.schedulerRunning = data.running;
-      updateSchedulerUI();
+  if (state && state.pose) {
+    const pose = state.pose;
+    const [rx, ry] = view.point(Number(pose.x || 0), Number(pose.y || 0));
+    const angle = -Number(pose.yaw || 0);
+    ctx.save(); ctx.translate(rx, ry); ctx.rotate(angle);
+    ctx.fillStyle = "#22c55e"; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, -6); ctx.lineTo(-4, 0); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  if (goal) {
+    const [gx, gy] = view.point(goal.x, goal.y);
+    const yaw = Number(goal.yaw === undefined ? radians($("goal-yaw").value) : goal.yaw);
+    const arrowX = gx + Math.cos(yaw) * 25;
+    const arrowY = gy - Math.sin(yaw) * 25;
+    ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(gx, gy, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx - 12, gy); ctx.lineTo(gx + 12, gy); ctx.moveTo(gx, gy - 12); ctx.lineTo(gx, gy + 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(arrowX, arrowY); ctx.stroke();
+    ctx.save(); ctx.translate(arrowX, arrowY); ctx.rotate(-yaw);
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5, -4); ctx.lineTo(-5, 4); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+
+let pendingDrawFrame = null;
+function requestDraw() {
+  if (pendingDrawFrame !== null) return;
+  pendingDrawFrame = window.requestAnimationFrame(() => {
+    pendingDrawFrame = null;
+    draw();
+  });
+}
+
+async function action(button, busyText, operation) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = busyText;
+  try {
+    const result = await operation();
+    const message = result.message || (result.success ? "Comandă confirmată" : result.error) || "Operație terminată";
+    if (result.success === false) throw new Error(message);
+    log(message);
+    toast(message);
+    return result;
+  } catch (error) {
+    log(`EROARE: ${error.message}`);
+    toast(error.message, true);
+    return null;
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
+    await refreshState();
+  }
+}
+
+async function refreshMaps() {
+  try {
+    const data = await api("/api/maps");
+    const select = $("maps");
+    const previous = select.value;
+    select.innerHTML = '<option value="">Selectează o hartă…</option>';
+    for (const item of data.maps || []) {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.textContent = `${item.name} · ${(item.size / 1024 / 1024).toFixed(1)} MB${item.native_ready ? " · navigabilă" : " · doar vizualizare"}`;
+      option.dataset.nativeReady = String(Boolean(item.native_ready));
+      select.appendChild(option);
     }
-  });
-}
+    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
 
-function updateTaskParamsUI() {
-  const type = $('task-type-select').value;
-  $$('.task-params').forEach(el => el.style.display = 'none');
-  const el = $(`task-params-${type}`);
-  if (el) el.style.display = 'flex';
-}
-
-async function addTask() {
-  const type = $('task-type-select').value;
-  const name = $('task-name-input').value.trim() || typeLabel(type);
-  let params = {};
-
-  if (type === 'navigate') {
-    params = {
-      x: parseFloat($('tp-x').value || '0'),
-      y: parseFloat($('tp-y').value || '0'),
-      yaw: parseFloat($('tp-yaw').value || '0') * Math.PI / 180,
-      timeout: parseFloat($('tp-timeout').value || '30')
-    };
-  } else if (type === 'wait') {
-    params = { seconds: parseFloat($('tp-wait-secs').value || '3') };
-  } else if (type === 'slam_save') {
-    params = { map_name: $('tp-map-name').value.trim() || `map_${Date.now()}` };
-  } else if (type === 'command') {
-    params = {
-      type: $('tp-cmd-type').value,
-      command: $('tp-cmd-text').value.trim()
-    };
-  }
-
-  const result = await apiPost('/api/tasks', { name, type, params });
-  $('task-name-input').value = '';
-  showToast(`Task "${name}" adăugat ✓`, 'success');
-}
-
-async function startScheduler() {
-  const result = await apiPost('/api/tasks/start');
-  if (result.success) {
-    state.schedulerRunning = true;
-    updateSchedulerUI();
-    showToast('Scheduler pornit ✓', 'success');
-  } else {
-    showToast(result.error || 'Eroare la pornire', 'error');
-  }
-}
-
-async function stopScheduler() {
-  await apiPost('/api/tasks/stop');
-  state.schedulerRunning = false;
-  updateSchedulerUI();
-  showToast('Scheduler oprit.', 'info');
-}
-
-function updateSchedulerUI() {
-  const running = state.schedulerRunning;
-  $('scheduler-state').textContent = running ? 'RULEAZĂ' : 'Oprit';
-  $('scheduler-state').className = 'scheduler-state' + (running ? ' running' : '');
-  $('btn-run-scheduler').disabled = running;
-  $('btn-stop-scheduler').disabled = !running;
-}
-
-function renderTasks(tasks) {
-  state.tasks = tasks;
-  const list = $('tasks-list');
-  const empty = $('tasks-empty-state');
-
-  if (!tasks || tasks.length === 0) {
-    list.innerHTML = '';
-    list.appendChild(empty);
-    empty.style.display = 'flex';
-    updateProgress(0, 0);
-    updateBadge('scheduler', 0);
-    return;
-  }
-
-  empty.style.display = 'none';
-  const icons = { navigate: '🧭', wait: '⏱', slam_start: '▶', slam_stop: '⏹', slam_save: '💾', command: '⚙' };
-
-  list.innerHTML = tasks.map(t => {
-    const detail = getTaskDetail(t);
-    const statusClass = t.status !== 'pending' ? `status-${t.status}` : '';
-    const isRunning = t.status === 'running';
-    return `
-      <div class="task-item ${statusClass}" data-id="${t.id}">
-        <span class="task-drag">⠿</span>
-        <span class="task-icon">${icons[t.type] || '•'}</span>
-        <div class="task-info">
-          <div class="task-name">${escapeHtml(t.name)}</div>
-          ${detail ? `<div class="task-detail">${detail}</div>` : ''}
-          ${t.result ? `<div class="task-detail" style="color:var(--text-muted)">${escapeHtml(t.result.substring(0,80))}</div>` : ''}
-        </div>
-        ${isRunning ? '<div class="task-spinner"></div>' : ''}
-        <span class="task-status-chip ${t.status !== 'pending' ? t.status : ''}">${statusLabel(t.status)}</span>
-        ${t.status === 'pending' ? `<button class="btn btn-ghost btn-sm danger" onclick="deleteTask('${t.id}')">✕</button>` : ''}
-      </div>
-    `;
-  }).join('');
-
-  // Progress
-  const done = tasks.filter(t => t.status === 'done').length;
-  updateProgress(done, tasks.length);
-  updateBadge('scheduler', tasks.filter(t => t.status === 'pending').length);
-}
-
-function getTaskDetail(t) {
-  if (t.type === 'navigate') {
-    const p = t.params;
-    const yawDeg = p.yaw ? (p.yaw * 180 / Math.PI).toFixed(0) : 0;
-    return `X:${(p.x||0).toFixed(2)} Y:${(p.y||0).toFixed(2)} Yaw:${yawDeg}°`;
-  }
-  if (t.type === 'wait') return `${t.params.seconds || 1}s`;
-  if (t.type === 'slam_save') return t.params.map_name || '';
-  if (t.type === 'command') return (t.params.command || '').substring(0, 40);
-  return '';
-}
-
-window.deleteTask = async (id) => {
-  await apiDelete(`/api/tasks/${id}`);
-};
-
-function updateProgress(done, total) {
-  const pct = total > 0 ? (done / total * 100) : 0;
-  $('progress-bar').style.width = `${pct}%`;
-  $('progress-text').textContent = `${done} / ${total} task-uri completate`;
-}
-
-function statusLabel(s) {
-  return { pending: 'Pending', running: 'Rulează', done: 'Done', failed: 'Eșuat', cancelled: 'Anulat' }[s] || s;
-}
-function typeLabel(t) {
-  return { navigate: 'Navigare', wait: 'Așteptare', slam_start: 'Start Mapping', slam_stop: 'Stop Mapping', slam_save: 'Salvare Hartă', command: 'Comandă' }[t] || t;
-}
-
-// =========================================================================
-// COMMANDS
-// =========================================================================
-function initCommands() {
-  $('btn-create-cmd').addEventListener('click', async () => {
-    const name = $('cmd-name').value.trim();
-    const type = $('cmd-type').value;
-    const command = $('cmd-command').value.trim();
-    const description = $('cmd-description').value.trim();
-
-    if (!name || !command) {
-      showToast('Completează numele și comanda!', 'warning');
-      return;
+    const partialSelect = $("partial-sessions");
+    const previousPartial = partialSelect.value;
+    partialSelect.innerHTML = '<option value="">Nicio sesiune salvată…</option>';
+    for (const item of data.partial_sessions || []) {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.textContent = `${item.name} · ${item.snapshots} capturi`;
+      partialSelect.appendChild(option);
     }
-
-    await apiPost('/api/commands', { name, type, command, description });
-    $('cmd-name').value = '';
-    $('cmd-command').value = '';
-    $('cmd-description').value = '';
-    showToast(`Comanda "${name}" creată ✓`, 'success');
-
-    const data = await apiFetch('/api/commands');
-    renderCommands(data.commands || []);
-  });
-
-  // Load initial commands
-  apiFetch('/api/commands').then(data => {
-    if (data.commands) renderCommands(data.commands);
-  });
-}
-
-function renderCommands(commands) {
-  state.commands = commands;
-  const list = $('commands-list');
-  const empty = $('commands-empty-state');
-  $('commands-count').textContent = `${commands.length} comenzi`;
-
-  if (!commands || commands.length === 0) {
-    list.innerHTML = '';
-    list.appendChild(empty);
-    empty.style.display = 'flex';
-    return;
+    if ([...partialSelect.options].some((option) => option.value === previousPartial)) partialSelect.value = previousPartial;
+    updateMapReadiness();
+  } catch (error) {
+    log(`EROARE listă hărți: ${error.message}`);
   }
-
-  empty.style.display = 'none';
-  const typeIcons = { shell: '🖥', ros2_topic: '📡', ros2_service: '🔧', python: '🐍' };
-
-  list.innerHTML = commands.map(cmd => `
-    <div class="command-item">
-      <div class="cmd-icon">${typeIcons[cmd.type] || '⚙'}</div>
-      <div class="cmd-info">
-        <div class="cmd-name">${escapeHtml(cmd.name)}</div>
-        ${cmd.description ? `<div class="cmd-desc">${escapeHtml(cmd.description)}</div>` : ''}
-        <div class="cmd-preview">${escapeHtml(cmd.command)}</div>
-      </div>
-      <div class="cmd-actions">
-        <span class="cmd-type-badge">${cmd.type}</span>
-        <div style="display:flex;gap:4px;margin-top:6px">
-          <button class="btn btn-success btn-sm" onclick="runCommand('${cmd.id}')">▶ Run</button>
-          <button class="btn btn-ghost btn-sm" onclick="addCmdToTask('${cmd.id}')">+ Task</button>
-          <button class="btn btn-ghost btn-sm danger" onclick="deleteCommand('${cmd.id}')">✕</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
 }
 
-window.runCommand = async (id) => {
-  showToast('Execut comanda...', 'info');
-  const result = await apiPost(`/api/commands/${id}/run`);
-  if (result.success) {
-    showToast(`Comanda executată ✓\n${(result.output || '').substring(0, 60)}`, 'success');
+function updateMapReadiness() {
+  const option = $("maps").selectedOptions[0];
+  const box = $("map-readiness");
+  if (!option || !option.value) {
+    box.className = "readiness neutral";
+    box.textContent = "Nicio hartă selectată";
+  } else if (option.dataset.nativeReady === "true") {
+    box.className = "readiness good";
+    box.textContent = "Hartă pregătită pentru localizare și navigație";
   } else {
-    showToast(`Eroare: ${result.error || 'Necunoscută'}`, 'error');
-  }
-};
-
-window.deleteCommand = async (id) => {
-  if (!confirm('Ștergi această comandă?')) return;
-  await apiDelete(`/api/commands/${id}`);
-  const data = await apiFetch('/api/commands');
-  renderCommands(data.commands || []);
-};
-
-window.addCmdToTask = (id) => {
-  const cmd = state.commands.find(c => c.id === id);
-  if (!cmd) return;
-  // Switch la scheduler și pre-completează formularul
-  $$('.nav-item').forEach(b => { if (b.dataset.tab === 'scheduler') b.click(); });
-  $('task-type-select').value = 'command';
-  updateTaskParamsUI();
-  $('tp-cmd-type').value = cmd.type;
-  $('tp-cmd-text').value = cmd.command;
-  $('task-name-input').value = cmd.name;
-  showToast(`Comanda "${cmd.name}" pregătită pentru scheduler ✓`, 'info');
-};
-
-// =========================================================================
-// UI HELPERS
-// =========================================================================
-function updatePoseDisplay(pose) {
-  $('pose-x').textContent = pose.x.toFixed(2);
-  $('pose-y').textContent = pose.y.toFixed(2);
-  $('pose-yaw').textContent = (pose.yaw_deg || (pose.yaw * 180 / Math.PI) || 0).toFixed(1);
-  $('nav-current-pos').textContent = `(${pose.x.toFixed(2)}, ${pose.y.toFixed(2)})`;
-}
-
-function updateWsStatus(connected) {
-  $('ws-dot').className = 'status-dot ' + (connected ? 'ok' : 'err');
-  $('ws-status-text').textContent = connected ? 'Conectat' : 'Deconectat';
-}
-
-function updateBadge(tab, count) {
-  const badge = $(`badge-${tab}`);
-  if (!badge) return;
-  badge.textContent = count;
-  badge.style.display = count > 0 ? 'inline-block' : 'none';
-}
-
-function addLog(message, level = 'info') {
-  const container = $('log-container');
-  const entry = document.createElement('div');
-  entry.className = `log-entry log-${level}`;
-  const now = new Date();
-  const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-  entry.innerHTML = `<span class="log-time">${time}</span><span>${escapeHtml(message)}</span>`;
-  container.appendChild(entry);
-  container.scrollTop = container.scrollHeight;
-
-  // Keep max 100 entries
-  while (container.children.length > 100) {
-    container.removeChild(container.firstChild);
+    box.className = "readiness warn";
+    box.textContent = "Copie locală disponibilă; serviciul 1802 nu a confirmat harta nativă";
   }
 }
 
-function showToast(message, type = 'info') {
-  const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
-  const container = $('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span class="toast-text">${escapeHtml(message)}</span>`;
-  container.appendChild(toast);
+$("start-map").addEventListener("click", async (event) => {
+  await action(event.currentTarget, "Aștept primul cloud…", async () => {
+    viewingStoredMap = false;
+    firstMapFrame = true;
+    followRobot = false;
+    updateFollowButton();
+    goal = null;
+    const result = await api("/api/slam/start_mapping", { method: "POST" });
+    if (result.success) setText("viewer-subtitle", "Harta 3D stabilizată, proiectată în XY · sesiune nouă");
+    return result;
+  });
+});
 
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => toast.remove(), 250);
-  }, 3500);
-}
+$("pause-map").addEventListener("click", async (event) => {
+  await action(event.currentTarget, "Comut…", () => api("/api/slam/pause_mapping", {
+    method: "POST",
+  }));
+});
 
-// =========================================================================
-// API HELPERS
-// =========================================================================
-async function apiFetch(path) {
+$("stop-map").addEventListener("click", async (event) => {
+  const result = await action(event.currentTarget, "Opresc…", () => api("/api/slam/stop_mapping", {
+    method: "POST",
+  }));
+  if (result) await refreshMaps();
+});
+
+$("save-map").addEventListener("click", async (event) => {
+  const name = $("map-name").value.trim();
+  if (!name) return toast("Introdu numele hărții", true);
+  const result = await action(event.currentTarget, "Salvez…", () => api("/api/slam/save_map", {
+    method: "POST", body: JSON.stringify({ name }),
+  }));
+  if (result) await refreshMaps();
+});
+
+$("refresh-maps").addEventListener("click", refreshMaps);
+$("refresh-partials").addEventListener("click", refreshMaps);
+$("maps").addEventListener("change", () => {
+  updateMapReadiness();
+  invalidateRoute("Harta selectată s-a schimbat; recalculează ruta");
+});
+$("view-map").addEventListener("click", async (event) => {
+  await action(event.currentTarget, "Încarc…", viewSavedMap);
+});
+$("download-map").addEventListener("click", () => {
+  const name = $("maps").value;
+  if (!name) return toast("Selectează mai întâi o hartă", true);
+  window.location.href = `/api/maps/${encodeURIComponent(name)}/file`;
+});
+$("clear-view").addEventListener("click", () => {
+  viewingStoredMap = false;
+  mapPoints = [];
+  goal = null;
+  firstMapFrame = true;
+  bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
+  $("maps").value = "";
+  updateMapReadiness();
+  invalidateRoute("Vizualizarea este goală; poți continua mappingul sau încărca altă hartă");
+  $("empty-map").classList.remove("hidden");
+  setText("viewer-subtitle", "Vizualizare goală · fișierele PCD nu au fost șterse");
+  setText("render-count", "0 puncte vizibile");
+  toast("Harta a fost scoasă doar din viewer; fișierul a rămas salvat");
+});
+$("view-partial").addEventListener("click", async (event) => {
+  await action(event.currentTarget, "Încarc…", viewLatestPartial);
+});
+$("download-partial").addEventListener("click", async () => {
   try {
-    const resp = await fetch(`${API_BASE}${path}`);
-    return await resp.json();
-  } catch (e) {
-    console.error('API fetch error:', path, e);
-    return {};
-  }
-}
-
-async function apiPost(path, body = {}) {
-  try {
-    const resp = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return await resp.json();
-  } catch (e) {
-    console.error('API post error:', path, e);
-    return { success: false, error: e.message };
-  }
-}
-
-async function apiDelete(path) {
-  try {
-    const resp = await fetch(`${API_BASE}${path}`, { method: 'DELETE' });
-    return await resp.json();
-  } catch (e) {
-    return { success: false };
-  }
-}
-
-function escapeHtml(str) {
-  if (typeof str !== 'string') return String(str || '');
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// =========================================================================
-// KEYBOARD SHORTCUTS
-// =========================================================================
-document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  switch (e.key.toLowerCase()) {
-    case 'p': setMapTool('pan'); break;
-    case 'n': setMapTool('navigate'); break;
-    case 's': if (state.activeTab === 'navigation') apiPost('/api/nav/stop'); break;
-    case '1': $$('.nav-item')[0]?.click(); break;
-    case '2': $$('.nav-item')[1]?.click(); break;
-    case '3': $$('.nav-item')[2]?.click(); break;
-    case '4': $$('.nav-item')[3]?.click(); break;
+    const latest = await latestPartial();
+    window.location.href = `/api/partial-maps/${encodeURIComponent(latest.session)}/${encodeURIComponent(latest.snapshot.name)}/file`;
+  } catch (error) {
+    toast(error.message, true);
   }
 });
+
+$("localize").addEventListener("click", async (event) => {
+  const map = $("maps").value;
+  if (!map) return toast("Selectează mai întâi o hartă", true);
+  await action(event.currentTarget, "Localizez…", () => api("/api/localization/start", {
+    method: "POST",
+    body: JSON.stringify({
+      map,
+      x: Number($("loc-x").value), y: Number($("loc-y").value), yaw: radians($("loc-yaw").value),
+    }),
+  }));
+});
+
+function navigationTarget() {
+  const x = Number($("goal-x").value);
+  const y = Number($("goal-y").value);
+  const yaw = radians($("goal-yaw").value);
+  const speed = Number($("speed").value);
+  return { x, y, yaw, speed, map: $("maps").value };
+}
+
+$("preview-route").addEventListener("click", async (event) => {
+  const target = navigationTarget();
+  goal = { x: target.x, y: target.y, yaw: target.yaw };
+  const result = await action(event.currentTarget, "Calculez A*…", () => api("/api/navigation/preview", {
+    method: "POST", body: JSON.stringify(target),
+  }));
+  if (!result) return;
+  routePreview = {
+    id: result.preview_id,
+    points: result.route.points || [],
+    target,
+  };
+  const distance = Number(result.route.distance || 0);
+  $("route-summary").className = "route-summary ready";
+  setText("route-summary", `Rută pregătită · ${distance.toFixed(2)} m · ${routePreview.points.length} puncte · confirmare în 120 s`);
+  $("navigate").disabled = false;
+  draw();
+});
+
+$("navigate").addEventListener("click", async (event) => {
+  if (!routePreview) return toast("Previzualizează mai întâi ruta", true);
+  const target = navigationTarget();
+  if (!window.confirm(`CONFIRMARE PORNIRE\nX=${target.x.toFixed(2)}, Y=${target.y.toFixed(2)}, yaw=${degrees(target.yaw).toFixed(0)}°, viteză=${target.speed.toFixed(2)} m/s. Robotul poate începe deplasarea. Continui?`)) return;
+  const result = await action(event.currentTarget, "Trimit 1102…", () => api("/api/navigation/goal", {
+    method: "POST",
+    body: JSON.stringify({ ...target, preview_id: routePreview.id }),
+  }));
+  if (result) {
+    $("navigate").disabled = true;
+    $("route-summary").className = "route-summary ready";
+    setText("route-summary", result.message || "Executorul rutei A* a pornit");
+    draw();
+  }
+});
+
+$("pause").addEventListener("click", (event) => action(event.currentTarget, "Oprire…", () => api("/api/navigation/pause", { method: "POST" })));
+$("resume").addEventListener("click", (event) => action(event.currentTarget, "Pornire…", () => api("/api/navigation/resume", { method: "POST" })));
+$("speed").addEventListener("input", () => {
+  setText("speed-value", `${Number($("speed").value).toFixed(2)} m/s`);
+  invalidateRoute("Viteza s-a schimbat; recalculează ruta");
+});
+["goal-x", "goal-y"].forEach((id) => {
+  $(id).addEventListener("input", () => invalidateRoute("Destinația s-a schimbat; recalculează ruta"));
+});
+
+$("mode-password").addEventListener("input", () => {
+  const unlocked = $("mode-password").value === "123";
+  document.querySelectorAll("[data-robot-mode]").forEach((button) => {
+    button.disabled = !unlocked;
+  });
+});
+
+document.querySelectorAll("[data-robot-mode]").forEach((button) => {
+  button.addEventListener("click", async (event) => {
+    const mode = button.dataset.robotMode;
+    if (!window.confirm(`Confirmi schimbarea fizică a robotului în modul ${mode.toUpperCase()}?`)) return;
+    const result = await action(event.currentTarget, "Trimit…", () => api("/api/robot/mode", {
+      method: "POST",
+      body: JSON.stringify({ mode, password: $("mode-password").value }),
+    }));
+    if (result) {
+      $("mode-password").value = "";
+      document.querySelectorAll("[data-robot-mode]").forEach((item) => { item.disabled = true; });
+      invalidateRoute("Modul robotului s-a schimbat; recalculează ruta");
+    }
+  });
+});
+
+$("fit-map").addEventListener("click", () => {
+  followRobot = false;
+  updateFollowButton();
+  fitBounds(mapPoints);
+  requestDraw();
+});
+$("follow-robot").addEventListener("click", () => {
+  followRobot = !followRobot;
+  updateFollowButton();
+  if (followRobot) centerOnRobot();
+  requestDraw();
+});
+$("zoom-in").addEventListener("click", () => zoomAt(0.8));
+$("zoom-out").addEventListener("click", () => zoomAt(1.25));
+$("clear-log").addEventListener("click", () => { $("log").textContent = ""; });
+
+document.querySelectorAll("[data-yaw]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const yawDegrees = Number(button.dataset.yaw);
+    invalidateRoute("Orientarea finală s-a schimbat; recalculează ruta");
+    $("goal-yaw").value = yawDegrees;
+    if (goal) goal.yaw = radians(yawDegrees);
+    document.querySelectorAll("[data-yaw]").forEach((item) => item.classList.remove("selected"));
+    button.classList.add("selected");
+    draw();
+  });
+});
+
+$("goal-yaw").addEventListener("input", () => {
+  invalidateRoute("Orientarea finală s-a schimbat; recalculează ruta");
+  if (goal) goal.yaw = radians($("goal-yaw").value);
+  document.querySelectorAll("[data-yaw]").forEach((item) => item.classList.remove("selected"));
+  draw();
+});
+
+canvas.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  zoomAt(event.deltaY > 0 ? 1.14 : 0.88, event.clientX - rect.left, event.clientY - rect.top);
+}, { passive: false });
+
+canvas.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const view = projection(rect.width, rect.height);
+  const world = view.world(event.clientX - rect.left, event.clientY - rect.top);
+  pointerInteraction = {
+    mode: event.shiftKey ? "orient" : "pan",
+    startX: event.clientX,
+    startY: event.clientY,
+    startBounds: { ...bounds },
+    scale: view.scale,
+    moved: false,
+  };
+  if (pointerInteraction.mode === "orient") {
+    invalidateRoute("Orientarea finală s-a schimbat; recalculează ruta");
+  }
+  if (pointerInteraction.mode === "orient" && !goal) {
+    goal = { x: world[0], y: world[1], yaw: radians($("goal-yaw").value) };
+    $("goal-x").value = world[0].toFixed(2);
+    $("goal-y").value = world[1].toFixed(2);
+  }
+  canvas.setPointerCapture(event.pointerId);
+});
+
+canvas.addEventListener("pointermove", (event) => {
+  if (!pointerInteraction) return;
+  const dx = event.clientX - pointerInteraction.startX;
+  const dy = event.clientY - pointerInteraction.startY;
+  if (Math.hypot(dx, dy) > 3) pointerInteraction.moved = true;
+  if (pointerInteraction.mode === "pan") {
+    if (pointerInteraction.moved && followRobot) {
+      followRobot = false;
+      updateFollowButton();
+    }
+    const original = pointerInteraction.startBounds;
+    const shiftX = -dx / pointerInteraction.scale;
+    const shiftY = dy / pointerInteraction.scale;
+    bounds = {
+      minX: original.minX + shiftX, maxX: original.maxX + shiftX,
+      minY: original.minY + shiftY, maxY: original.maxY + shiftY,
+    };
+  } else if (goal) {
+    const rect = canvas.getBoundingClientRect();
+    const world = projection(rect.width, rect.height).world(
+      event.clientX - rect.left, event.clientY - rect.top
+    );
+    if (Math.hypot(world[0] - goal.x, world[1] - goal.y) > 0.02) {
+      goal.yaw = Math.atan2(world[1] - goal.y, world[0] - goal.x);
+      $("goal-yaw").value = degrees(goal.yaw).toFixed(1);
+    }
+  }
+  canvas.style.cursor = pointerInteraction.mode === "pan" ? "grabbing" : "crosshair";
+  requestDraw();
+});
+
+function finishPointer(event) {
+  if (!pointerInteraction) return;
+  const interaction = pointerInteraction;
+  pointerInteraction = null;
+  canvas.style.cursor = "crosshair";
+  if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+  if (interaction.mode === "pan" && !interaction.moved) setGoalAt(event.clientX, event.clientY);
+}
+
+canvas.addEventListener("pointerup", finishPointer);
+canvas.addEventListener("pointercancel", finishPointer);
+
+window.addEventListener("resize", requestDraw);
+if (!token) log("ATENȚIE: tokenul lipsește din URL; acțiunile protejate vor fi refuzate.");
+refreshMaps();
+updateFollowButton();
+refreshState();
+setInterval(refreshState, 1000);
+setInterval(refreshMaps, 5000);
