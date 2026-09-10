@@ -315,7 +315,7 @@ class CarMapManager:
             cmd = [
                 "ros2", "run", "nav2_map_server", "map_saver_cli",
                 "-f", target_prefix,
-                "--ros-args", "-p", "save_map_timeout:=10.0",
+                "--ros-args", "-p", "save_map_timeout:=6000",
             ]
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             yaml_path = f"{target_prefix}.yaml"
