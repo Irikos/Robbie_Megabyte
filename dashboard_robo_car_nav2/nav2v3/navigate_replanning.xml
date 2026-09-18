@@ -1,0 +1,26 @@
+<!--
+  Replanificare Nav2 la 2 Hz. Obstacolele live nu sunt șterse ca recovery:
+  plannerul trebuie să găsească o rută în jurul lor sau să aștepte în siguranță.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="6" name="NavigateG1">
+      <PipelineSequence name="PlanAndFollow">
+        <RateController hz="2.0">
+          <RecoveryNode number_of_retries="1" name="PlanPath">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+            <Wait wait_duration="0.5"/>
+          </RecoveryNode>
+        </RateController>
+        <RecoveryNode number_of_retries="1" name="FollowPath">
+          <FollowPath path="{path}" controller_id="FollowPath"/>
+          <Wait wait_duration="0.5"/>
+        </RecoveryNode>
+      </PipelineSequence>
+      <ReactiveFallback name="RecoveryFallback">
+        <GoalUpdated/>
+        <Wait wait_duration="1.0"/>
+      </ReactiveFallback>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

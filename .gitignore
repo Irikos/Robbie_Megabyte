@@ -26,3 +26,16 @@ maps_2d/
 build/
 install/
 log/
+
+# Biblioteci compilate (SDK) — nu în git
+*.so
+
+# Modele 3D grele pentru vizualizare (decomentează dacă vrei repo ușor)
+# frontend/assets/g1/
+# *.stl
+# *.glb
+
+# Date de calibrare LiDAR-cameră (capturi mari)
+**/lidar_camera_calibration/data/
+*.npz
+*.npy

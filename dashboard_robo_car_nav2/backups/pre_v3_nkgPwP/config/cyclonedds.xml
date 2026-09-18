@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Numai procesele acestui proiect folosesc această configurație. -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="any">
+    <SharedMemory><Enable>false</Enable></SharedMemory>
+    <General>
+      <Interfaces>
+        <NetworkInterface name="enP8p1s0" />
+        <NetworkInterface name="wlx94ba06f25f71" />
+      </Interfaces>
+    </General>
+    <Discovery>
+      <Peers>
+        <Peer address="192.168.0.166" />
+        <Peer address="192.168.0.135" />
+      </Peers>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>99</MaxAutoParticipantIndex>
+    </Discovery>
+  </Domain>
+</CycloneDDS>
