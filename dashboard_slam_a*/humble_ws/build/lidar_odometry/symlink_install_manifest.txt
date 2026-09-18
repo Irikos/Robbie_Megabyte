@@ -1,0 +1,16 @@
+/root/humble_ws/install/lidar_odometry/lib/lidar_odometry/lidar_odometry_node
+/root/humble_ws/install/lidar_odometry/share/ament_index/resource_index/package_run_dependencies/lidar_odometry
+/root/humble_ws/install/lidar_odometry/share/ament_index/resource_index/parent_prefix_path/lidar_odometry
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/environment/ament_prefix_path.sh
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/environment/ament_prefix_path.dsv
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/environment/path.sh
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/environment/path.dsv
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/local_setup.bash
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/local_setup.sh
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/local_setup.zsh
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/local_setup.dsv
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/package.dsv
+/root/humble_ws/install/lidar_odometry/share/ament_index/resource_index/packages/lidar_odometry
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/cmake/lidar_odometryConfig.cmake
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/cmake/lidar_odometryConfig-version.cmake
+/root/humble_ws/install/lidar_odometry/share/lidar_odometry/package.xml

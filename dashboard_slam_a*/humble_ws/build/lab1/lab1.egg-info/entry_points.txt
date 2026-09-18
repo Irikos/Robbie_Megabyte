@@ -1,0 +1,6 @@
+[console_scripts]
+bridge = lab1.bridge:main
+odom_bc = lab1.odom_bc:main
+ws_bridge_node = lab1.ws_bridge:main
+ws_bridge_v2 = lab1.ws_bridge_v2:main
+

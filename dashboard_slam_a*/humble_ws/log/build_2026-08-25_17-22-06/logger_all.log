@@ -1,0 +1,157 @@
+[0.624s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--symlink-install', '--packages-select', 'lab1']
+[0.624s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=True, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=4, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['lab1'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7f9c964f40>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7f9cb02620>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7f9cb02620>>, mixin_verb=('build',))
+[1.645s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[1.645s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[1.646s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[1.646s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[1.646s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[1.646s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[1.646s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/root/humble_ws'
+[1.647s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[1.647s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[1.647s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[1.648s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[1.648s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[1.648s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[1.648s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[1.648s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[1.648s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[1.714s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[1.714s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[1.714s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[1.715s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[1.715s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[1.715s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[1.716s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[1.716s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[1.716s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[1.717s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[1.717s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[1.717s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[1.718s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[1.718s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[1.718s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[1.719s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[1.719s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[1.719s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[1.719s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[1.719s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[1.720s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[1.720s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[1.720s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[1.720s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[1.720s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[1.721s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[1.721s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[1.721s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[1.721s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extensions ['ignore', 'ignore_ament_install']
+[1.722s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extension 'ignore'
+[1.722s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extension 'ignore_ament_install'
+[1.722s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extensions ['colcon_pkg']
+[1.722s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extension 'colcon_pkg'
+[1.723s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extensions ['colcon_meta']
+[1.723s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extension 'colcon_meta'
+[1.723s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extensions ['ros']
+[1.723s] Level 1:colcon.colcon_core.package_identification:_identify(src/Simple-2D-LiDAR-Odometry) by extension 'ros'
+[1.740s] DEBUG:colcon.colcon_core.package_identification:Package 'src/Simple-2D-LiDAR-Odometry' with type 'ros.ament_cmake' and name 'lidar_odometry'
+[1.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extensions ['ignore', 'ignore_ament_install']
+[1.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extension 'ignore'
+[1.741s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extension 'ignore_ament_install'
+[1.742s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extensions ['colcon_pkg']
+[1.742s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extension 'colcon_pkg'
+[1.742s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extensions ['colcon_meta']
+[1.742s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extension 'colcon_meta'
+[1.742s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extensions ['ros']
+[1.743s] Level 1:colcon.colcon_core.package_identification:_identify(src/lab1) by extension 'ros'
+[1.746s] DEBUG:colcon.colcon_core.package_identification:Package 'src/lab1' with type 'ros.ament_python' and name 'lab1'
+[1.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extensions ['ignore', 'ignore_ament_install']
+[1.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extension 'ignore'
+[1.747s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extension 'ignore_ament_install'
+[1.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extensions ['colcon_pkg']
+[1.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extension 'colcon_pkg'
+[1.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extensions ['colcon_meta']
+[1.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extension 'colcon_meta'
+[1.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extensions ['ros']
+[1.748s] Level 1:colcon.colcon_core.package_identification:_identify(src/rplidar_ros) by extension 'ros'
+[1.752s] DEBUG:colcon.colcon_core.package_identification:Package 'src/rplidar_ros' with type 'ros.ament_cmake' and name 'rplidar_ros'
+[1.752s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[1.752s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[1.752s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[1.752s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[1.753s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[1.909s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'lidar_odometry' in 'src/Simple-2D-LiDAR-Odometry'
+[1.909s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'rplidar_ros' in 'src/rplidar_ros'
+[1.911s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[1.912s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[1.924s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 3 installed packages in /root/humble_ws/install
+[1.932s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 318 installed packages in /opt/ros/humble
+[1.941s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[2.177s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'cmake_args' from command line to 'None'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'cmake_target' from command line to 'None'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'cmake_clean_cache' from command line to 'False'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'cmake_clean_first' from command line to 'False'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'cmake_force_configure' from command line to 'False'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'ament_cmake_args' from command line to 'None'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'catkin_cmake_args' from command line to 'None'
+[2.178s] Level 5:colcon.colcon_core.verb:set package 'lab1' build argument 'catkin_skip_building_tests' from command line to 'False'
+[2.179s] DEBUG:colcon.colcon_core.verb:Building package 'lab1' with the following arguments: {'ament_cmake_args': None, 'build_base': '/root/humble_ws/build/lab1', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/root/humble_ws/install/lab1', 'merge_install': False, 'path': '/root/humble_ws/src/lab1', 'symlink_install': True, 'test_result_base': None}
+[2.179s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[2.184s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[2.184s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/root/humble_ws/src/lab1' with build type 'ament_python'
+[2.185s] Level 1:colcon.colcon_core.shell:create_environment_hook('lab1', 'ament_prefix_path')
+[2.203s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[2.204s] INFO:colcon.colcon_core.shell:Creating environment hook '/root/humble_ws/install/lab1/share/lab1/hook/ament_prefix_path.ps1'
+[2.206s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/root/humble_ws/install/lab1/share/lab1/hook/ament_prefix_path.dsv'
+[2.208s] INFO:colcon.colcon_core.shell:Creating environment hook '/root/humble_ws/install/lab1/share/lab1/hook/ament_prefix_path.sh'
+[2.212s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.212s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[3.418s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/root/humble_ws/src/lab1'
+[3.419s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[3.420s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[5.010s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools commands: build_py, install_headers, setopt, bdist_egg, install, clean, develop, check, egg_info, upload_docs, install_scripts, install_egg_info, build_scripts, install_data, test, build, bdist_rpm, saveopts, rotate, dist_info, alias, build_ext, upload, sdist, register, easy_install, symlink_data, install_lib, bdist, bdist_dumb, build_clib
+[6.309s] DEBUG:colcon.colcon_core.task.python.build:Available setuptools 'develop' options: --help, --editable, --local-snapshots-ok, --dry-run, --no-deps, --optimize, --record, --site-dirs, --install-dir, --upgrade, --install-layout, --index-url, --egg-path, --no-user-cfg, --version, --user, --always-copy, --find-links, --uninstall, --zip-ok, --multi-version, --build-directory, --no-find-links, --script-dir, --verbose, --force-installation-into-system-dir, --allow-hosts, --always-unzip, --quiet, --prefix, --exclude-scripts
+[6.313s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/root/humble_ws/build/lab1': PYTHONPATH=/root/humble_ws/build/lab1/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/root/humble_ws/install/lab1/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /root/humble_ws/build/lab1/build --no-deps symlink_data
+[8.387s] Level 1:colcon.colcon_core.shell:create_environment_hook('lab1', 'pythonpath_develop')
+[8.388s] INFO:colcon.colcon_core.shell:Creating environment hook '/root/humble_ws/build/lab1/share/lab1/hook/pythonpath_develop.ps1'
+[8.389s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/root/humble_ws/build/lab1' returned '0': PYTHONPATH=/root/humble_ws/build/lab1/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/root/humble_ws/install/lab1/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /root/humble_ws/build/lab1/build --no-deps symlink_data
+[8.391s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/root/humble_ws/build/lab1/share/lab1/hook/pythonpath_develop.dsv'
+[8.392s] INFO:colcon.colcon_core.shell:Creating environment hook '/root/humble_ws/build/lab1/share/lab1/hook/pythonpath_develop.sh'
+[8.404s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1' for CMake module files
+[8.406s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1' for CMake config files
+[8.409s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1/lib'
+[8.410s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1/bin'
+[8.411s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1/lib/pkgconfig/lab1.pc'
+[8.412s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1/lib/python3.10/site-packages'
+[8.412s] Level 1:colcon.colcon_core.shell:create_environment_hook('lab1', 'pythonpath')
+[8.413s] INFO:colcon.colcon_core.shell:Creating environment hook '/root/humble_ws/install/lab1/share/lab1/hook/pythonpath.ps1'
+[8.415s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/root/humble_ws/install/lab1/share/lab1/hook/pythonpath.dsv'
+[8.416s] INFO:colcon.colcon_core.shell:Creating environment hook '/root/humble_ws/install/lab1/share/lab1/hook/pythonpath.sh'
+[8.419s] Level 1:colcon.colcon_core.environment:checking '/root/humble_ws/install/lab1/bin'
+[8.419s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(lab1)
+[8.421s] INFO:colcon.colcon_core.shell:Creating package script '/root/humble_ws/install/lab1/share/lab1/package.ps1'
+[8.427s] INFO:colcon.colcon_core.shell:Creating package descriptor '/root/humble_ws/install/lab1/share/lab1/package.dsv'
+[8.430s] INFO:colcon.colcon_core.shell:Creating package script '/root/humble_ws/install/lab1/share/lab1/package.sh'
+[8.434s] INFO:colcon.colcon_core.shell:Creating package script '/root/humble_ws/install/lab1/share/lab1/package.bash'
+[8.437s] INFO:colcon.colcon_core.shell:Creating package script '/root/humble_ws/install/lab1/share/lab1/package.zsh'
+[8.441s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/root/humble_ws/install/lab1/share/colcon-core/packages/lab1)
+[8.442s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[8.443s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[8.443s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[8.444s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[8.469s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.notify_send': Could not find 'notify-send'
+[8.470s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[8.470s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[8.471s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[8.471s] DEBUG:colcon.colcon_notification.desktop_notification.notify2:Failed to initialize notify2: org.freedesktop.DBus.Error.NotSupported: Unable to autolaunch a dbus-daemon without a $DISPLAY for X11
+[8.471s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[8.473s] INFO:colcon.colcon_core.shell:Creating prefix script '/root/humble_ws/install/local_setup.ps1'
+[8.478s] INFO:colcon.colcon_core.shell:Creating prefix util module '/root/humble_ws/install/_local_setup_util_ps1.py'
+[8.484s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/root/humble_ws/install/setup.ps1'
+[8.490s] INFO:colcon.colcon_core.shell:Creating prefix script '/root/humble_ws/install/local_setup.sh'
+[8.492s] INFO:colcon.colcon_core.shell:Creating prefix util module '/root/humble_ws/install/_local_setup_util_sh.py'
+[8.495s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/root/humble_ws/install/setup.sh'
+[8.500s] INFO:colcon.colcon_core.shell:Creating prefix script '/root/humble_ws/install/local_setup.bash'
+[8.503s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/root/humble_ws/install/setup.bash'
+[8.507s] INFO:colcon.colcon_core.shell:Creating prefix script '/root/humble_ws/install/local_setup.zsh'
+[8.510s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/root/humble_ws/install/setup.zsh'

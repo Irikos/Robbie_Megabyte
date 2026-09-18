@@ -1,0 +1,16 @@
+running develop
+running egg_info
+writing lab1.egg-info/PKG-INFO
+writing dependency_links to lab1.egg-info/dependency_links.txt
+writing entry points to lab1.egg-info/entry_points.txt
+writing requirements to lab1.egg-info/requires.txt
+writing top-level names to lab1.egg-info/top_level.txt
+reading manifest file 'lab1.egg-info/SOURCES.txt'
+writing manifest file 'lab1.egg-info/SOURCES.txt'
+running build_ext
+Creating /root/humble_ws/install/lab1/lib/python3.10/site-packages/lab1.egg-link (link to .)
+Installing bridge script to /root/humble_ws/install/lab1/lib/lab1
+Installing odom_bc script to /root/humble_ws/install/lab1/lib/lab1
+
+Installed /root/humble_ws/build/lab1
+running symlink_data

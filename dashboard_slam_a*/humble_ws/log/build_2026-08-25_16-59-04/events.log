@@ -1,0 +1,5 @@
+[0.000000] (-) TimerEvent: {}
+[0.001094] (-) JobUnselected: {'identifier': 'lab1'}
+[0.001556] (-) JobUnselected: {'identifier': 'lidar_odometry'}
+[0.001799] (-) JobUnselected: {'identifier': 'rplidar_ros'}
+[0.001881] (-) EventReactorShutdown: {}

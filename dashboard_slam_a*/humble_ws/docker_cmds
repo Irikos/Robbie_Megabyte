@@ -1,0 +1,1 @@
+docker run -it --name jammy2 --network host -v ~/humble_ws:/root/humble_ws -v /dev:/dev --privileged my-jammy:with-changes

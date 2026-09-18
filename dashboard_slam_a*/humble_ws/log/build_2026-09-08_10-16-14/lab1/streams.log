@@ -1,0 +1,20 @@
+[3.911s] Invoking command in '/root/humble_ws/build/lab1': PYTHONPATH=/root/humble_ws/build/lab1/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/root/humble_ws/install/lab1/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /root/humble_ws/build/lab1/build --no-deps symlink_data
+[5.021s] running develop
+[5.744s] running egg_info
+[5.745s] writing lab1.egg-info/PKG-INFO
+[5.748s] writing dependency_links to lab1.egg-info/dependency_links.txt
+[5.748s] writing entry points to lab1.egg-info/entry_points.txt
+[5.748s] writing requirements to lab1.egg-info/requires.txt
+[5.749s] writing top-level names to lab1.egg-info/top_level.txt
+[5.758s] reading manifest file 'lab1.egg-info/SOURCES.txt'
+[5.762s] writing manifest file 'lab1.egg-info/SOURCES.txt'
+[5.767s] running build_ext
+[5.768s] Creating /root/humble_ws/install/lab1/lib/python3.10/site-packages/lab1.egg-link (link to .)
+[5.771s] Installing bridge script to /root/humble_ws/install/lab1/lib/lab1
+[5.772s] Installing odom_bc script to /root/humble_ws/install/lab1/lib/lab1
+[5.772s] Installing ws_bridge_node script to /root/humble_ws/install/lab1/lib/lab1
+[5.772s] Installing ws_bridge_v2 script to /root/humble_ws/install/lab1/lib/lab1
+[5.773s] 
+[5.773s] Installed /root/humble_ws/build/lab1
+[5.774s] running symlink_data
+[5.904s] Invoked command in '/root/humble_ws/build/lab1' returned '0': PYTHONPATH=/root/humble_ws/build/lab1/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/root/humble_ws/install/lab1/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /root/humble_ws/build/lab1/build --no-deps symlink_data
