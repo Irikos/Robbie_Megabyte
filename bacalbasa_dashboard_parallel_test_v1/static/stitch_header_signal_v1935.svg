@@ -1,0 +1,128 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 190 30"
+    preserveAspectRatio="xMidYMid meet"
+>
+    <!--
+      STITCH HEADER SIGNAL V1.9.35
+
+      Intentionally simpler than V1.9.34:
+        - one long horizontal data rail
+        - one small geometric node
+        - one short amber channel
+        - one subtle travelling packet
+    -->
+
+    <g
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+        <!-- quiet backbone -->
+        <path
+            d="M7 15 H178"
+            stroke="#315f50"
+            stroke-width="1"
+            opacity=".34"
+        />
+
+        <!-- green signal sections -->
+        <path
+            d="M15 15 H65 M79 15 H111 M129 15 H174"
+            stroke="#10b981"
+            stroke-width="1.1"
+            opacity=".62"
+        />
+
+        <!-- small interruptions / telemetry ticks -->
+        <path
+            d="M35 11 V15 M58 15 V19 M151 11 V15"
+            stroke="#8ecb7f"
+            stroke-width=".8"
+            opacity=".48"
+        />
+
+        <!-- compact central geometric node -->
+        <path
+            d="M112 15 L119 9 L128 12 L129 18 L119 21 Z"
+            stroke="#10b981"
+            stroke-width="1"
+            opacity=".72"
+        />
+
+        <circle
+            cx="120"
+            cy="15"
+            r="2"
+            stroke="#8ecb7f"
+            stroke-width=".9"
+            opacity=".8"
+        />
+
+        <!-- restrained amber secondary channel -->
+        <path
+            d="M72 19 H87 L93 15"
+            stroke="#f59e0b"
+            stroke-width="1"
+            opacity=".58"
+        />
+
+        <path
+            d="M95 15 L101 11 H107"
+            stroke="#f59e0b"
+            stroke-width=".8"
+            opacity=".38"
+        />
+    </g>
+
+    <!--
+      Single outward travelling packet.
+      The right ornament is mirrored by CSS automatically.
+    -->
+    <circle
+        cx="166"
+        cy="15"
+        r="1.7"
+        fill="#8ecb7f"
+        opacity="0"
+    >
+        <animate
+            attributeName="cx"
+            values="166;145;88;28"
+            keyTimes="0;0.16;0.66;1"
+            dur="3.4s"
+            repeatCount="indefinite"
+        />
+
+        <animate
+            attributeName="opacity"
+            values="0;.9;.65;0"
+            keyTimes="0;.12;.76;1"
+            dur="3.4s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+    <!-- tiny amber packet, deliberately slower -->
+    <circle
+        cx="101"
+        cy="19"
+        r="1.15"
+        fill="#f59e0b"
+        opacity="0"
+    >
+        <animate
+            attributeName="cx"
+            values="101;82;69"
+            dur="4.8s"
+            repeatCount="indefinite"
+        />
+
+        <animate
+            attributeName="opacity"
+            values="0;.65;0"
+            dur="4.8s"
+            repeatCount="indefinite"
+        />
+    </circle>
+</svg>

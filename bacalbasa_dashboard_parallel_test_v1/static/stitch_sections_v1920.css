@@ -1,0 +1,460 @@
+
+/* ==================================================================
+   STITCH V1.9.20 — THREE-COLUMN DRAG / FINAL GEOMETRY
+   ================================================================== */
+
+body.stitch-live-v12 #view-live
+.stitch-draggable-section-v1920 {
+
+    position:
+        relative !important;
+}
+
+
+/* ------------------------------------------------------------
+   Put the exact Bacalbasa grip at the top centre of each section.
+   ------------------------------------------------------------ */
+
+body.stitch-live-v12 #view-live
+.stitch-section-handle-v1920 {
+
+    left:
+        50% !important;
+
+    right:
+        auto !important;
+
+    top:
+        5px !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    z-index:
+        80 !important;
+
+    touch-action:
+        none !important;
+
+    user-select:
+        none !important;
+
+    cursor:
+        grab !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.stitch-section-handle-v1920.stitch-handle-dragging-v1920 {
+
+    cursor:
+        grabbing !important;
+}
+
+
+/* ------------------------------------------------------------
+   Bacalbasa D7H arranging animation.
+   ------------------------------------------------------------ */
+
+body.stitch-live-v12 #view-live
+.combined-live-grid.stitch-section-arranging-v1920
+> .stitch-draggable-section-v1920:not(
+    .stitch-section-dragging-v1920
+) {
+
+    animation:
+        stitchWorkspaceJiggleV1920
+        210ms
+        ease-in-out
+        infinite
+        alternate !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.combined-live-grid.stitch-section-arranging-v1920
+> .stitch-draggable-section-v1920:nth-child(even):not(
+    .stitch-section-dragging-v1920
+) {
+
+    animation-direction:
+        alternate-reverse !important;
+}
+
+
+@keyframes stitchWorkspaceJiggleV1920 {
+
+    from {
+        transform:
+            rotate(-0.18deg)
+            translateY(-0.4px);
+    }
+
+    to {
+        transform:
+            rotate(0.18deg)
+            translateY(0.4px);
+    }
+}
+
+
+/* Actual dragged section. */
+
+body.stitch-live-v12 #view-live
+.stitch-section-dragging-v1920 {
+
+    z-index:
+        100 !important;
+
+    cursor:
+        grabbing !important;
+
+    animation:
+        none !important;
+
+    transform:
+        translate3d(
+            var(--stitch-section-drag-x-v1920, 0px),
+            var(--stitch-section-drag-y-v1920, 0px),
+            0
+        )
+        scale(1.018)
+        rotate(0.18deg)
+        !important;
+
+    transition:
+        none !important;
+
+    will-change:
+        transform;
+
+    box-shadow:
+        0 22px 45px rgba(0,0,0,.36),
+        0 0 0 1px rgba(97,227,173,.13)
+        !important;
+}
+
+
+/* Drop destination. */
+
+body.stitch-live-v12 #view-live
+.stitch-section-drop-target-v1920 {
+
+    box-shadow:
+        0 0 0 2px rgba(97,227,173,.07) inset,
+        0 0 0 1px rgba(97,227,173,.42)
+        !important;
+}
+
+
+/* ------------------------------------------------------------
+   YOLO is now owned directly by camera-mode-strip.
+   ------------------------------------------------------------ */
+
+body.stitch-live-v12 #view-live
+.camera-mode-strip {
+
+    position:
+        relative !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.camera-mode-options.stitch-yolo-old-host-v1920 {
+
+    display:
+        none !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#cameraYoloControl.stitch-yolo-final-v1920 {
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    position:
+        absolute !important;
+
+    left:
+        auto !important;
+
+    margin:
+        0 !important;
+
+    transform:
+        translateY(-50%) !important;
+
+    translate:
+        none !important;
+
+    visibility:
+        visible !important;
+
+    opacity:
+        1 !important;
+
+    z-index:
+        30 !important;
+}
+
+
+/* ------------------------------------------------------------
+   ARM OWNERSHIP is finally removed from old offset experiments.
+   ------------------------------------------------------------ */
+
+body.stitch-live-v12 #view-live
+.hero-state .hero-top {
+
+    position:
+        relative !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0,1fr)
+        auto !important;
+
+    align-items:
+        start !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.hero-state .ownership-box.stitch-ownership-final-v1920 {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    margin:
+        0 !important;
+
+    padding-top:
+        0 !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+
+    align-self:
+        start !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.hero-state .ownership-box.stitch-ownership-final-v1920
+> span {
+
+    display:
+        block !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    body.stitch-live-v12 #view-live
+    .combined-live-grid.stitch-section-arranging-v1920
+    > .stitch-draggable-section-v1920 {
+
+        animation:
+            none !important;
+    }
+}
+
+
+
+/* EXACT BACALBASA HANDLE RULES */
+
+body.stitch-live-v12 #view-live .stitch-section-handle-v1920 {
+position:
+        absolute
+        !important;
+
+    z-index:
+        30
+        !important;
+
+    left:
+        50%
+        !important;
+
+    top:
+        4px
+        !important;
+
+    transform:
+        translateX(-50%)
+        !important;
+
+    width:
+        68px
+        !important;
+
+    height:
+        22px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    display:
+        grid
+        !important;
+
+    place-items:
+        center
+        !important;
+
+    border:
+        0
+        !important;
+
+    outline:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    cursor:
+        grab
+        !important;
+
+    touch-action:
+        none
+        !important;
+
+    user-select:
+        none
+        !important;
+}
+
+body.stitch-live-v12 #view-live .stitch-section-handle-v1920:active,
+body.stitch-live-v12 #view-live .stitch-section-handle-v1920.d15k-rail-handle-active {
+cursor:
+        grabbing
+        !important;
+}
+
+body.reference-stitch
+.stitch-section-grip-v1920 {
+width:
+        48px
+        !important;
+
+    height:
+        4px
+        !important;
+
+    border-radius:
+        999px
+        !important;
+
+    background:
+        linear-gradient(
+            90deg,
+
+            rgba(121,127,121,.34)
+            0%,
+
+            rgba(121,127,121,.34)
+            32%,
+
+            #8ecb7f
+            32%,
+
+            #8ecb7f
+            68%,
+
+            rgba(121,127,121,.34)
+            68%,
+
+            rgba(121,127,121,.34)
+            100%
+        )
+        !important;
+
+    transition:
+        box-shadow 160ms ease,
+        background 160ms ease,
+        transform 160ms ease
+        !important;
+}
+
+body.stitch-live-v12 #view-live .stitch-section-handle-v1920.d15k-rail-handle-active
+.stitch-section-grip-v1920 {
+box-shadow:
+        0 0 8px
+        rgba(52,211,153,.24)
+        !important;
+
+    transform:
+        scaleX(1.08)
+        !important;
+}
+
+/* Slightly brighten the handle while physically moving. */
+body.reference-stitch
+.d15l-active-rail-handle
+.stitch-section-grip-v1920,
+body.reference-stitch
+.d15-dock-grip.d15l-active-rail-handle {
+filter:
+        brightness(1.14)
+        !important;
+
+    box-shadow:
+        0 0 8px
+        rgba(
+            52,
+            211,
+            153,
+            .20
+        )
+        !important;
+}
+
+/* ------------------------------------------------------------
+   LEFT / RIGHT TOP GRIPS — SAME VERTICAL HEIGHT
+   ------------------------------------------------------------ */
+
+/*
+ * The right dock's 4px grip begins roughly 9px from the top.
+ *
+ * The left grip sits inside a 22px-tall pointer target,
+body.stitch-live-v12 #view-live .stitch-section-handle-v1920 {
+top:
+        0
+        !important;
+}

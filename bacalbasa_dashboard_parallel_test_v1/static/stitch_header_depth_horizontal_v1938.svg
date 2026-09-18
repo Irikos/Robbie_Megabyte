@@ -1,0 +1,185 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 205 34"
+    fill="none"
+>
+
+    <!--
+      STITCH V1.9.38
+
+      Horizontal version of the DEPTH idle motif.
+
+      Think of the normal DEPTH layers rotated 90 degrees:
+          nav -> narrow plane -> larger plane -> larger plane
+
+      Mostly green.
+      One amber depth layer.
+      One restrained travelling pulse.
+    -->
+
+
+    <!-- ========================================================
+         CONNECTION TO NAV
+         ======================================================== -->
+
+    <path
+        d="M204 17H174"
+        stroke="#0d7d60"
+        stroke-width="1"
+        stroke-linecap="round"
+        opacity=".42"
+    />
+
+
+    <!-- ========================================================
+         HORIZONTAL DEPTH PLANES
+         ======================================================== -->
+
+    <g
+        stroke-linejoin="round"
+        stroke-linecap="round"
+    >
+
+        <!-- closest / smallest -->
+
+        <path
+            d="M169 13L157 10V24L169 21"
+            stroke="#0c9a70"
+            stroke-width="1"
+            opacity=".68"
+        />
+
+
+        <!-- second -->
+
+        <path
+            d="M151 11L134 7V27L151 23"
+            stroke="#0b8765"
+            stroke-width="1"
+            opacity=".56"
+        />
+
+
+        <!-- amber reference plane -->
+
+        <path
+            d="M128 9L106 4V30L128 25"
+            stroke="#b57b0a"
+            stroke-width="1"
+            opacity=".48"
+        />
+
+
+        <!-- widest rear plane -->
+
+        <path
+            d="M99 7L72 2V32L99 27"
+            stroke="#08795c"
+            stroke-width="1"
+            opacity=".40"
+        />
+
+    </g>
+
+
+    <!-- ========================================================
+         CENTERLINE + DEPTH TARGET
+         ======================================================== -->
+
+    <path
+        d="M175 17H63"
+        stroke="#0a805f"
+        stroke-width=".7"
+        stroke-dasharray="5 7"
+        opacity=".26"
+    />
+
+
+    <circle
+        cx="105"
+        cy="17"
+        r="2.1"
+        fill="#f59e0b"
+        opacity=".75"
+    >
+        <animate
+            attributeName="r"
+            values="1.3;2.2;1.3"
+            dur="2.8s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+
+    <!-- ========================================================
+         OUTWARD MOVING GREEN DEPTH PULSE
+         ======================================================== -->
+
+    <circle
+        cy="17"
+        r="1.55"
+        fill="#8ecb7f"
+    >
+
+        <animate
+            attributeName="cx"
+            values="171;150;125;94;68"
+            dur="3.8s"
+            repeatCount="indefinite"
+        />
+
+        <animate
+            attributeName="opacity"
+            values="0;.85;.65;.35;0"
+            dur="3.8s"
+            repeatCount="indefinite"
+        />
+
+    </circle>
+
+
+    <!-- ========================================================
+         SMALL IDLE MARKS
+         ======================================================== -->
+
+    <g
+        stroke-linecap="round"
+        opacity=".32"
+    >
+
+        <path
+            d="M43 11H62"
+            stroke="#0b8d69"
+            stroke-width=".8"
+        />
+
+        <path
+            d="M34 17H59"
+            stroke="#0a765a"
+            stroke-width=".8"
+        />
+
+        <path
+            d="M46 23H64"
+            stroke="#a9760d"
+            stroke-width=".8"
+        />
+
+    </g>
+
+
+    <circle
+        cx="53"
+        cy="17"
+        r="1.1"
+        fill="#0da779"
+    >
+        <animate
+            attributeName="opacity"
+            values=".2;.8;.2"
+            dur="2.5s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+</svg>

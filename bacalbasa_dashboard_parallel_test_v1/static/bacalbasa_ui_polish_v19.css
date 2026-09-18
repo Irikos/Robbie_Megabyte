@@ -1,0 +1,1217 @@
+/* ==========================================================
+   FULL DASH POLISH V19
+   ========================================================== */
+
+
+/* ==========================================================
+   SETTINGS VALUES
+   LABEL | SLIDER | VALUE
+   ========================================================== */
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row) {
+    display: grid !important;
+
+    grid-template-columns:
+        128px
+        minmax(0,1fr)
+        92px
+        !important;
+
+    column-gap:
+        10px !important;
+
+    align-items:
+        center !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> label {
+    grid-column: 1 !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> input[type="range"] {
+    grid-column: 2 !important;
+
+    width:
+        100% !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> .controller-param-number {
+    grid-column: 3 !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        43px
+        49px
+        !important;
+
+    align-items:
+        center !important;
+
+    width:
+        92px !important;
+
+    min-width:
+        92px !important;
+
+    max-width:
+        92px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    overflow:
+        visible !important;
+}
+
+
+#controllerModal
+.controller-param-number
+input[type="number"] {
+    width:
+        43px !important;
+
+    min-width:
+        43px !important;
+
+    max-width:
+        43px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    outline:
+        0 !important;
+
+    color:
+        #8c96a7 !important;
+
+    text-align:
+        left !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+}
+
+
+#controllerModal
+.controller-param-number
+span {
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    color:
+        #8c96a7 !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        visible !important;
+
+    font-size:
+        10px !important;
+}
+
+
+/* Save text centered */
+#controllerModal
+#controllerStartBtn {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    text-align:
+        center !important;
+
+    line-height:
+        1 !important;
+}
+
+
+/* ==========================================================
+   MODE — ALIGN INSPIRE WITH FAULT
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+#actionCondFault,
+
+body.stitch-live-v12
+#view-live
+.quick-grid
+> div:has(> #fingerFeedback) {
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0,1fr)
+        82px
+        !important;
+
+    column-gap:
+        4px !important;
+
+    align-items:
+        center !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#actionCondFault
+.stitch-status-value,
+
+body.stitch-live-v12
+#view-live
+#fingerFeedback {
+    width:
+        82px !important;
+
+    min-width:
+        82px !important;
+
+    max-width:
+        82px !important;
+
+    justify-self:
+        start !important;
+
+    text-align:
+        left !important;
+
+    margin:
+        0 !important;
+
+    transform:
+        none !important;
+}
+
+
+/* ==========================================================
+   HAND BARS — MOVE LEFT
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-bar {
+    width:
+        calc(100% - 10px)
+        !important;
+
+    transform:
+        translateX(-10px)
+        !important;
+
+    transform-origin:
+        left center !important;
+}
+
+
+/* ==========================================================
+   REMOVE OLD BROKEN CONTROLLER PRESENTATION
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-old-controller-hidden-v19 {
+    display:
+        none !important;
+}
+
+
+/* Retire any old extra XR action panel */
+body.stitch-live-v12
+#view-live
+.action-readiness-panel,
+
+body.stitch-live-v12
+#view-live
+#xrActionBtn {
+    display:
+        none !important;
+}
+
+
+/* ==========================================================
+   NEW CONTROLLER
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-controller-v19 {
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    gap:
+        7px !important;
+
+    width:
+        100% !important;
+
+    margin:
+        5px 0 0 0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-controller-process-row-v19,
+
+body.stitch-live-v12
+#view-live
+.baca-controller-xr-row-v19 {
+    position:
+        relative !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    width:
+        100% !important;
+
+    height:
+        32px !important;
+}
+
+
+/* Gear independent from centered switch */
+body.stitch-live-v12
+#view-live
+.baca-settings-v19 {
+    position:
+        absolute !important;
+
+    left:
+        0 !important;
+
+    top:
+        0 !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    width:
+        32px !important;
+
+    height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        1px solid #333733
+        !important;
+
+    border-radius:
+        5px !important;
+
+    background:
+        #171917 !important;
+
+    color:
+        #8c96a7 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v19
+svg {
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    fill:
+        none !important;
+
+    stroke:
+        currentColor !important;
+
+    stroke-width:
+        1.5 !important;
+
+    stroke-linecap:
+        round !important;
+
+    stroke-linejoin:
+        round !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v19:disabled {
+    color:
+        #454b47 !important;
+
+    border-color:
+        #292c2a !important;
+
+    opacity:
+        1 !important;
+}
+
+
+/* Centered segmented control */
+body.stitch-live-v12
+#view-live
+.baca-switch-v19 {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        2px !important;
+
+    width:
+        min(
+            230px,
+            calc(100% - 74px)
+        )
+        !important;
+
+    height:
+        32px !important;
+
+    margin:
+        0 auto !important;
+
+    padding:
+        3px !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        #171817 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-segment-v19 {
+    appearance:
+        none !important;
+
+    -webkit-appearance:
+        none !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    flex:
+        1 1 0 !important;
+
+    gap:
+        6px !important;
+
+    height:
+        24px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 8px !important;
+
+    border:
+        1px solid transparent
+        !important;
+
+    border-radius:
+        3px !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    color:
+        #454b47 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        1 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* DEAD means visually dead */
+body.stitch-live-v12
+#view-live
+.baca-segment-v19[
+    data-enabled="false"
+] {
+    color:
+        #454b47 !important;
+
+    background:
+        transparent !important;
+
+    border-color:
+        transparent !important;
+
+    pointer-events:
+        none !important;
+
+    cursor:
+        default !important;
+}
+
+
+/* Configure / Enter enabled */
+body.stitch-live-v12
+#view-live
+.baca-segment-v19[
+    data-enabled="true"
+][data-tone="go"] {
+    color:
+        #98d982 !important;
+
+    background:
+        rgba(152,217,130,.09)
+        !important;
+
+    border-color:
+        rgba(152,217,130,.48)
+        !important;
+
+    pointer-events:
+        auto !important;
+
+    cursor:
+        pointer !important;
+}
+
+
+/* Stop / Exit enabled */
+body.stitch-live-v12
+#view-live
+.baca-segment-v19[
+    data-enabled="true"
+][data-tone="stop"] {
+    color:
+        #f5b51b !important;
+
+    background:
+        rgba(245,181,27,.07)
+        !important;
+
+    border-color:
+        rgba(245,181,27,.50)
+        !important;
+
+    pointer-events:
+        auto !important;
+
+    cursor:
+        pointer !important;
+}
+
+
+/* Connector icon */
+body.stitch-live-v12
+#view-live
+.baca-go-v19::before {
+    content:
+        "" !important;
+
+    width:
+        7px !important;
+
+    height:
+        7px !important;
+
+    flex:
+        0 0 7px !important;
+
+    border:
+        1.4px solid
+        currentColor !important;
+
+    border-radius:
+        2px !important;
+
+    transform:
+        rotate(-45deg)
+        !important;
+}
+
+
+/* Disconnect X */
+body.stitch-live-v12
+#view-live
+.baca-stop-v19::before {
+    content:
+        "×" !important;
+
+    font-size:
+        14px !important;
+
+    font-weight:
+        500 !important;
+
+    line-height:
+        1 !important;
+
+    color:
+        currentColor !important;
+}
+
+
+/* ==========================================================
+   BATTERY
+   ========================================================== */
+
+header.topbar,
+.topbar {
+    position:
+        relative !important;
+}
+
+
+.baca-battery-v19 {
+    position:
+        absolute !important;
+
+    right:
+        18px !important;
+
+    top:
+        50% !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        7px !important;
+
+    height:
+        30px !important;
+
+    padding:
+        0 10px !important;
+
+    border:
+        1px solid #343734
+        !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        rgba(17,19,17,.92)
+        !important;
+
+    color:
+        #98d982 !important;
+}
+
+
+.baca-battery-body-v19 {
+    position:
+        relative !important;
+
+    display:
+        block !important;
+
+    width:
+        23px !important;
+
+    height:
+        11px !important;
+
+    box-sizing:
+        border-box !important;
+
+    padding:
+        2px !important;
+
+    border:
+        1px solid currentColor
+        !important;
+
+    border-radius:
+        3px !important;
+}
+
+
+.baca-battery-body-v19::after {
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    right:
+        -4px !important;
+
+    top:
+        3px !important;
+
+    width:
+        2px !important;
+
+    height:
+        5px !important;
+
+    border-radius:
+        0 2px 2px 0 !important;
+
+    background:
+        currentColor !important;
+}
+
+
+.baca-battery-body-v19
+> i {
+    display:
+        block !important;
+
+    width:
+        0%;
+
+    max-width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    border-radius:
+        1px !important;
+
+    background:
+        currentColor !important;
+
+    transition:
+        width .25s ease !important;
+}
+
+
+.baca-battery-v19
+> strong {
+    min-width:
+        29px !important;
+
+    color:
+        currentColor !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    text-align:
+        right !important;
+}
+
+
+.baca-battery-v19[data-tone="good"] {
+    color:
+        #98d982 !important;
+}
+
+.baca-battery-v19[data-tone="low"] {
+    color:
+        #f5b51b !important;
+}
+
+.baca-battery-v19[data-tone="critical"] {
+    color:
+        #fb7185 !important;
+}
+
+.baca-battery-v19[data-tone="unknown"] {
+    color:
+        #68706a !important;
+}
+
+/* ==========================================================
+   FULL DASH ALIGNMENT V19.1
+   ========================================================== */
+
+
+/* ==========================================================
+   MODE
+
+   Fault and Inspire are both left-column MODE cells.
+   Anchor both values against the exact same right edge.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+#actionCondFault,
+
+body.stitch-live-v12
+#view-live
+.quick-grid
+> div:has(> #fingerFeedback) {
+    position:
+        relative !important;
+
+    display:
+        block !important;
+
+    min-width:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#actionCondFault
+.stitch-status-value,
+
+body.stitch-live-v12
+#view-live
+#fingerFeedback {
+    position:
+        absolute !important;
+
+    right:
+        0 !important;
+
+    top:
+        50% !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    text-align:
+        right !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==========================================================
+   HAND BARS
+
+   Previous V19 moved these -10px.
+   Bring them halfway back to the right.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-bar {
+    width:
+        calc(100% - 5px)
+        !important;
+
+    transform:
+        translateX(-5px)
+        !important;
+
+    transform-origin:
+        left center !important;
+}
+
+
+/* ==========================================================
+   HAND VALUE / FEEDBACK READOUTS
+
+   Move the little placeholder dashes — and later the actual
+   command/feedback numbers — slightly LEFT without moving
+   the bars with them.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout {
+    transform:
+        translateX(-6px)
+        !important;
+
+    overflow:
+        visible !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout
+strong,
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout
+em {
+    overflow:
+        visible !important;
+}
+
+
+
+/* FULL_DASH_ALIGNMENT_V19_2_BEGIN */
+
+
+/* ==========================================================
+   INSPIRE
+
+   Undo the previous absolute-position experiment.
+
+   The Inspire cell gets the same fixed-width value column
+   used by the other MODE rows, so OK 0.00s sits directly
+   beneath HOLD instead of overlapping "Inspire".
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.quick-grid
+> div:has(> #fingerFeedback) {
+    position:
+        static !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0,1fr)
+        88px
+        !important;
+
+    column-gap:
+        4px !important;
+
+    align-items:
+        center !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#fingerFeedback {
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    grid-column:
+        2 !important;
+
+    width:
+        88px !important;
+
+    min-width:
+        88px !important;
+
+    max-width:
+        88px !important;
+
+    justify-self:
+        end !important;
+
+    align-self:
+        center !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    transform:
+        none !important;
+
+    text-align:
+        right !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==========================================================
+   HAND BARS
+
+   Current = -5px.
+   Move them another 3px RIGHT -> -2px.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-bar {
+    width:
+        calc(100% - 2px)
+        !important;
+
+    transform:
+        translateX(-2px)
+        !important;
+
+    transform-origin:
+        left center !important;
+}
+
+
+/* ==========================================================
+   HAND VALUES
+
+   Current readout shift = -6px.
+   Move the command/feedback dashes another 4px LEFT.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout {
+    transform:
+        translateX(-10px)
+        !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* FULL_DASH_ALIGNMENT_V19_2_END */
+
+/* ==========================================================
+   FULL DASH HAND BAR ALIGNMENT V19.3
+   tiny +2px move to the RIGHT
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-bar {
+    width:
+        calc(100% - 2px)
+        !important;
+
+    transform:
+        translateX(0)
+        !important;
+
+    transform-origin:
+        left center !important;
+}
+
+
+/* HAND BARS — +5px RIGHT FROM CURRENT POSITION */
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-bar {
+    transform:
+        translateX(5px)
+        !important;
+}
+
+
+/* ==========================================================
+   HAND BAR FINAL ALIGNMENT — +5px RIGHT
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-bar {
+    transform:
+        translateX(5px)
+        !important;
+}
+
+
+/* ==========================================================
+   HAND READOUT FINAL ALIGNMENT V20.3
+
+   Previous final position: translateX(-10px)
+   Requested: +5px RIGHT
+   New position: -5px
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout {
+    transform:
+        translateX(-5px)
+        !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* HAND VALUES — another +5px RIGHT */
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout {
+    transform:
+        translateX(0px)
+        !important;
+
+    overflow:
+        visible !important;
+}
+
+
+
+/* HAND_VALUES_RIGHT_PLUS2_V20_6 */
+body.stitch-live-v12
+#view-live
+.hand-channel
+.hand-readout {
+    transform: translateX(2px) !important;
+    overflow: visible !important;
+}
+

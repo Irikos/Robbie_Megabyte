@@ -1,0 +1,239 @@
+<svg
+xmlns="http://www.w3.org/2000/svg"
+viewBox="0 0 420 48"
+preserveAspectRatio="none">
+
+<defs>
+
+  <linearGradient id="gGreen" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#183c32" stop-opacity="0"/>
+    <stop offset="20%"  stop-color="#377d61" stop-opacity=".38"/>
+    <stop offset="52%"  stop-color="#83cf78" stop-opacity=".88"/>
+    <stop offset="82%"  stop-color="#479269" stop-opacity=".42"/>
+    <stop offset="100%" stop-color="#17372f" stop-opacity="0"/>
+  </linearGradient>
+
+  <linearGradient id="gAmber" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#6b4812" stop-opacity="0"/>
+    <stop offset="24%"  stop-color="#a9751f" stop-opacity=".25"/>
+    <stop offset="55%"  stop-color="#dea12f" stop-opacity=".78"/>
+    <stop offset="84%"  stop-color="#90621c" stop-opacity=".30"/>
+    <stop offset="100%" stop-color="#61420f" stop-opacity="0"/>
+  </linearGradient>
+
+  <filter id="glow" x="-20%" y="-100%" width="140%" height="300%">
+    <feGaussianBlur stdDeviation="1.15" result="blur"/>
+    <feMerge>
+      <feMergeNode in="blur"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+
+
+  <path
+    id="waveA"
+    d="
+      M2 24
+      C38 24 48 9 80 9
+      C112 9 126 38 160 38
+      C194 38 207 7 242 7
+      C278 7 290 35 323 35
+      C356 35 374 24 418 24
+    "
+  />
+
+  <path
+    id="waveB"
+    d="
+      M2 24
+      C40 24 56 36 88 36
+      C121 36 137 11 171 11
+      C204 11 220 37 253 37
+      C288 37 303 12 337 12
+      C371 12 383 24 418 24
+    "
+  />
+
+  <path
+    id="waveC"
+    d="
+      M3 24
+      C52 24 67 17 103 17
+      C140 17 158 30 195 30
+      C232 30 250 16 287 16
+      C324 16 352 24 417 24
+    "
+  />
+
+</defs>
+
+
+<!-- quiet background filaments -->
+
+<use
+  href="#waveA"
+  fill="none"
+  stroke="#315c4d"
+  stroke-width=".65"
+  opacity=".22"
+/>
+
+<use
+  href="#waveB"
+  fill="none"
+  stroke="#70551f"
+  stroke-width=".6"
+  opacity=".18"
+/>
+
+<use
+  href="#waveC"
+  fill="none"
+  stroke="#536259"
+  stroke-width=".5"
+  stroke-dasharray="1 10"
+  opacity=".28"
+/>
+
+
+<!-- moving green filament -->
+
+<use
+  href="#waveA"
+  fill="none"
+  stroke="url(#gGreen)"
+  stroke-width="1.45"
+  stroke-linecap="round"
+  stroke-dasharray="62 29 12 38"
+  filter="url(#glow)">
+
+  <animate
+    attributeName="stroke-dashoffset"
+    from="0"
+    to="-282"
+    dur="6.8s"
+    repeatCount="indefinite"
+  />
+
+</use>
+
+
+<!-- moving amber filament -->
+
+<use
+  href="#waveB"
+  fill="none"
+  stroke="url(#gAmber)"
+  stroke-width="1.05"
+  stroke-linecap="round"
+  stroke-dasharray="31 35 8 44"
+  filter="url(#glow)">
+
+  <animate
+    attributeName="stroke-dashoffset"
+    from="-150"
+    to="150"
+    dur="8.7s"
+    repeatCount="indefinite"
+  />
+
+</use>
+
+
+<!-- second soft green current -->
+
+<use
+  href="#waveC"
+  fill="none"
+  stroke="#72bb72"
+  stroke-width=".7"
+  stroke-linecap="round"
+  stroke-dasharray="4 20"
+  opacity=".42">
+
+  <animate
+    attributeName="stroke-dashoffset"
+    from="0"
+    to="-144"
+    dur="5.2s"
+    repeatCount="indefinite"
+  />
+
+</use>
+
+
+<!-- travelling green light -->
+
+<circle
+  r="2.25"
+  fill="#95dc83"
+  filter="url(#glow)">
+
+  <animateMotion
+    dur="7.2s"
+    repeatCount="indefinite">
+    <mpath href="#waveA"/>
+  </animateMotion>
+
+  <animate
+    attributeName="opacity"
+    values=".04;.92;.80;.04"
+    keyTimes="0;.14;.82;1"
+    dur="7.2s"
+    repeatCount="indefinite"
+  />
+
+</circle>
+
+
+<!-- travelling amber light -->
+
+<circle
+  r="1.65"
+  fill="#dda12d"
+  filter="url(#glow)">
+
+  <animateMotion
+    begin="-3.4s"
+    dur="9.1s"
+    repeatCount="indefinite">
+    <mpath href="#waveB"/>
+  </animateMotion>
+
+  <animate
+    attributeName="opacity"
+    values=".03;.76;.58;.03"
+    keyTimes="0;.18;.82;1"
+    begin="-3.4s"
+    dur="9.1s"
+    repeatCount="indefinite"
+  />
+
+</circle>
+
+
+<!-- small drifting nodes -->
+
+<g fill="#79c779" filter="url(#glow)">
+
+  <circle r="1.0">
+    <animateMotion
+      begin="-1.8s"
+      dur="11s"
+      repeatCount="indefinite">
+      <mpath href="#waveC"/>
+    </animateMotion>
+  </circle>
+
+  <circle r=".75" opacity=".55">
+    <animateMotion
+      begin="-6.4s"
+      dur="13s"
+      repeatCount="indefinite">
+      <mpath href="#waveC"/>
+    </animateMotion>
+  </circle>
+
+</g>
+
+</svg>

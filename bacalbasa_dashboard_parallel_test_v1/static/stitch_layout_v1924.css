@@ -1,0 +1,1480 @@
+/* ==================================================================
+   STITCH V1.9.24
+   BACALBASA D15L / D15M MAJOR-SURFACE BEHAVIOR
+
+   Camera:
+       exact Bacalbasa 48 x 4 visible grip
+
+   Twin / operator rail:
+       same visual language, wider 72 x 4 grip
+
+   Visible grip geometry:
+       section top -> 13px
+       grip        -> 4px
+       grip -> content -> 13px
+
+       total reserved top lane = 30px
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+   THREE REAL MAJOR SURFACES
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .stitch-major-v1924 {
+
+    position:
+        relative !important;
+
+    box-sizing:
+        border-box !important;
+
+    padding-top:
+        30px !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    transform-origin:
+        center !important;
+}
+
+
+/* ------------------------------------------------------------------
+   REAL HANDLE HIT AREA
+
+   Bacalbasa:
+       top 4px
+       height 22px
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-handle-v1924 {
+
+    position:
+        absolute !important;
+
+    z-index:
+        100 !important;
+
+    left:
+        50% !important;
+
+    top:
+        4px !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    height:
+        22px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        grid !important;
+
+    place-items:
+        center !important;
+
+    border:
+        0 !important;
+
+    outline:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    cursor:
+        grab !important;
+
+    touch-action:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* Exact Bacalbasa hit width on Camera. */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="camera"]
+> .stitch-major-handle-v1924 {
+
+    width:
+        68px !important;
+}
+
+
+/* Wider requested hit area on Twin + operator rail. */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="twin"]
+> .stitch-major-handle-v1924,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="rail"]
+> .stitch-major-handle-v1924 {
+
+    width:
+        96px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-major-handle-v1924:active,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-handle-v1924.stitch-major-handle-active-v1924 {
+
+    cursor:
+        grabbing !important;
+}
+
+
+/* ------------------------------------------------------------------
+   EXACT BACALBASA GRIP LANGUAGE
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-grip-v1924 {
+
+    display:
+        block !important;
+
+    height:
+        4px !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        linear-gradient(
+            90deg,
+
+            rgba(121,127,121,.34)
+            0%,
+
+            rgba(121,127,121,.34)
+            32%,
+
+            #8ecb7f
+            32%,
+
+            #8ecb7f
+            68%,
+
+            rgba(121,127,121,.34)
+            68%,
+
+            rgba(121,127,121,.34)
+            100%
+        )
+        !important;
+
+    transition:
+        box-shadow 160ms ease,
+        background 160ms ease,
+        transform 160ms ease
+        !important;
+}
+
+
+/* Camera = exact Bacalbasa visible width. */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="camera"]
+.stitch-major-grip-v1924 {
+
+    width:
+        48px !important;
+}
+
+
+/* Center + operator = deliberately larger. */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="twin"]
+.stitch-major-grip-v1924,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="rail"]
+.stitch-major-grip-v1924 {
+
+    width:
+        72px !important;
+}
+
+
+/* Bacalbasa active-handle feedback. */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-handle-active-v1924
+.stitch-major-grip-v1924 {
+
+    box-shadow:
+        0 0 8px
+        rgba(52,211,153,.24)
+        !important;
+
+    transform:
+        scaleX(1.08)
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   D15L — ACTUAL SECTION FOLLOWS THE POINTER
+
+   No clone.
+   No placeholder.
+   No wiggle.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924.stitch-major-following-v1924 {
+
+    transform:
+        translate3d(
+            var(
+                --stitch-major-drag-x-v1924,
+                0px
+            ),
+            0,
+            0
+        )
+        !important;
+
+    z-index:
+        40000 !important;
+
+    box-shadow:
+        0 18px 44px
+        rgba(0,0,0,.36),
+        0 0 0 1px
+        rgba(52,211,153,.14)
+        !important;
+
+    will-change:
+        transform !important;
+
+    pointer-events:
+        none !important;
+
+    transition:
+        box-shadow 150ms ease
+        !important;
+}
+
+
+/* Pointer-captured handle stays logically active. */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-following-v1924
+.stitch-major-handle-active-v1924 {
+
+    pointer-events:
+        auto !important;
+
+    cursor:
+        grabbing !important;
+}
+
+
+/* ------------------------------------------------------------------
+   D15M — OTHER REAL SURFACES REFLOW
+
+   They use Web Animation FLIP from JS.
+   No CSS jiggle.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12.stitch-major-dragging-v1924
+#view-live
+.stitch-major-v1924:not(.stitch-major-following-v1924) {
+
+    will-change:
+        transform !important;
+}
+
+
+/* Do not clip the real surface while it crosses columns. */
+
+body.stitch-live-v12.stitch-major-dragging-v1924
+.app-shell,
+
+body.stitch-live-v12.stitch-major-dragging-v1924
+#view-live,
+
+body.stitch-live-v12.stitch-major-dragging-v1924
+#view-live
+.combined-live-grid {
+
+    overflow:
+        visible !important;
+}
+
+
+/* ------------------------------------------------------------------
+   MODE / ARM OWNERSHIP — STRUCTURAL TWO-COLUMN HEADER
+
+       MODE               ARM OWNERSHIP
+       —                  —
+
+   The original modeValue and ownershipValue remain the live nodes.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.stitch-mode-heading-v1924 {
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto !important;
+
+    align-items:
+        start !important;
+
+    column-gap:
+        10px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-cluster-v1924 {
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    text-align:
+        left !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+.ownership-box {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    translate:
+        none !important;
+
+    transform:
+        none !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    align-self:
+        start !important;
+
+    text-align:
+        right !important;
+}
+
+
+/* MODE and ARM OWNERSHIP glyph boxes share one Y coordinate. */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+.panel-kicker,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+.ownership-box
+> span {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    translate:
+        none !important;
+
+    transform:
+        none !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    vertical-align:
+        top !important;
+}
+
+
+/* Their live values also share the same second line. */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+#modeValue,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+#ownershipValue {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    translate:
+        none !important;
+
+    transform:
+        none !important;
+
+    margin:
+        4px 0 0 !important;
+
+    padding:
+        0 !important;
+
+    line-height:
+        14px !important;
+
+    min-height:
+        14px !important;
+}
+
+
+/* Do not allow historical decoration to create another value line. */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+.ownership-box::before,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+.ownership-box::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    body.stitch-live-v12
+    #view-live
+    .stitch-major-v1924.stitch-major-following-v1924 {
+
+        transition:
+            none !important;
+    }
+}
+
+
+/* ==================================================================
+   STITCH V1.9.25 — SINGLE VISIBLE MAJOR HANDLE
+
+   Historical V1.9.20 -> V1.9.23 drag engines may remain loaded
+   because some of those files also contain unrelated presentation /
+   YOLO work.
+
+   Their major-section handles, however, are no longer allowed to
+   render or receive pointer input.
+
+   V1.9.24 is the sole major-section drag owner.
+   ================================================================== */
+
+
+body.stitch-live-v12
+#view-live
+.stitch-section-handle-v1920,
+
+body.stitch-live-v12
+#view-live
+.stitch-section-handle-v1921,
+
+body.stitch-live-v12
+#view-live
+.stitch-section-handle-v1922,
+
+body.stitch-live-v12
+#view-live
+.stitch-section-handle-v1923 {
+
+    display:
+        none !important;
+
+    visibility:
+        hidden !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-section-grip-v1920,
+
+body.stitch-live-v12
+#view-live
+.stitch-section-grip-v1921,
+
+body.stitch-live-v12
+#view-live
+.stitch-section-grip-v1922,
+
+body.stitch-live-v12
+#view-live
+.stitch-section-grip-v1923 {
+
+    display:
+        none !important;
+}
+
+
+/*
+ * The sole remaining grip.
+ *
+ * Its gray outer portions + green centre are ONE bar, matching the
+ * Bacalbasa source language.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-handle-v1924 {
+
+    visibility:
+        visible !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-major-grip-v1924 {
+
+    display:
+        block !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.26 — SIDEBAR / MODE / HANDLE CLEANUP
+
+   Presentation only.
+   Major-section drag behavior is NOT changed.
+   ================================================================== */
+
+
+/* ================================================================
+   RIGHT SIDEBAR — FILL ITS ENTIRE GRID TRACK
+
+   The grid track was wider than the rail itself because older
+   sidebar styling retained a max/fixed width.
+
+   Preserve whichever grid slot V1.9.24 gives it, but make the
+   surface itself stretch across that whole slot.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> [data-stitch-major-key="rail"] {
+
+    width:
+        100% !important;
+
+    max-width:
+        none !important;
+
+    min-width:
+        0 !important;
+
+    justify-self:
+        stretch !important;
+
+    align-self:
+        stretch !important;
+
+    margin-right:
+        0 !important;
+}
+
+
+/*
+ * Remove older width caps from the immediate rail surface too.
+ */
+
+body.stitch-live-v12
+#view-live
+[data-stitch-major-key="rail"].operator-rail,
+
+body.stitch-live-v12
+#view-live
+[data-stitch-major-key="rail"].combined-rail {
+
+    width:
+        100% !important;
+
+    max-width:
+        none !important;
+
+    min-width:
+        0 !important;
+}
+
+
+/* ================================================================
+   MODE — REMOVE ARM OWNERSHIP COMPLETELY FROM PRESENTATION
+
+   The actual ownership DOM/value remains present so backend/data
+   behavior is untouched. It is simply no longer displayed.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924
+.ownership-box {
+
+    display:
+        none !important;
+}
+
+
+/*
+ * MODE now owns the full heading width.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1924 {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) !important;
+
+    width:
+        100% !important;
+
+    column-gap:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-cluster-v1924 {
+
+    width:
+        100% !important;
+
+    max-width:
+        none !important;
+}
+
+
+/* ================================================================
+   REMOVE THE LARGE LINE BELOW MODE
+
+   Cover both actual borders and historical pseudo-element versions.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.hero-top,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.stitch-mode-heading-v1924 {
+
+    border-bottom:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.hero-top::before,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.hero-top::after,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.stitch-mode-heading-v1924::before,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.stitch-mode-heading-v1924::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+
+    border:
+        0 !important;
+}
+
+
+/*
+ * Catch an actual dedicated separator if the original MODE markup
+ * uses one instead of a border.
+ */
+
+body.stitch-live-v12
+#view-live
+.hero-state
+> hr,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.hero-divider,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.mode-divider,
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.section-separator {
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   ALL THREE DRAG HANDLES — SAME DIMENSIONS
+
+   Previously:
+       Camera visible grip = 48px
+       Twin/Rail visible grip = 72px
+
+   Now:
+       ALL visible grips = 72px
+       ALL hit areas     = 96px
+
+   Styling/animation remains exactly the V1.9.24 Bacalbasa version.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924
+> .stitch-major-handle-v1924 {
+
+    width:
+        96px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924
+.stitch-major-grip-v1924 {
+
+    width:
+        72px !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.27 — MODE CLEANUP + EXACT THREE-GRIP PARITY
+   ================================================================== */
+
+
+/* ================================================================
+   ARM OWNERSHIP
+
+   The compatibility shell remains hidden only so old presentation
+   code cannot destabilize the MODE structure.
+
+   No visible ARM OWNERSHIP UI remains.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.ownership-box {
+
+    display:
+        none !important;
+}
+
+
+/*
+ * Absolute guarantee that the old ownership progress/divider can
+ * never return visually, even if stale cached markup is encountered.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.progress.ownership {
+
+    display:
+        none !important;
+
+    height:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    max-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+}
+
+
+/* ================================================================
+   MODE — REMOVE THE REMAINING HEADER DIVIDER
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state
+.hero-top,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-heading-v1924 {
+
+    border-bottom:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state::before,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state::after,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state
+.hero-top::before,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state
+.hero-top::after,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-heading-v1924::before,
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-heading-v1924::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   COMPACT MODE AFTER OWNERSHIP REMOVAL
+
+   Remove the dead vertical space that belonged to the deleted
+   ownership row/bar.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state {
+
+    min-height:
+        0 !important;
+
+    padding-bottom:
+        0 !important;
+
+    margin-bottom:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-top {
+
+    min-height:
+        0 !important;
+
+    padding-bottom:
+        0 !important;
+
+    margin-bottom:
+        0 !important;
+}
+
+
+/* ================================================================
+   ALL THREE MAJOR DRAG HANDLES — EXACT SAME SIZE
+
+   Important:
+   use the same attribute-specific selector as the old Camera rule,
+   so its historical 48px !important rule can no longer win through
+   higher specificity.
+
+       hit area    96px
+       visible bar 72px
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="camera"]
+> .stitch-major-handle-v1924,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="twin"]
+> .stitch-major-handle-v1924,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="rail"]
+> .stitch-major-handle-v1924 {
+
+    width:
+        96px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="camera"]
+> .stitch-major-handle-v1924
+.stitch-major-grip-v1924,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="twin"]
+> .stitch-major-handle-v1924
+.stitch-major-grip-v1924,
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924[data-stitch-major-key="rail"]
+> .stitch-major-handle-v1924
+.stitch-major-grip-v1924 {
+
+    width:
+        72px !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.28 — INLINE MODE VALUE + UNIFIED TOP GAP
+   ================================================================== */
+
+
+/* ================================================================
+   MODE + LIVE VALUE ON ONE LINE
+
+       MODE   —
+
+   #modeValue remains the real live telemetry node.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state
+.hero-top {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state
+.hero-top
+> div:first-child {
+
+    display:
+        inline-flex !important;
+
+    flex-direction:
+        row !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        12px !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.hero-state
+.hero-top
+.panel-kicker {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+#modeValue {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        14px !important;
+
+    height:
+        auto !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    line-height:
+        inherit !important;
+}
+
+
+/* ================================================================
+   TOP BAR -> MAIN SECTIONS GAP
+
+   Use the same visual rhythm as the gap between Camera / Twin / Rail.
+   ================================================================ */
+
+body.stitch-live-v12
+.app-shell {
+
+    padding-top:
+        8px !important;
+}
+
+
+body.stitch-live-v12
+#view-live {
+
+    margin-top:
+        0 !important;
+
+    padding-top:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid {
+
+    margin-top:
+        0 !important;
+
+    row-gap:
+        8px !important;
+
+    column-gap:
+        8px !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.29 — MODE VALUE ALIGNMENT + EXACT MAJOR GAP
+   ================================================================== */
+
+body.stitch-live-v12 {
+
+    --stitch-major-gap-v1929:
+        8px;
+}
+
+
+/* ================================================================
+   MODE + LIVE VALUE
+
+       MODE        —
+
+   Keep #modeValue as the real telemetry value.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-cluster-v1924 {
+
+    display:
+        inline-flex !important;
+
+    flex-direction:
+        row !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-cluster-v1924
+.panel-kicker {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    line-height:
+        18px !important;
+}
+
+
+/*
+ * Move the real value farther right.
+ *
+ * The slight +1px optical correction vertically centers the dash
+ * glyph with MODE instead of letting the font baseline make it look
+ * too high.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+#modeValue {
+
+    position:
+        relative !important;
+
+    inset:
+        auto !important;
+
+    left:
+        auto !important;
+
+    right:
+        auto !important;
+
+    bottom:
+        auto !important;
+
+    top:
+        1px !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    flex:
+        0 0 auto !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        14px !important;
+
+    height:
+        18px !important;
+
+    min-height:
+        18px !important;
+
+    margin:
+        0 0 0 22px !important;
+
+    padding:
+        0 !important;
+
+    line-height:
+        18px !important;
+}
+
+
+/* ================================================================
+   ONE GAP VALUE FOR THE ENTIRE MAJOR LAYOUT
+
+   Desired:
+
+       header
+          8 px
+       three major sections
+
+   and:
+
+       Camera  8px  Twin  8px  Right rail
+   ================================================================ */
+
+
+/*
+ * The shell itself was retaining the larger header/content spacing.
+ */
+
+body.stitch-live-v12
+.app-shell {
+
+    gap:
+        var(--stitch-major-gap-v1929)
+        !important;
+
+    row-gap:
+        var(--stitch-major-gap-v1929)
+        !important;
+
+    padding-top:
+        0 !important;
+}
+
+
+/*
+ * Do not add another margin underneath the top bar.
+ */
+
+body.stitch-live-v12
+header.topbar {
+
+    margin-bottom:
+        0 !important;
+}
+
+
+/*
+ * Remove intermediate spacing that would otherwise stack on top
+ * of the shell's 8px gap.
+ */
+
+body.stitch-live-v12
+#view-live {
+
+    margin-top:
+        0 !important;
+
+    padding-top:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid {
+
+    margin-top:
+        0 !important;
+
+    padding-top:
+        0 !important;
+
+    column-gap:
+        var(--stitch-major-gap-v1929)
+        !important;
+
+    row-gap:
+        var(--stitch-major-gap-v1929)
+        !important;
+
+    gap:
+        var(--stitch-major-gap-v1929)
+        !important;
+}
+

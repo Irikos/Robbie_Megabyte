@@ -1,0 +1,2822 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>G1 Teleop Control Center</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/static/styles.css?v=camera-multiview-v1" />
+  <link
+    rel="stylesheet"
+    href="/static/stitch_live_v12.css?v=controller-ui-v16"
+  />
+
+    <!-- BACALBASA_FONT_PARITY_V128 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/stitch_bacalbasa_shell_v1917.css?v=bacalbasa-shell-v1917" />
+
+  <link rel="stylesheet" href="/static/stitch_bacalbasa_shell_v1918.css?v=bacalbasa-shell-v1918" />
+
+  <link rel="stylesheet" href="/static/stitch_sections_v1920.css?v=sections-v1920" />
+
+  <link rel="stylesheet" href="/static/stitch_layout_v1923.css?v=layout-v1923" />
+  <link rel="stylesheet" href="/static/stitch_layout_v1924.css?v=layout-v1929">
+  <link rel="stylesheet" href="/static/stitch_polish_v1930.css?v=1930" />
+  <link rel="stylesheet" href="/static/stitch_resize_v1931.css?v=camera-row-depth-v1941" />
+  <link rel="stylesheet" href="/static/bacalbasa_inspect_resize_v111.css?v=inspect-final-clean3">
+
+
+  <link rel="stylesheet" href="/static/stitch_final_polish_v1944.css?v=1944" />
+
+  <link rel="stylesheet" href="/static/stitch_final_polish_v1945.css?v=1945" />
+
+  <link rel="stylesheet" href="/static/stitch_final_polish_v1946.css?v=1946" />
+
+  <link rel="stylesheet" href="/static/stitch_final_polish_v1947.css?v=1947" />
+  <link rel="stylesheet" href="/static/stitch_final_polish_v1948.css?v=1948b" />
+  <link rel="stylesheet" href="/static/stitch_camera_workspace_v1949.css?v=1949" />
+  <link rel="stylesheet" href="/static/stitch_camera_workspace_v1951.css?v=1951" />
+  <link rel="stylesheet" href="/static/stitch_camera_workspace_v1952.css?v=1952" />
+  <link rel="stylesheet" href="/static/stitch_camera_workspace_v1953.css?v=1953r1" />
+  <link rel="stylesheet" href="/static/stitch_interface_consistency_v1954.css?v=1954" />
+  <link rel="stylesheet" href="/static/bacalbasa_ui_v2000.css?v=2105" />
+
+  <link rel="stylesheet" href="/static/bacalbasa_slam_v2200.css?v=2210-clean1" />
+  <script defer src="/static/bacalbasa_slam_v2201.js?v=slam-final-clean1"></script>
+  <link rel="stylesheet" href="/static/bacalbasa_slam_v2215.css?v=2216-1" />
+  <script defer src="/static/bacalbasa_slam_v2215.js?v=slam-final-clean1"></script>
+  <link rel="stylesheet" href="/static/bacalbasa_ui_core.css?v=1-11">
+
+  <script id="bacaSlamCanonicalStartupWidthV13">
+  (() => {
+      try {
+          [
+              "g1Dashboard.bacaSlamMajorWidths.clean1",
+              "g1Dashboard.bacaSlamMajorWidths.v2210r1",
+              "g1Dashboard.bacaSlamMajorWidths.v2210"
+          ].forEach(key => {
+              localStorage.removeItem(key);
+          });
+      } catch (_) {
+      }
+  })();
+  </script>
+  <link rel="stylesheet" href="/static/bacalbasa_inspect_v1.css?v=1-17">
+  <link rel="stylesheet" href="/static/bacalbasa_resize_core.css?v=1-0">
+  <link rel="stylesheet" href="/static/bacalbasa_shell_final.css?v=1-0">
+  <link rel="stylesheet" href="/static/bacalbasa_inspect_polish_v119.css?v=1-19">
+  <link rel="stylesheet" href="/static/bacalbasa_inspect_overlay_resize_v120.css?v=inspect-final-clean2">
+  <link rel="stylesheet" href="/static/bacalbasa_camera_host_v167.css?v=167-1" />
+
+  <!-- LIVE_STARTUP_CLEANUP_6_PREPAINT_WIDTHS -->
+  <script id="bacaLivePrepaintWidthsV1">
+  (() => {
+      "use strict";
+
+      const STORAGE_KEY =
+          "g1Dashboard.stitchMajorWidths.v1931";
+
+      const STYLE_ID =
+          "bacaLivePrepaintWidthsStyleV1";
+
+      const KEYS = [
+          "camera",
+          "twin",
+          "rail"
+      ];
+
+      try {
+
+          const raw =
+              JSON.parse(
+                  localStorage.getItem(
+                      STORAGE_KEY
+                  )
+                  ||
+                  "null"
+              );
+
+
+          if(
+              !raw
+              ||
+              typeof raw !== "object"
+          ){
+              return;
+          }
+
+
+          const values = {};
+
+          let sum = 0;
+
+
+          for(const key of KEYS){
+
+              const value =
+                  Number(
+                      raw[key]
+                  );
+
+
+              if(
+                  !Number.isFinite(value)
+                  ||
+                  value <= 0
+              ){
+                  return;
+              }
+
+
+              values[key] =
+                  value;
+
+              sum +=
+                  value;
+          }
+
+
+          if(sum <= 0){
+              return;
+          }
+
+
+          for(const key of KEYS){
+
+              values[key] =
+                  values[key]
+                  /
+                  sum;
+          }
+
+
+          const style =
+              document.createElement(
+                  "style"
+              );
+
+
+          style.id =
+              STYLE_ID;
+
+
+          /*
+           * DOM order at first paint:
+           *
+           *     Camera | Twin | Rail
+           *
+           * These are the same logical keys used by the
+           * V1.9.31 persistence owner.
+           *
+           * fr units preserve the saved ratios while CSS Grid
+           * subtracts the inter-column gaps automatically.
+           */
+          style.textContent =
+              `
+              .combined-live-grid {
+                  grid-template-columns:
+                      minmax(0, ${values.camera}fr)
+                      minmax(0, ${values.twin}fr)
+                      minmax(0, ${values.rail}fr)
+                      !important;
+              }
+              `;
+
+
+          document.head.appendChild(
+              style
+          );
+
+
+          document.documentElement
+              .dataset
+              .bacaLivePrepaintWidths =
+                  "true";
+
+      }
+      catch(_){
+          /*
+           * localStorage may be unavailable.
+           * In that case normal stylesheet geometry is used.
+           */
+      }
+
+  })();
+  </script>
+
+
+  <link
+    rel="stylesheet"
+    href="/static/bacalbasa_controller_v18.css?v=18-3"
+  >
+
+
+<link
+  rel="stylesheet"
+  href="/static/bacalbasa_ui_polish_v19.css?v=19-9-hand-values-plus2"
+>
+
+
+<link
+  rel="stylesheet"
+  href="/static/bacalbasa_controller_v20.css?v=20-2-clean"
+>
+
+</head>
+<!-- STITCH_V134_LABEL_PARITY -->
+<!-- STITCH_STATIC_GEOMETRY_V1939 -->
+<!-- STITCH_RESPONSIVE_LABELS_V1940 -->
+<!-- STITCH_CAMERA_HEADER_REAL_ROW_V1941 -->
+<!-- STITCH_CAMERA_TITLE_FINAL_Y_V1942 -->
+<body class="stitch-live-v12">
+  <header class="topbar">
+    <div class="brand">
+      <span id="stitchAppLogo" class="stitch-app-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle
+            cx="12"
+            cy="12"
+            r="8"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-dasharray="2 3"
+          />
+          <path
+            d="M12 4v16M4 12h16"
+            stroke="currentColor"
+            stroke-width="1"
+          />
+          <polygon
+            points="12,7 15.5,12 12,17 8.5,12"
+            fill="currentColor"
+            fill-opacity=".25"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="1.5"
+            fill="#98d982"
+          />
+        </svg>
+      </span>
+      <div class="eyebrow">UNITREE G1 · XR TELEOPERATION</div>
+      <div class="title-row">
+        <h1>Teleop Control Center</h1>
+        <span class="readonly process-control-label">BRIDGE NO DDS · SERVICE WORKER ISOLATED</span>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="Dashboard sections">
+      <button class="tab active" data-view="live">Live</button>
+      <button class="tab" data-view="slam">SLAM</button>
+      <button class="tab" data-view="inspect">Inspect</button>
+      <button class="tab" data-view="bacalbasa">Camera Teleop</button>
+    </nav>
+
+    <div class="header-status">
+      <span id="controllerProcessChip" class="chip">CTRL —</span>
+      <span id="telemetryChip" class="chip">TELEMETRY —</span>
+      <span id="cameraChip" class="chip">CAMERA —</span>
+      <span id="versionText" class="version">—</span>
+    </div>
+  </header>
+  <main class="app-shell">
+    <!-- COMBINED LIVE / OPERATOR VIEW -->
+    <section id="view-live" class="view active">
+      <div class="combined-live-grid">
+        <section class="panel camera-panel">
+          <div class="panel-head compact-head" style="display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;width:100%!important;min-height:34px!important;height:34px!important;padding:0!important;margin:0!important;">
+            <div class="stitch-camera-title-block-v1940" style="display:flex!important;align-items:center!important;width:auto!important;min-width:0!important;max-width:none!important;flex:0 0 auto!important;align-self:center!important;position:static!important;top:auto!important;transform:none!important;">
+              <!-- STITCH_CAMERA_HEADER_V160 -->
+              <div id="cameraMultiviewTitle" class="panel-kicker" style="position:relative!important;top:auto!important;left:auto!important;right:auto!important;transform:translateY(5px)!important;width:auto!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;display:flex!important;align-items:center!important;white-space:nowrap!important;">Camera Multiview</div>
+              <div class="panel-title-line">
+                <strong>Live views</strong>
+                <span id="cameraMeta" class="dim">—</span>
+              </div>
+            </div>
+
+            <div class="camera-actions" style="display:flex!important;align-items:center!important;justify-content:flex-end!important;align-self:center!important;flex:0 0 auto!important;width:auto!important;min-width:0!important;margin-left:auto!important;position:static!important;top:auto!important;transform:none!important;">
+              <span id="cameraProcessState" class="camera-process-state">SERVER —</span>
+<a id="cameraTrustLink" class="ghost-link" target="_blank" rel="noreferrer">Trust RGB cert</a>
+
+<div
+                id="stitchCameraPowerSwitchV158"
+                class="baca-power-switch-v2100"
+                role="group"
+                aria-label="Camera connection"
+              >
+
+                <span
+                  class="baca-power-indicator-v2100"
+                  aria-hidden="true"
+                ></span>
+
+                <button
+                  id="cameraConnectBtn"
+                  class="
+                    baca-power-segment-v2100
+                    baca-power-connect-v2100
+                  "
+                  type="button"
+                  aria-label="Connect camera views"
+                >
+
+                  <span class="baca-power-label-v2100">
+                    Connect
+                  </span>
+                </button>
+
+                <button
+                  id="cameraStopBtn"
+                  class="
+                    baca-power-segment-v2100
+                    baca-power-disconnect-v2100
+                  "
+                  type="button"
+                  aria-label="Disconnect camera"
+                >
+
+                  <span class="baca-power-label-v2100">
+                    Disconnect
+                  </span>
+                </button>
+
+              </div>
+</div>
+          </div>
+
+          <div class="camera-mode-strip" aria-label="Active camera views">
+            <div class="camera-mode-buttons" data-stitch-camera-dock="v144">
+              <!-- STITCH_CAMERA_DOCK_STATIC_V144 -->
+              <button
+                class="camera-mode-btn stitch-camera-dock-btn active"
+                data-camera-mode="rgb"
+                aria-pressed="true"
+                aria-label="RealSense RGB"
+              >
+                <span class="stitch-camera-dock-svg">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+  <rect x="3.5" y="6.5" width="17" height="12" rx="2.2"/>
+  <circle cx="12" cy="12.5" r="4"/>
+  <circle cx="12" cy="12.5" r="1.6"/>
+  <path d="M8 6.5l1.4-2h5.2l1.4 2"/>
+</svg>
+</span>
+                <span class="stitch-camera-dock-num">
+                  01
+                </span>
+              </button>
+              <button
+                class="camera-mode-btn stitch-camera-dock-btn active"
+                data-camera-mode="depth"
+                aria-pressed="true"
+                aria-label="Depth"
+              >
+                <span class="stitch-camera-dock-svg">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M12 3.5l8 4.2-8 4.2-8-4.2 8-4.2Z"/>
+  <path d="M5 11.2l7 3.7 7-3.7"/>
+  <path d="M5 15.5l7 4 7-4"/>
+  <path d="M12 7.7v7.2"/>
+</svg>
+</span>
+                <span class="stitch-camera-dock-num">
+                  02
+                </span>
+              </button>
+              <button
+                class="camera-mode-btn stitch-camera-dock-btn active"
+                data-camera-mode="overlay"
+                aria-pressed="true"
+                aria-label="RGB + Depth"
+              >
+                <span class="stitch-camera-dock-svg">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+  <rect x="3.5" y="5" width="11.5" height="11.5" rx="1.8"/>
+  <rect x="9" y="8" width="11.5" height="11.5" rx="1.8"/>
+  <circle cx="9.3" cy="10.8" r="2.5"/>
+  <path d="M13 15l2-2 3 3"/>
+</svg>
+</span>
+                <span class="stitch-camera-dock-num">
+                  03
+                </span>
+              </button>
+              <button
+                class="camera-mode-btn stitch-camera-dock-btn"
+                data-camera-mode="disparity"
+                aria-pressed="false"
+                aria-label="Disparity"
+              >
+                <span class="stitch-camera-dock-svg">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+  <rect x="2.8" y="6.5" width="7.4" height="11" rx="1.4"/>
+  <rect x="13.8" y="6.5" width="7.4" height="11" rx="1.4"/>
+  <path d="M8 12h8"/>
+  <path d="M11 9l-3 3 3 3"/>
+  <path d="M13 9l3 3-3 3"/>
+</svg>
+</span>
+                <span class="stitch-camera-dock-num">
+                  04
+                </span>
+              </button>
+              <button
+                class="camera-mode-btn stitch-camera-dock-btn"
+                data-camera-mode="pointcloud"
+                aria-pressed="false"
+                aria-label="Point Cloud"
+              >
+                <span class="stitch-camera-dock-svg">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+  <circle cx="7" cy="7" r="1"/>
+  <circle cx="12.5" cy="5" r="1"/>
+  <circle cx="17.5" cy="8" r="1"/>
+  <circle cx="9" cy="11" r="1"/>
+  <circle cx="15" cy="12" r="1"/>
+  <circle cx="18.5" cy="15.5" r="1"/>
+  <circle cx="11.5" cy="16.5" r="1"/>
+  <path d="M5 19h6"/>
+  <path d="M5 19v-6"/>
+  <path d="M5 19l4-4"/>
+</svg>
+</span>
+                <span class="stitch-camera-dock-num">
+                  05
+                </span>
+              </button>
+              <button
+                class="camera-mode-btn stitch-camera-dock-btn active"
+                data-camera-mode="lifecam"
+                aria-pressed="true"
+                aria-label="External Cam"
+              >
+                <span class="stitch-camera-dock-svg">
+<svg viewBox="0 0 24 24" aria-hidden="true">
+  <rect x="5" y="4.5" width="14" height="13" rx="4"/>
+  <circle cx="12" cy="11" r="3.8"/>
+  <circle cx="12" cy="11" r="1.5"/>
+  <path d="M9 17.5v2h6v-2"/>
+  <path d="M8 20h8"/>
+</svg>
+</span>
+                <span class="stitch-camera-dock-num">
+                  06
+                </span>
+              </button>
+</div>
+
+            <div class="camera-mode-options">
+              <!-- STITCH_CAMERA_CONTROLS_V157 -->
+              <!-- STITCH_CAMERA_CONTROLS_V158 -->
+              <!-- STITCH_CAMERA_CONTROLS_V159 -->
+<label
+                id="cameraYoloControl"
+                class="toggle camera-yolo-toggle stitch-original-yolo-hidden-v1923"
+                title="Run one YOLO inference pipeline and reuse detections across aligned RealSense views"
+              >
+                <input
+                  id="cameraYoloToggle"
+                  type="checkbox"
+                />
+                <span>YOLO</span>
+              </label>
+<span id="cameraYoloState" class="camera-yolo-state">YOLO OFF</span>
+              <span id="cameraModeState" class="camera-mode-state">VIEWS 2</span>
+            </div>
+          </div>
+          <div id="cameraStage" class="camera-stage camera-grid" data-count="2"></div>
+        </section>
+
+        <section class="panel twin-panel baca-ui-major-panel">
+          <div class="panel-head twin-head">
+            <div class="twin-title-block">
+              <div class="panel-kicker">ROBOT · 29 DOF</div>
+              <div class="panel-title-line"><strong>Live G1 + Inspire twin</strong><span id="robotModelStatus" class="dim">waiting for V1.4 telemetry</span></div>
+            </div>
+          </div>
+          <div class="twin-controlbar baca-ui-primary-row" aria-label="Robot twin display controls">
+            <div class="twin-control-group">
+              <span class="twin-control-label">OVERLAYS</span>
+              <label class="toggle"><input id="ghostToggle" type="checkbox" checked><span class="stitch-overlay-label-v1940"><span class="stitch-overlay-full-v1940">Command ghost</span><span class="stitch-overlay-short-v1940">Ghost</span></span></label>
+              <label class="toggle" title="Show the 29 kinematic joint centers on top of the G1 mesh"><input id="jointToggle" type="checkbox"><span class="stitch-overlay-label-v1940"><span class="stitch-overlay-full-v1940">Joint markers</span><span class="stitch-overlay-short-v1940">Joint</span></span></label>
+              <label class="toggle health-toggle"><input id="healthToggle" type="checkbox" checked><span class="stitch-overlay-label-v1940"><span class="stitch-overlay-full-v1940">Health</span><span class="stitch-overlay-short-v1940">Health</span></span></label>
+            </div>
+            <div class="twin-control-group health-control-group">
+              <span class="twin-control-label">HEALTH VIEW</span>
+              <select id="healthModeSelect" class="health-mode-select" aria-label="Joint health overlay mode">
+                <option value="composite">Composite</option>
+                <option value="temperature">Temperature</option>
+                <option value="torque">Torque</option>
+              </select>
+            </div>
+            <button id="twinResetBtn" class="ghost-btn twin-reset-btn baca-ui-reset-action">Reset view</button>
+          </div>
+          <div
+            id="stitchTwinStatusbar"
+            class="stitch-twin-statusbar baca-ui-secondary-row"
+          >
+            <div class="stitch-runtime-group">
+
+              <span
+                id="stitchCtrlChip"
+                class="stitch-runtime-chip warn"
+              >
+                CTRL OFFLINE
+              </span>
+            </div>
+
+            <div class="stitch-performance-group">
+              <span>
+                POSE
+                <strong id="stitchPoseAge">—</strong>
+              </span>
+
+              <span>
+                RX
+                <strong id="stitchPoseRx">—</strong>
+              </span>
+
+              <span>
+                RENDER
+                <strong id="stitchPoseFps">—</strong>
+              </span>
+
+              <span>
+                SEQ
+                <strong id="stitchPoseSeq">—</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="twin-stage">
+            <canvas id="robotTwinCanvas" aria-label="Live Unitree G1 with Inspire RH56DFX hand digital twin"></canvas>
+            <div class="twin-hud top-left">drag orbit · wheel zoom · click link/joint · double-click reset</div>
+            <div class="twin-hud top-right twin-perf">
+              <span>POSE <strong id="poseAgeStat">—</strong></span>
+              <span>RX <strong id="poseRxStat">—</strong></span>
+              <span>RENDER <strong id="poseFpsStat">—</strong></span>
+              <span>SEQ <strong id="poseSeqStat">—</strong></span>
+            </div>
+            <div id="healthLegendPrimary" class="twin-legend bottom-left">
+              <span><i class="health-dot h0"></i>normal</span>
+              <span><i class="health-dot h1"></i>watch</span>
+              <span><i class="health-dot h2"></i>high</span>
+              <span><i class="health-dot h3"></i>very high</span>
+            </div>
+          </div>
+          <div class="robot-mini-grid twin-stats">
+            <div><span>MODE MACHINE</span><strong id="robotModeMachine">—</strong></div>
+            <div><span>OWNERSHIP</span><strong id="robotWeight">—</strong></div>
+            <div><span>MAX ARM Δq</span><strong id="robotMaxError">—</strong></div>
+            <div><span>PEAK τ UTIL</span><strong id="robotPeakTorque">—</strong></div>
+            <div><span>MAX TEMP</span><strong id="robotMaxTemp">—</strong></div>
+            <div><span>JOINT HEALTH</span><strong id="robotHealthSummary">—</strong></div>
+          </div>
+        </section>
+
+        <aside class="operator-rail combined-rail">
+          <section class="hero-state panel">
+            <div class="hero-top">
+              <div>
+                <div class="panel-kicker">MODE</div>
+                <div id="modeValue" class="mode-value" hidden aria-hidden="true"></div>
+              </div>
+
+              <div class="ownership-box" hidden aria-hidden="true">
+                <span></span>
+                <strong id="ownershipValue"></strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel health-panel">
+            <div class="mini-health-grid">
+              <div class="health-item"><span>Xr</span><strong id="xrValue">—</strong><small id="xrReason">—</small></div>
+              <div class="health-item"><span>Hands</span><strong id="handsValue">—</strong><small id="handsReason">—</small></div>
+            </div>
+          </section>
+
+          <section id="recoveryPanel" class="panel recovery-panel hidden">
+            <div class="panel-head"><strong>Recovery</strong><span id="recoveryState" class="chip warn">HOLD</span></div>
+            <div class="recovery-row"><span>Position</span><strong id="holdPosition">—</strong></div>
+            <div class="recovery-row"><span>Rotation</span><strong id="holdRotation">—</strong></div>
+            <div class="recovery-row"><span>Stable frames</span><strong id="resumeFrames">—</strong></div>
+            <div class="progress"><div id="resumeBar" class="progress-fill"></div></div>
+          </section>
+
+          <section class="panel quick-panel">
+            <div class="quick-grid">
+              <div><span>Finger worker</span><strong id="fingerPhase">—</strong></div>
+              <div><span>Inspire</span><strong id="fingerFeedback">—</strong></div>
+              <div><span>Packet</span><strong id="packetAge">—</strong></div>
+            </div>
+          </section>
+
+          <section class="panel controller-process-panel">
+            <div class="panel-head controller-process-head">
+              <div><div class="panel-kicker">TELEOP LISTENER</div><strong id="controllerProcessTitle">Controller process</strong></div>
+              <span id="controllerProcessState" class="chip">—</span>
+            </div>
+            <div class="controller-process-meta">
+              <span id="controllerProcessPid">pid —</span>
+              <span id="controllerProcessUptime">uptime —</span>
+              <span id="controllerInspireState">Inspire —</span>
+            </div>
+            <div id="controllerProcessDetail" class="controller-process-detail">Checking process manager…</div>
+            
+            <div class="controller-process-actions baca-controller-actions-v16">
+
+              <button
+                id="controllerSettingsBtn"
+                class="baca-controller-settings-v16"
+                type="button"
+                disabled
+              >Settings</button>
+
+              <div
+                id="controllerProcessSwitchV16"
+                class="baca-segmented-switch-v16"
+                role="group"
+                aria-label="Controller process"
+              >
+                <button
+                  id="controllerConfigureBtn"
+                  class="baca-segment-v16 baca-segment-primary-v16"
+                  type="button"
+                >Configure</button>
+
+                <button
+                  id="controllerStopBtn"
+                  class="baca-segment-v16 baca-segment-stop-v16"
+                  type="button"
+                  disabled
+                >Stop</button>
+              </div>
+
+            </div>
+
+            <div
+              id="controllerXrSwitchV16"
+              class="baca-segmented-switch-v16 baca-xr-switch-v16"
+              role="group"
+              aria-label="XR teleoperation"
+            >
+              <button
+                id="bacaEnterTeleopBtn"
+                class="baca-segment-v16 baca-segment-primary-v16"
+                type="button"
+                disabled
+              >Enter Teleop</button>
+
+              <button
+                id="bacaExitTeleopBtn"
+                class="baca-segment-v16 baca-segment-stop-v16"
+                type="button"
+                disabled
+              >Exit Teleop</button>
+            </div>
+</section>
+
+          <section class="panel action-readiness-panel">
+            <div class="panel-head action-readiness-head">
+              <div><div class="panel-kicker">ACTION READINESS</div><strong id="actionLabel">Controller V1.8 required</strong></div>
+              <span id="actionReadinessChip" class="chip">READ ONLY</span>
+            </div>
+            <div class="action-route"><span id="actionOperation">—</span><b>→</b><strong id="actionNextState">—</strong></div>
+            <div id="actionReason" class="action-reason">No browser command channel is enabled in this revision.</div>
+            <div class="action-condition-strip">
+              <span id="actionCondLowstate">LOW —</span>
+              <span id="actionCondXr">XR —</span>
+              <!-- STITCH_SAFE_FINAL_ROWS -->
+              <span id="actionCondFault">
+                <span class="stitch-status-label">Fault</span>
+                <strong class="stitch-status-value">—</strong>
+              </span>
+            </div>
+            <div class="xr-action-row">
+              <button id="xrActionBtn" class="primary-btn xr-action-btn" disabled>ENTER TELEOP</button>
+              <span id="xrActionResult" class="xr-action-result">Controller request channel not ready.</span>
+            </div>
+          </section>
+
+          <section class="panel hand-panel twin-hands rail-hand-panel">
+            <div class="panel-head hand-panel-head">
+              <div><strong>Hands</strong><span class="hand-subtitle">command / feedback</span></div>
+            </div>
+            <div class="hand-matrix" aria-label="Inspire hand command and feedback">
+              <div class="hand-matrix-head"><span>FINGER</span><strong>LEFT</strong><strong>RIGHT</strong></div>
+              <!-- STITCH_V141_FUNCTIONAL_HAND_PLACEHOLDERS -->
+              <div id="handMatrixBody" class="hand-matrix-body">
+                <div class="hand-matrix-row stitch-hand-placeholder-row">
+                  <span class="hand-finger-name">Pinky</span>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                </div>
+                <div class="hand-matrix-row stitch-hand-placeholder-row">
+                  <span class="hand-finger-name">Ring</span>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                </div>
+                <div class="hand-matrix-row stitch-hand-placeholder-row">
+                  <span class="hand-finger-name">Middle</span>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                </div>
+                <div class="hand-matrix-row stitch-hand-placeholder-row">
+                  <span class="hand-finger-name">Index</span>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                </div>
+                <div class="hand-matrix-row stitch-hand-placeholder-row">
+                  <span class="hand-finger-name">Thumb</span>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                </div>
+                <div class="hand-matrix-row stitch-hand-placeholder-row">
+                  <span class="hand-finger-name">Thumb rot</span>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                  <div class="hand-channel">
+                    <div class="hand-bar">
+                      <i class="hand-command-fill" style="width:0%"></i>
+                    </div>
+                    <span class="hand-readout">
+                      <strong>—</strong><em>—</em>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="hand-legend"><span><i class="hand-legend-fill"></i> command</span><span><i class="hand-legend-marker"></i> feedback</span></div>
+            <div class="quick-grid hand-meta">
+              <div><span>Mode</span><strong id="handModeDetail">—</strong></div>
+              <div><span>Feedback</span><strong id="handFeedbackDetail">—</strong></div>
+              <div><span>Reacquire</span><strong id="handReacquire">—</strong></div>
+              <div><span>Retargets</span><strong id="handRetargets">—</strong></div>
+              <div class="hand-meta-wide"><span>Sym thumb</span><strong id="thumbStatus">—</strong></div>
+            </div>
+          </section>
+
+          <section class="panel joint-inspector rail-joint-inspector">
+            <div class="panel-head">
+              <div><div class="panel-kicker">SELECTED JOINT</div><strong id="selectedJointName">L_elbow</strong></div>
+              <div class="joint-head-chips"><span id="selectedHealthChip" class="chip">HEALTH —</span><span id="selectedJointIndex" class="chip">#18</span></div>
+            </div>
+            <div class="joint-group-line"><span id="selectedJointGroup">LEFT ARM</span><span id="selectedMotorState">motor —</span></div>
+            <!-- STITCH_V135_JOINT_LAYOUT -->
+            <div class="joint-kv-grid">
+              <div><span>Measured Q</span><strong id="selectedMeasuredQ">—</strong></div>
+              <div><span>Target</span><strong id="selectedTargetQ">—</strong></div>
+
+              <div><span>Published</span><strong id="selectedPublishedQ">—</strong></div>
+              <div><span>Δ Published</span><strong id="selectedErrorQ">—</strong></div>
+
+              <div><span>Dq</span><strong id="selectedDq">—</strong></div>
+              <div><span>IK</span><strong id="selectedIkQ">—</strong></div>
+
+              <div><span>Temp</span><strong id="selectedTemp">—</strong></div>
+              <div><span>τ Util</span><strong id="selectedTorqueUtil">—</strong></div>
+
+              <div><span>URDF Effort</span><strong id="selectedEffortLimit">—</strong></div>
+              <div><span>τ Est</span><strong id="selectedTau">—</strong></div>
+            </div>
+            <div class="joint-health-bars">
+              <div><span>Temperature</span><div class="health-bar"><i id="selectedTempBar"></i></div></div>
+              <div><span>Torque utilization</span><div class="health-bar"><i id="selectedTorqueBar"></i></div></div>
+            </div>
+            <div class="joint-note" id="selectedJointNote">Click a link or joint marker on the live G1 twin to inspect it here.</div>
+            <div class="joint-health-disclaimer">Health colors are diagnostic display bands; controller/Unitree safety limits remain authoritative.</div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <!-- SLAM VIEW: saved laboratory PCD + live relocation cloud -->
+    <section id="view-slam" class="view">
+      <div class="slam-layout">
+        <section class="panel slam-world-panel baca-ui-major-panel">
+          <div class="panel-head slam-head baca-ui-primary-row">
+<div class="panel-title-line">
+              <strong id="slamLabTitleV2209" class="baca-slam-heading-v2201">Laboratory Point Cloud</strong>
+              <span id="slamMapMeta" class="dim">map not loaded</span>
+            </div>
+
+<div class="baca-slam-top-layers-v17" aria-label="SLAM layers">
+              <label class="toggle baca-slam-live-toggle-v2206 baca-ui-check"><input id="slamMapToggle" type="checkbox" checked><span>Saved lab map</span></label>
+              <label class="toggle baca-slam-live-toggle-v2206 baca-ui-check"><input id="slamLiveToggle" type="checkbox" checked><span>Live relocation cloud</span></label>
+              <label class="toggle baca-slam-live-toggle-v2206 baca-ui-check"><input id="slamRobotToggle" type="checkbox" checked><span>Localized robot</span></label>
+            </div>
+
+            <div class="slam-head-actions baca-ui-primary-actions">
+              <span id="slamStateChip" class="chip">SLAM —</span>
+              <button
+                id="slamResetView"
+                class="ghost-btn baca-ui-reset-action"
+              >Reset view</button>
+            </div>
+          </div>
+
+          <div class="slam-stage">
+            <canvas id="slamCanvas" aria-label="Live laboratory SLAM point cloud"></canvas>
+                        <div id="slamOverlay" class="slam-overlay baca-slam-idle-v2215">
+
+              <svg
+                class="baca-slam-map-orbit-v2215"
+                viewBox="0 0 900 520"
+                aria-hidden="true"
+              >
+
+                <defs>
+
+                  <linearGradient
+                    id="bacaMapLine2215"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stop-color="#3f8f69"
+                      stop-opacity=".18"
+                    />
+                    <stop
+                      offset="48%"
+                      stop-color="#79cf84"
+                      stop-opacity=".88"
+                    />
+                    <stop
+                      offset="100%"
+                      stop-color="#2e7058"
+                      stop-opacity=".14"
+                    />
+                  </linearGradient>
+
+                  <radialGradient
+                    id="bacaNodeGlow2215"
+                    cx="50%"
+                    cy="50%"
+                    r="50%"
+                  >
+                    <stop
+                      offset="0%"
+                      stop-color="#8ed681"
+                      stop-opacity=".32"
+                    />
+                    <stop
+                      offset="100%"
+                      stop-color="#8ed681"
+                      stop-opacity="0"
+                    />
+                  </radialGradient>
+
+                </defs>
+
+
+                <!-- broad survey field -->
+
+                <ellipse
+                  class="baca-slam-field-v2215"
+                  cx="450"
+                  cy="250"
+                  rx="295"
+                  ry="175"
+                />
+
+
+                <!-- rotating survey orbits -->
+
+                <g class="baca-slam-orbit-a-v2215">
+
+                  <ellipse
+                    cx="450"
+                    cy="250"
+                    rx="270"
+                    ry="151"
+                    class="baca-slam-orbit-v2215"
+                  />
+
+                  <path
+                    class="baca-slam-orbit-bright-v2215"
+                    d="
+                      M245 151
+                      C325 83 461 70 575 107
+                      C626 123 668 149 698 183
+                    "
+                  />
+
+                </g>
+
+
+                <g class="baca-slam-orbit-b-v2215">
+
+                  <ellipse
+                    cx="450"
+                    cy="250"
+                    rx="226"
+                    ry="126"
+                    class="baca-slam-orbit-v2215"
+                  />
+
+                  <path
+                    class="baca-slam-orbit-amber-v2215"
+                    d="
+                      M270 298
+                      C317 352 406 378 496 369
+                      C567 362 624 335 657 297
+                    "
+                  />
+
+                </g>
+
+
+                <!-- top-down reconstructed map -->
+
+                <g class="baca-slam-cartography-v2215">
+
+                  <path
+                    class="baca-slam-contour-v2215 contour-a"
+                    d="
+                      M275 277
+                      L310 203
+                      L379 174
+                      L432 189
+                      L489 157
+                      L570 182
+                      L621 232
+                      L603 290
+                      L549 314
+                      L502 301
+                      L452 332
+                      L384 311
+                      L329 329
+                      Z
+                    "
+                  />
+
+                  <path
+                    class="baca-slam-contour-v2215 contour-b"
+                    d="
+                      M312 273
+                      L340 220
+                      L390 201
+                      L433 214
+                      L484 188
+                      L542 207
+                      L580 239
+                      L564 276
+                      L521 292
+                      L480 282
+                      L439 305
+                      L389 288
+                      L348 300
+                      Z
+                    "
+                  />
+
+                  <path
+                    class="baca-slam-contour-v2215 contour-c"
+                    d="
+                      M352 263
+                      L374 230
+                      L407 221
+                      L439 233
+                      L476 214
+                      L516 228
+                      L543 250
+                      L524 270
+                      L490 276
+                      L458 265
+                      L428 282
+                      L394 270
+                      Z
+                    "
+                  />
+
+                </g>
+
+
+                <!-- animated surveyed route -->
+
+                <path
+                  class="baca-slam-route-v2215"
+                  d="
+                    M292 284
+                    C333 256 347 211 399 210
+                    C449 209 449 256 494 257
+                    C550 259 565 216 612 235
+                  "
+                />
+
+
+                <!-- moving scan arm -->
+
+                <g class="baca-slam-scanner-v2215">
+
+                  <line
+                    x1="450"
+                    y1="250"
+                    x2="680"
+                    y2="250"
+                    class="baca-slam-scan-line-v2215"
+                  />
+
+                  <circle
+                    cx="681"
+                    cy="250"
+                    r="4"
+                    class="baca-slam-scan-tip-v2215"
+                  />
+
+                </g>
+
+
+                <!-- location nodes -->
+
+                <g class="baca-slam-nodes-v2215">
+
+                  <circle cx="330" cy="237" r="4" class="baca-slam-node-v2215 n1"/>
+                  <circle cx="389" cy="188" r="3" class="baca-slam-node-v2215 n2"/>
+                  <circle cx="534" cy="207" r="4" class="baca-slam-node-v2215 n3"/>
+                  <circle cx="583" cy="277" r="3" class="baca-slam-node-v2215 n4"/>
+                  <circle cx="402" cy="305" r="3" class="baca-slam-node-v2215 n5"/>
+
+                </g>
+
+
+                <!-- robot / origin indicator -->
+
+                <g class="baca-slam-origin-v2215">
+
+                  <circle
+                    cx="450"
+                    cy="250"
+                    r="32"
+                    class="baca-slam-origin-ring-v2215"
+                  />
+
+                  <circle
+                    cx="450"
+                    cy="250"
+                    r="9"
+                    class="baca-slam-origin-dot-v2215"
+                  />
+
+                  <path
+                    d="M450 250 L489 226"
+                    class="baca-slam-heading-v2215"
+                  />
+
+                </g>
+
+              </svg>
+
+              <strong>Laboratory map unavailable</strong>
+              <span>HTTP 404</span>
+
+            </div>
+            <div class="slam-layer-legend baca-slam-map-legend-v2210">
+              <span><i class="slam-map-dot"></i>Saved PCD</span>
+              <span><i class="slam-live-dot"></i>Live Mid360</span>
+              <span><i class="slam-robot-dot"></i>G1 + heading</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="slam-sidebar baca-ui-right-rail">
+          <section class="panel slam-status-panel baca-ui-rail-card">
+            <div class="panel-head"><strong id="slamLocalizationTitleV2209" class="baca-slam-heading-v2201">Localization</strong></div>
+            <div class="kv-list">
+              <div><span>State</span><strong id="slamLocalizationState">—</strong></div>
+              <div><span>Pose</span><strong id="slamPose">—</strong></div>
+              <div><span>Heading</span><strong id="slamYaw">—</strong></div>
+              <div><span>Pose source</span><strong id="slamPoseSource">—</strong></div>
+              <div><span>Map identity</span><strong id="slamMapIdentity">—</strong></div>
+              <div><span>Live cloud</span><strong id="slamCloudMeta">—</strong></div>
+            </div>
+          </section>
+
+
+
+          <section class="panel slam-initial-pose-panel baca-ui-rail-card">
+            <div class="panel-head">
+              <strong class="baca-slam-heading-v2201">Initial Pose</strong>
+            </div>
+            <div id="slamInitialSelection" class="slam-initial-selection baca-ui-action-field">
+              No position selected
+            </div>
+            <div class="slam-initial-actions">
+              <button id="slamInitialStartBtn" class="primary-btn baca-ui-enter-action">
+                Set robot position
+              </button>
+              <button
+                id="slamInitialConfirmBtn"
+                class="primary-btn hidden"
+                disabled
+              >
+                Confirm pose
+              </button>
+              <button
+                id="slamInitialCancelBtn"
+                class="ghost-btn hidden"
+              >
+                Cancel
+              </button>
+            </div>
+            <div
+              id="slamInitialResult"
+              class="slam-initial-result hidden baca-slam-hidden-result-v2210"
+              aria-live="polite"
+            ></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <!-- INSPECT VIEW: deeper read-only robot/system diagnostics -->
+    <section id="view-inspect" class="view">
+      <div class="inspect-health-grid inspect-v45">
+        <section class="panel system-health-card">
+          <div class="panel-head">
+            <div><div class="panel-kicker">PC2 · SYSTEM HEALTH</div><strong id="systemHostname">—</strong></div>
+            <span id="systemMonitorChip" class="chip">MONITOR —</span>
+          </div>
+          <div class="metric-tiles">
+            <div><span>CPU</span><strong id="systemCpu">—</strong><small id="systemLoad">load —</small></div>
+            <div><span>RAM</span><strong id="systemRam">—</strong><small id="systemRamDetail">—</small></div>
+            <div><span>ROOT DISK</span><strong id="systemDisk">—</strong><small id="systemDiskDetail">—</small></div>
+            <div><span>MAX TEMP</span><strong id="systemTemp">—</strong><small id="systemTempZone">—</small></div>
+          </div>
+          <div class="kv-list compact-kv system-kv">
+            <div><span>Uptime</span><strong id="systemUptime">—</strong></div>
+            <div><span>Interface</span><strong id="systemInterface">—</strong></div>
+            <div><span>IPv4</span><strong id="systemIpv4">—</strong></div>
+            <div><span>Network traffic</span><strong id="systemTraffic">—</strong></div>
+            <div><span>Monitor age</span><strong id="systemAge">—</strong></div>
+          </div>
+        </section>
+
+        <section class="panel base-sensing-card">
+          <div class="panel-head">
+            <div><div class="panel-kicker">BASE SENSING</div><strong>Torso IMU + odometry</strong></div>
+            <span id="baseSensorChip" class="chip">SENSORS —</span>
+          </div>
+
+          <div class="sensor-split">
+            <div class="sensor-block">
+              <div class="sensor-block-head"><span>TORSO IMU</span><strong id="imuTopic">rt/secondary_imu</strong></div>
+              <div class="attitude-grid">
+                <div><span>ROLL</span><strong id="imuRoll">—</strong></div>
+                <div><span>PITCH</span><strong id="imuPitch">—</strong></div>
+                <div><span>YAW</span><strong id="imuYaw">—</strong></div>
+              </div>
+              <div class="sensor-vector-grid">
+                <div><span>GYRO X</span><strong id="imuGyroX">—</strong></div>
+                <div><span>GYRO Y</span><strong id="imuGyroY">—</strong></div>
+                <div><span>GYRO Z</span><strong id="imuGyroZ">—</strong></div>
+                <div><span>ACC X</span><strong id="imuAccelX">—</strong></div>
+                <div><span>ACC Y</span><strong id="imuAccelY">—</strong></div>
+                <div><span>ACC Z</span><strong id="imuAccelZ">—</strong></div>
+              </div>
+              <div class="sensor-foot"><span id="imuQuaternion">q —</span><span id="imuMeta">—</span></div>
+            </div>
+
+            <div class="sensor-block odom-block">
+              <div class="sensor-block-head"><span>ODOMETRY</span><strong id="odomTopic">waiting</strong></div>
+              <div class="sensor-vector-grid odom-values">
+                <div><span>POS X</span><strong id="odomPosX">—</strong></div>
+                <div><span>POS Y</span><strong id="odomPosY">—</strong></div>
+                <div><span>POS Z</span><strong id="odomPosZ">—</strong></div>
+                <div><span>VEL X</span><strong id="odomVelX">—</strong></div>
+                <div><span>VEL Y</span><strong id="odomVelY">—</strong></div>
+                <div><span>VEL Z</span><strong id="odomVelZ">—</strong></div>
+              </div>
+              <div class="sensor-foot"><span id="odomYawRate">yaw rate —</span><span id="odomMeta">—</span></div>
+              <div id="odomNote" class="sensor-note">Best-effort read-only odometry; availability depends on the active Unitree odometer service/firmware.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel runtime-card">
+          <div class="panel-head"><div><div class="panel-kicker">RUNTIME</div><strong>Processes</strong></div><span class="dim">read-only</span></div>
+          <div class="endpoint-grid">
+            <div><span>TeleVuer <small class="process-port-v19">· 8012</small></span><strong id="endpointTelevuer">—</strong></div>
+            <div><span>Camera <small class="process-port-v19">· 60001</small></span><strong id="endpointCamera">—</strong></div>
+            <div><span>Dashboard <small class="process-port-v19">· 8080</small></span><strong id="endpointDashboard">—</strong></div>
+            <div><span>Controller</span><strong id="processController">—</strong></div>
+            <div><span>Teleimager</span><strong id="processTeleimager">—</strong></div>
+            <div><span>Inspire service</span><strong id="processInspire">—</strong></div>
+          </div>
+          <div class="runtime-note">Dashboard stack can now be launched with one script; robot controller remains a separate safety-critical process.</div>
+        </section>
+
+        <section class="panel unitree-services-card service-inventory-wide">
+          <div class="panel-head service-head">
+            <div><div class="panel-kicker">UNITREE ROBOTSTATE API</div><strong>Service inventory</strong></div>
+            <div class="service-head-actions">
+              <input id="serviceFilter" class="service-filter" type="search" placeholder="Filter services…" autocomplete="off" />
+              <select id="serviceStateFilter" class="service-select" aria-label="Filter service state">
+                <option value="ALL">STATE · ALL</option>
+                <option value="ON">STATE · ON</option>
+                <option value="OFF">STATE · OFF</option>
+              </select>
+              <select id="servicePolicyFilter" class="service-select" aria-label="Filter service policy">
+                <option value="ALL">POLICY · ALL</option>
+                <option value="ALLOWED">POLICY · ALLOWED</option>
+                <option value="PROTECTED">POLICY · PROTECTED</option>
+                <option value="READ_ONLY">POLICY · READ ONLY</option>
+                <option value="UNKNOWN">POLICY · UNKNOWN</option>
+              </select>
+              <span id="serviceControlChip" class="chip">CONTROL —</span>
+              <span id="robotStateChip" class="chip">API —</span>
+            </div>
+          </div>
+          <div class="robotstate-summary">
+            <div><span>Client API</span><strong id="robotStateClientVersion">—</strong></div>
+            <div><span>Server API</span><strong id="robotStateServerVersion">—</strong></div>
+            <div><span>Version match</span><strong id="robotStateVersionMatch">—</strong></div>
+            <div><span>Services</span><strong id="robotStateServiceCount">—</strong></div>
+          </div>
+          <div class="service-status-row">
+            <div id="robotStateError" class="diagnostic-note">Start the read-only system monitor to query service state.</div>
+            <div id="robotServiceCounts" class="service-counts">—</div>
+          </div>
+          <div class="service-table">
+            <div class="service-row service-header"><span>SERVICE</span><span>POLICY</span><span>STATE</span><span>CONTROL</span></div>
+            <div id="robotServiceList" class="service-list"><div class="empty">No service inventory yet</div></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- BACALBASA / CAMERA POSE TELEOP INTEGRATION -->
+    <section id="view-bacalbasa" class="view bacalbasa-integration-view">
+      <iframe
+        id="bacalbasaFrame"
+        class="bacalbasa-integration-frame"
+        src="/static/bacalbasa/index.html?v=camera-final-16723"
+        title="Bacalbasa Camera Teleoperation"
+      ></iframe>
+    </section>
+
+    <!-- STATUS VIEW -->
+    <section id="view-status" class="view">
+      <div class="status-grid">
+        <section class="panel status-card">
+          <div class="panel-head"><strong>Mode & safety</strong><span id="statusModeChip" class="chip">—</span></div>
+          <div class="kv-list">
+            <div><span>Safety fault</span><strong id="safetyFault">none</strong></div>
+            <div><span>Tracking hold</span><strong id="trackingHoldReason">none</strong></div>
+            <div><span>Shutdown pending</span><strong id="shutdownPending">NO</strong></div>
+            <div><span>Stop gate</span><strong id="statusStopGate">—</strong></div>
+            <div><span>Ownership</span><strong id="statusOwnership">—</strong></div>
+          </div>
+        </section>
+
+        <section class="panel status-card">
+          <div class="panel-head"><strong>Tracking</strong><span id="statusXrChip" class="chip">—</span></div>
+          <div class="kv-list">
+            <div><span>XR reason</span><strong id="statusXrReason">—</strong></div>
+            <div><span>Guard</span><strong id="statusGuard">—</strong></div>
+            <div><span>Alignment</span><strong id="alignmentFrames">—</strong></div>
+            <div><span>Hold position</span><strong id="statusHoldPosition">—</strong></div>
+            <div><span>Hold rotation</span><strong id="statusHoldRotation">—</strong></div>
+          </div>
+        </section>
+
+        <section class="panel status-card">
+          <div class="panel-head"><strong>Robot motion / R3</strong><span id="statusLowstateChip" class="chip">—</span></div>
+          <div class="kv-list">
+            <div><span>R3 max axis</span><strong id="r3Max">—</strong></div>
+            <div><span>Left stick</span><strong id="leftStick">—</strong></div>
+            <div><span>Right stick</span><strong id="rightStick">—</strong></div>
+            <div><span>dq max / RMS</span><strong id="dqCombined">—</strong></div>
+            <div><span>Yaw rate</span><strong id="yawRate">—</strong></div>
+            <div><span>Mode machine</span><strong id="statusModeMachine">—</strong></div>
+          </div>
+        </section>
+
+        <section class="panel status-card">
+          <div class="panel-head"><strong>Services</strong><span class="dim">read-only</span></div>
+          <div class="kv-list">
+            <div><span>Finger phase</span><strong id="statusFingerPhase">—</strong></div>
+            <div><span>Inspire feedback</span><strong id="statusInspire">—</strong></div>
+            <div><span>Arm publisher</span><strong id="statusArmPublisher">—</strong></div>
+            <div><span>Camera config</span><strong id="statusCamera">—</strong></div>
+            <div><span>Telemetry age</span><strong id="statusPacketAge">—</strong></div>
+          </div>
+        </section>
+
+        <section class="panel status-card action-status-card">
+          <div class="panel-head"><strong>Action readiness</strong><span id="statusActionChip" class="chip">READ ONLY</span></div>
+          <div class="kv-list">
+            <div><span>Next action</span><strong id="statusActionLabel">—</strong></div>
+            <div><span>Operation</span><strong id="statusActionOperation">—</strong></div>
+            <div><span>Would enter</span><strong id="statusActionNextState">—</strong></div>
+            <div><span>Request channel</span><strong id="statusActionChannel">DISABLED</strong></div>
+          </div>
+          <div id="statusActionReason" class="status-action-reason">Controller action-readiness telemetry required.</div>
+        </section>
+
+        <section class="panel events-panel-full">
+          <div class="panel-head"><strong>Event timeline</strong><span class="dim">RAM only</span></div>
+          <div id="allEvents" class="events"><div class="empty">No events yet</div></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="managementKeyModal" class="modal-backdrop hidden" role="presentation">
+    <section class="management-key-modal" role="dialog" aria-modal="true" aria-labelledby="managementKeyTitle">
+      <div class="controller-modal-head">
+        <div>
+          <div class="panel-kicker">DASHBOARD INTERACTIONS</div>
+          <h2 id="managementKeyTitle">Management access</h2>
+          <p>Enter the management key printed by the currently running <strong>./start_dashboard.sh</strong>. The key is required for listener start/stop and ENTER/EXIT TELEOP. Monitoring remains read-only without it.</p>
+        </div>
+      </div>
+
+      <label class="management-key-field">
+        <span>Management key</span>
+        <input id="managementKeyInput" type="password" autocomplete="off" placeholder="Paste current dashboard management key" />
+      </label>
+      <div class="management-key-note">A saved key is verified against the current dashboard on every page load, so restarting the dashboard automatically requires the new key.</div>
+      <div id="managementKeyError" class="controller-modal-error hidden"></div>
+
+      <div class="management-key-actions">
+        <button id="managementKeyReadOnlyBtn" class="ghost-btn">Continue read-only</button>
+        <button id="managementKeySubmitBtn" class="primary-btn">Unlock interactions</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="controllerModal" class="modal-backdrop hidden" role="presentation">
+    <section class="controller-modal" role="dialog" aria-modal="true" aria-labelledby="controllerModalTitle">
+      <div class="controller-modal-head">
+        <div>
+          <div class="panel-kicker">CONTROLLER SETTINGS</div>
+          <h2 id="controllerModalTitle">Teleop listener settings</h2>
+          <p>Adjust and save the values used the next time <strong>Configure</strong> starts the V1.8 listener.</p>
+        </div>
+        <button id="controllerModalCloseBtn" class="icon-btn" aria-label="Close">×</button>
+      </div>
+
+      <div id="controllerModalNotice" class="controller-modal-notice">These values are saved locally and used by Configure. Controller and Unitree runtime checks remain authoritative.</div>
+
+      <div class="controller-auth-row">
+        <label>
+          <span>Management key</span>
+          <input id="controllerManagementKey" type="password" autocomplete="off" placeholder="Paste key printed by ./start_dashboard.sh" />
+        </label>
+        <button id="controllerResetDefaultsBtn" class="ghost-btn">Reset known-good</button>
+      </div>
+
+      <div class="controller-locked-block">
+        <div class="controller-section-title">LOCKED WORKING SETTINGS</div>
+        <div id="controllerLockedSettings" class="controller-locked-grid"></div>
+      </div>
+
+      <div id="controllerParameterSections" class="controller-parameter-sections"></div>
+
+      <details class="controller-command-details">
+        <summary>Resolved launch command</summary>
+        <pre id="controllerCommandPreview">Loading controller configuration…</pre>
+      </details>
+
+      <div id="controllerModalError" class="controller-modal-error hidden"></div>
+
+      <div class="controller-modal-footer">
+        <span id="controllerModalRuntime" class="dim">—</span>
+        <div>
+          <button id="controllerModalCancelBtn" class="ghost-btn">Cancel</button>
+          <button id="controllerStartBtn" class="primary-btn">Save</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/bacalbasa_ui_v2000.js?v=2104"></script>
+<script type="module" src="/static/app.js?v=V21_6_ORIGINAL_TWIN"></script>
+  <script src="/static/stitch_live_v12.js?v=ctrl-only-v13c"></script>
+
+  <script src="/static/stitch_bacalbasa_shell_v1917.js?v=live-startup-clean5-rollback1"></script>
+
+  <script src="/static/stitch_layout_v1923.js?v=live-yolo-stable1"></script>
+  <script src="/static/stitch_layout_v1924.js?v=live-startup-clean7-restored1"></script>
+  <script src="/static/stitch_polish_v1930.js?v=1930"></script>
+  <script src="/static/stitch_resize_v1931.js?v=rail330-v13"></script>
+
+  <script src="/static/stitch_final_polish_v1945.js?v=1945"></script>
+  <script defer src="/static/bacalbasa_inspect_layout_v16.js?v=1-18"></script>
+  <script defer src="/static/bacalbasa_slam_initial_rail_parity.js?v=1-0"></script>
+  <script defer src="/static/bacalbasa_inspect_resize_v111.js?v=1-1"></script>
+  <script defer src="/static/bacalbasa_inspect_service_v124.js?v=1-28"></script>
+
+<style id="FULL_DASH_LIVE_V4_FINAL">
+
+/* ----------------------------------------------------------
+   BOTTOM LEGENDS
+
+   Both use the exact same Y.
+   Health/right legend wins any overlap.
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12 #view-live
+.twin-legend.bottom-left {
+    bottom: 10px !important;
+    z-index: 30 !important;
+}
+
+body.stitch-live-v12 #view-live
+#healthLegend {
+    bottom: 10px !important;
+    right: 10px !important;
+    z-index: 60 !important;
+
+    background:
+        var(--panel, #111513)
+        !important;
+}
+
+
+/* Defeat the earlier responsive rule which moved it upward. */
+@container (max-width: 700px) {
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+        bottom: 10px !important;
+    }
+}
+
+@container (max-width: 520px) {
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+        bottom: 10px !important;
+    }
+}
+
+
+/* ----------------------------------------------------------
+   MODE VALUES
+
+   Give the value real room instead of a tiny clipped column,
+   then pull it slightly left from the rail edge.
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section .health-item,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section #actionCondStop,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section #actionCondFault,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section .quick-grid > div {
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        82px
+        !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section .health-item > strong:last-child,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section .stitch-status-value,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section .quick-grid > div > strong:last-child {
+
+    position:
+        relative !important;
+
+    left:
+        -12px !important;
+
+    width:
+        82px !important;
+
+    min-width:
+        82px !important;
+
+    max-width:
+        82px !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+
+    white-space:
+        nowrap !important;
+
+    text-align:
+        right !important;
+
+    transform:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   SELECTED JOINT VALUES
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12 #view-live
+.rail-joint-inspector
+.joint-kv-grid > div {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        92px
+        !important;
+
+    column-gap:
+        4px !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.rail-joint-inspector
+.joint-kv-grid strong {
+
+    position:
+        relative !important;
+
+    left:
+        -12px !important;
+
+    width:
+        92px !important;
+
+    min-width:
+        92px !important;
+
+    max-width:
+        92px !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+
+    white-space:
+        nowrap !important;
+
+    text-align:
+        right !important;
+
+    transform:
+        none !important;
+}
+
+</style>
+
+
+<style id="FULL_DASH_MODE_COMPACT_V6">
+
+/* ==========================================================
+   MODE CARD — genuinely compact after four items disappeared
+   ========================================================== */
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section {
+
+    height:
+        auto !important;
+
+    min-height:
+        0 !important;
+
+    max-height:
+        none !important;
+
+    padding:
+        7px 10px
+        !important;
+
+    align-self:
+        start !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.mini-health-grid,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.quick-grid,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.stitch-safety-row {
+
+    margin-top:
+        0 !important;
+
+    margin-bottom:
+        0 !important;
+
+    row-gap:
+        0 !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.health-item,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.quick-grid > div,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.stitch-safety-status {
+
+    min-height:
+        20px !important;
+
+    height:
+        20px !important;
+}
+
+
+/* Let the following right-rail cards immediately occupy
+   the vertical space released by MODE. */
+body.stitch-live-v12 #view-live
+.combined-rail {
+
+    align-content:
+        start !important;
+}
+
+
+/* ==========================================================
+   ROBOT BOTTOM LEGENDS
+
+   Exact same Y.
+   Right health legend wins every overlap.
+   ========================================================== */
+
+body.stitch-live-v12 #view-live
+.twin-legend.bottom-left {
+
+    bottom:
+        10px !important;
+
+    z-index:
+        10 !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#healthLegend {
+
+    bottom:
+        10px !important;
+
+    right:
+        10px !important;
+
+    z-index:
+        9999 !important;
+
+    opacity:
+        1 !important;
+
+    isolation:
+        isolate !important;
+
+    white-space:
+        nowrap !important;
+
+    background:
+        #111311 !important;
+
+    /*
+     * Extend the opaque health-legend background slightly
+     * to the left so the measured/published legend cannot
+     * bleed through during collision.
+     */
+    box-shadow:
+        -10px 0 0 4px #111311,
+        0 0 0 1px #2c302c
+        !important;
+
+    padding:
+        4px 7px !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#healthLegend > * {
+
+    position:
+        relative !important;
+
+    z-index:
+        10000 !important;
+}
+
+
+/* Defeat all previous narrow-center overrides. */
+@container (max-width: 700px) {
+
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+
+        bottom:
+            10px !important;
+    }
+}
+
+
+@container (max-width: 520px) {
+
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+
+        bottom:
+            10px !important;
+    }
+}
+
+</style>
+
+
+<style id="FULL_DASH_LEGEND_MATCH_LEFT_V8">
+
+/*
+ * RIGHT health legend:
+ * stylistically identical to measured-body legend.
+ * Only difference is its right-side position and higher z-index.
+ */
+
+body.stitch-live-v12 #view-live
+#healthLegend {
+
+    position: absolute !important;
+
+    right: 10px !important;
+    bottom: 10px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    gap: 11px !important;
+
+    background:
+        rgba(7, 11, 16, .76)
+        !important;
+
+    backdrop-filter:
+        blur(7px) !important;
+
+    -webkit-backdrop-filter:
+        blur(7px) !important;
+
+    border:
+        1px solid rgba(82, 105, 128, .38)
+        !important;
+
+    border-radius:
+        7px !important;
+
+    padding:
+        5px 7px !important;
+
+    font-size:
+        9px !important;
+
+    color:
+        #9eb0c2 !important;
+
+    opacity:
+        1 !important;
+
+    box-shadow:
+        none !important;
+
+    background-image:
+        none !important;
+
+    isolation:
+        auto !important;
+
+    pointer-events:
+        none !important;
+
+    /*
+     * Right legend must paint OVER the measured/published legend
+     * when their widths collide.
+     */
+    z-index:
+        60 !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.twin-legend.bottom-left {
+
+    bottom:
+        10px !important;
+
+    z-index:
+        20 !important;
+}
+
+
+/*
+ * Undo the V5/V6 nested stacking hacks.
+ */
+body.stitch-live-v12 #view-live
+#healthLegend > * {
+
+    position:
+        static !important;
+
+    z-index:
+        auto !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#healthLegend span {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        5px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/*
+ * Keep the existing explanatory text if present,
+ * but make it part of the same legend rather than a second style.
+ */
+body.stitch-live-v12 #view-live
+#healthLegend small {
+
+    position:
+        static !important;
+
+    color:
+        inherit !important;
+
+    font-size:
+        inherit !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Never move it vertically at narrow center widths. */
+@container (max-width: 700px) {
+
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+
+        bottom:
+            10px !important;
+    }
+}
+
+
+@container (max-width: 520px) {
+
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+
+        bottom:
+            10px !important;
+    }
+}
+
+</style>
+
+
+<style id="FULL_DASH_HEALTH_LEGEND_NEW_V9">
+
+/*
+ * Current Bacalbasa visual language.
+ * Neutral green/gray, NOT the old blue legend skin.
+ */
+
+body.stitch-live-v12 #view-live
+#healthLegend {
+
+    position:
+        absolute !important;
+
+    right:
+        10px !important;
+
+    bottom:
+        10px !important;
+
+    z-index:
+        60 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        8px !important;
+
+    padding:
+        5px 7px !important;
+
+    border:
+        1px solid #303630
+        !important;
+
+    border-radius:
+        5px !important;
+
+    background:
+        rgba(20, 24, 20, .90)
+        !important;
+
+    background-image:
+        none !important;
+
+    backdrop-filter:
+        blur(5px) !important;
+
+    -webkit-backdrop-filter:
+        blur(5px) !important;
+
+    color:
+        #808781 !important;
+
+    font-size:
+        8px !important;
+
+    box-shadow:
+        none !important;
+
+    outline:
+        none !important;
+
+    isolation:
+        auto !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#healthLegend > * {
+
+    position:
+        static !important;
+
+    z-index:
+        auto !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#healthLegend span {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        4px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/*
+ * If the two legends collide, the RIGHT health legend
+ * paints over the measured/published legend.
+ */
+body.stitch-live-v12 #view-live
+.twin-legend.bottom-left {
+
+    bottom:
+        10px !important;
+
+    z-index:
+        20 !important;
+}
+
+
+@container (max-width: 700px) {
+
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+
+        bottom:
+            10px !important;
+    }
+}
+
+
+@container (max-width: 520px) {
+
+    body.stitch-live-v12 #view-live
+    #healthLegend {
+
+        bottom:
+            10px !important;
+    }
+}
+
+</style>
+
+
+<script id="FULL_DASH_HEALTH_LEGEND_VERIFY_V10">
+(() => {
+
+    const MARK =
+        "FULL_DASH_HEALTH_LEGEND_VERIFY_V10";
+
+
+    function install() {
+
+        const healthLegend =
+            document.getElementById(
+                "healthLegend"
+            );
+
+        const measuredLegend =
+            document.querySelector(
+                "#view-live .twin-legend.bottom-left"
+            );
+
+        const healthToggle =
+            document.getElementById(
+                "healthToggle"
+            );
+
+
+        if (
+            !healthLegend
+            ||
+            !measuredLegend
+            ||
+            !healthToggle
+        ) {
+            return;
+        }
+
+
+        function copyMeasuredStyle() {
+
+            const source =
+                getComputedStyle(
+                    measuredLegend
+                );
+
+
+            /*
+             * Copy the REAL rendered appearance of the
+             * measured-body legend.
+             *
+             * Inline !important deliberately wins over all the
+             * experimental V5/V6/V7/V8/V9 healthLegend rules.
+             */
+
+            const properties = [
+                ["background-color", source.backgroundColor],
+                ["background-image", source.backgroundImage],
+
+                ["border-top", source.borderTop],
+                ["border-right", source.borderRight],
+                ["border-bottom", source.borderBottom],
+                ["border-left", source.borderLeft],
+                ["border-radius", source.borderRadius],
+
+                ["box-shadow", source.boxShadow],
+
+                ["backdrop-filter", source.backdropFilter],
+
+                [
+                    "-webkit-backdrop-filter",
+                    source.webkitBackdropFilter
+                    || source.backdropFilter
+                ],
+
+                ["padding", source.padding],
+
+                ["font-family", source.fontFamily],
+                ["font-size", source.fontSize],
+                ["font-weight", source.fontWeight],
+                ["line-height", source.lineHeight],
+
+                ["color", source.color],
+
+                ["gap", source.gap],
+                ["align-items", source.alignItems],
+
+                ["opacity", source.opacity],
+            ];
+
+
+            for (
+                const [name, value]
+                of properties
+            ) {
+
+                if (
+                    value
+                    &&
+                    value !== "none"
+                ) {
+                    healthLegend.style.setProperty(
+                        name,
+                        value,
+                        "important"
+                    );
+                }
+
+                else if (
+                    name === "box-shadow"
+                    ||
+                    name === "background-image"
+                ) {
+                    healthLegend.style.setProperty(
+                        name,
+                        value || "none",
+                        "important"
+                    );
+                }
+            }
+
+
+            /*
+             * Same vertical level as measured legend.
+             */
+            healthLegend.style.setProperty(
+                "bottom",
+                source.bottom,
+                "important"
+            );
+
+            healthLegend.style.setProperty(
+                "right",
+                "10px",
+                "important"
+            );
+
+
+            /*
+             * Right legend paints over left if they collide.
+             */
+            measuredLegend.style.setProperty(
+                "z-index",
+                "20",
+                "important"
+            );
+
+            healthLegend.style.setProperty(
+                "z-index",
+                "60",
+                "important"
+            );
+
+
+            healthLegend.style.setProperty(
+                "outline",
+                "none",
+                "important"
+            );
+
+            healthLegend.style.setProperty(
+                "isolation",
+                "auto",
+                "important"
+            );
+
+
+            /*
+             * Health OFF => health legend completely disappears.
+             * Health ON  => same display type as measured legend.
+             */
+            healthLegend.style.setProperty(
+                "display",
+                healthToggle.checked
+                    ? source.display
+                    : "none",
+                "important"
+            );
+        }
+
+
+        if (
+            healthToggle.dataset
+                .healthLegendV10Installed
+            !== "1"
+        ) {
+
+            healthToggle.dataset
+                .healthLegendV10Installed =
+                    "1";
+
+
+            healthToggle.addEventListener(
+                "change",
+                copyMeasuredStyle
+            );
+
+
+            window.addEventListener(
+                "resize",
+                copyMeasuredStyle
+            );
+        }
+
+
+        copyMeasuredStyle();
+
+
+        /*
+         * One second follow-up handles any late layout/style pass.
+         */
+        window.setTimeout(
+            copyMeasuredStyle,
+            1000
+        );
+    }
+
+
+    if (
+        document.readyState
+        === "loading"
+    ) {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            install,
+            {
+                once: true
+            }
+        );
+
+    } else {
+
+        install();
+    }
+
+})();
+</script>
+
+
+<style id="FULL_DASH_TEXT_VISIBILITY_V11">
+
+/* ==========================================================
+   RIGHT RAIL
+
+   Keep the real supported minimum from the screenshot.
+   ========================================================== */
+
+body.stitch-live-v12 #view-live
+.combined-rail,
+
+body.stitch-live-v12 #view-live
+[data-stitch-major-key="rail"] {
+
+    min-width:
+        390px !important;
+}
+
+
+/* ==========================================================
+   MODE
+
+   Every cell gets:
+       88 px label | remaining value
+
+   Therefore Hands and Finger worker put their white value
+   dash at the same X position.
+
+   It also gives XR enough value space to show BAD/BLOCKED/etc
+   rather than B...
+   ========================================================== */
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.health-item,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+#actionCondFault,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.quick-grid > div {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        88px minmax(0, 1fr)
+        !important;
+
+    column-gap:
+        5px !important;
+
+    align-items:
+        center !important;
+
+    min-width:
+        0 !important;
+}
+
+
+/* Old secondary explanations no longer consume horizontal room. */
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.health-item > small {
+
+    display:
+        none !important;
+}
+
+
+/* MODE labels: NEVER ellipsize Finger worker. */
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.health-item > span:first-child,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+#actionCondFault
+.stitch-status-label,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.quick-grid > div > span:first-child {
+
+    width:
+        88px !important;
+
+    min-width:
+        88px !important;
+
+    max-width:
+        none !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* MODE values all share identical geometry. */
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.health-item > strong,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+#actionCondFault
+.stitch-status-value,
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.quick-grid > div > strong {
+
+    position:
+        static !important;
+
+    left:
+        auto !important;
+
+    right:
+        auto !important;
+
+    transform:
+        none !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    justify-self:
+        end !important;
+
+    text-align:
+        right !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==========================================================
+   SELECTED JOINT
+
+   Each half-row is wide enough for:
+       Δ Published    0.00 rad
+       URDF Effort    25 N·m
+
+   Labels get their real required space instead of ellipsis.
+   ========================================================== */
+
+body.stitch-live-v12 #view-live
+.rail-joint-inspector
+.joint-kv-grid {
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr))
+        !important;
+
+    column-gap:
+        14px !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.rail-joint-inspector
+.joint-kv-grid > div {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        88px minmax(0, 1fr)
+        !important;
+
+    column-gap:
+        4px !important;
+
+    align-items:
+        center !important;
+
+    min-width:
+        0 !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.rail-joint-inspector
+.joint-kv-grid > div >
+span:first-child {
+
+    width:
+        88px !important;
+
+    min-width:
+        88px !important;
+
+    max-width:
+        none !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12 #view-live
+.rail-joint-inspector
+.joint-kv-grid > div >
+strong:last-child {
+
+    position:
+        static !important;
+
+    left:
+        auto !important;
+
+    right:
+        auto !important;
+
+    transform:
+        none !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    justify-self:
+        end !important;
+
+    text-align:
+        right !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+
+    white-space:
+        nowrap !important;
+}
+
+</style>
+
+
+<style id="FULL_DASH_MODE_ALIGNMENT_RAIL360_V12">
+
+/*
+ * Final supported minimum for the right Live rail.
+ * The JS resize engine enforces the same 360px floor.
+ */
+body.stitch-live-v12 #view-live
+.combined-rail,
+
+body.stitch-live-v12 #view-live
+[data-stitch-major-key="rail"] {
+
+    min-width:
+        360px !important;
+}
+
+
+/*
+ * Hands and Finger worker are both right-column MODE rows.
+ *
+ * Give BOTH an identical fixed value track at the right edge.
+ * Therefore their dash / state text begins and ends at exactly
+ * the same X coordinate.
+ */
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.health-item:has(> #handsValue),
+
+body.stitch-live-v12 #view-live
+.stitch-mode-section
+.quick-grid > div:has(> #fingerPhase) {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        72px
+        !important;
+
+    column-gap:
+        4px !important;
+
+    align-items:
+        center !important;
+}
+
+
+body.stitch-live-v12 #view-live
+#handsValue,
+
+body.stitch-live-v12 #view-live
+#fingerPhase {
+
+    position:
+        static !important;
+
+    left:
+        auto !important;
+
+    right:
+        auto !important;
+
+    transform:
+        none !important;
+
+    width:
+        72px !important;
+
+    min-width:
+        72px !important;
+
+    max-width:
+        72px !important;
+
+    margin:
+        0 !important;
+
+    justify-self:
+        end !important;
+
+    text-align:
+        right !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        visible !important;
+
+    text-overflow:
+        clip !important;
+}
+
+</style>
+
+
+<style id="FULL_DASH_UI_V13">
+
+/* Real right-rail floor. */
+body.stitch-live-v12 #view-live
+.combined-rail,
+
+body.stitch-live-v12 #view-live
+[data-stitch-major-key="rail"] {
+    min-width: 330px !important;
+}
+
+
+/*
+ * BRIDGE badge is deliberately gone.
+ * Also suppress any old presentation-layer mirror if one exists.
+ */
+
+
+/*
+ * Match Hands + Finger worker value X position to Packet.
+ * Their actual values move with the dash.
+ */
+body.stitch-live-v12 #view-live
+#handsValue,
+
+body.stitch-live-v12 #view-live
+#fingerPhase {
+    transform: translateX(-12px) !important;
+}
+
+
+/*
+ * CTRL is now the first/only runtime chip on the left
+ * of the center runtime row.
+ */
+body.stitch-live-v12 #view-live
+#controllerProcessChip {
+    margin-left: 0 !important;
+}
+
+</style>
+
+
+  <script
+    defer
+    src="/static/bacalbasa_controller_v18.js?v=18-3"
+  ></script>
+
+
+<script
+  defer
+  src="/static/bacalbasa_ui_polish_v19.js?v=19-real-1"
+></script>
+
+
+<script
+  defer
+  src="/static/bacalbasa_controller_v20.js?v=20-1"
+></script>
+
+
+<script
+  defer
+  src="/static/bacalbasa_controller_actions_v20_2.js?v=20-2-direct-actions-1"
+></script>
+
+
+<script
+  defer
+  src="/static/bacalbasa_runtime_sync_v20_3.js?v=20-3-runtime-1"
+></script>
+
+  <script src="/static/bacalbasa_browser_lease_v20_7.js?v=21-2b-eventsource"></script>
+</body>
+</html>
+
+<!-- STITCH_CAMERA_ICONS_V152 -->

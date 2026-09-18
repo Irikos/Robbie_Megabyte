@@ -1,0 +1,227 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 220 42"
+    fill="none"
+>
+
+    <!--
+        V1.9.46 — SCANNER CORRIDOR
+
+        Navigation sits immediately to the RIGHT.
+
+        This is intentionally NOT another square chain.
+
+        It uses:
+          - perspective scanner rails
+          - shallow depth apertures
+          - isolated scan points
+          - outward illumination sequence
+    -->
+
+
+    <!-- upper perspective rail -->
+    <path
+        d="
+        M214 13
+        L180 14.5
+        L148 16
+        L116 17.2
+        L82 18.1
+        L48 18.8
+        L16 19.3
+        "
+        stroke="#127458"
+        stroke-width=".8"
+        opacity=".34"
+    />
+
+
+    <!-- lower perspective rail -->
+    <path
+        d="
+        M214 29
+        L180 27.5
+        L148 26
+        L116 24.8
+        L82 23.9
+        L48 23.2
+        L16 22.7
+        "
+        stroke="#127458"
+        stroke-width=".8"
+        opacity=".34"
+    />
+
+
+    <!-- nearest aperture -->
+    <path
+        d="M188 10 L214 13 L214 29 L188 32 Z"
+        stroke="#138c68"
+        stroke-width="1"
+        opacity=".75"
+    >
+        <animate
+            attributeName="opacity"
+            values=".42;.9;.42"
+            dur="4.2s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- second aperture -->
+    <path
+        d="M154 13 L177 14.5 L177 27.5 L154 29 Z"
+        stroke="#138262"
+        stroke-width=".9"
+        opacity=".58"
+    >
+        <animate
+            attributeName="opacity"
+            values=".32;.72;.32"
+            dur="4.2s"
+            begin=".35s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- third aperture -->
+    <path
+        d="M120 15.5 L140 16.2 L140 25.8 L120 26.5 Z"
+        stroke="#11775b"
+        stroke-width=".85"
+        opacity=".47"
+    >
+        <animate
+            attributeName="opacity"
+            values=".25;.60;.25"
+            dur="4.2s"
+            begin=".7s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- fourth aperture -->
+    <path
+        d="M87 17.3 L103 17.8 L103 24.2 L87 24.7 Z"
+        stroke="#10694f"
+        stroke-width=".75"
+        opacity=".37"
+    >
+        <animate
+            attributeName="opacity"
+            values=".20;.48;.20"
+            dur="4.2s"
+            begin="1.05s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- distant aperture -->
+    <path
+        d="M56 18.6 L68 18.9 L68 23.1 L56 23.4 Z"
+        stroke="#0f5e48"
+        stroke-width=".7"
+        opacity=".26"
+    >
+        <animate
+            attributeName="opacity"
+            values=".14;.36;.14"
+            dur="4.2s"
+            begin="1.4s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- subtle amber depth edges -->
+    <path
+        d="M188 10 L214 13"
+        stroke="#d08c0b"
+        stroke-width=".85"
+        opacity=".62"
+    />
+
+    <path
+        d="M154 29 L177 27.5"
+        stroke="#b1780b"
+        stroke-width=".75"
+        opacity=".43"
+    />
+
+    <path
+        d="M120 15.5 L140 16.2"
+        stroke="#9d6e11"
+        stroke-width=".7"
+        opacity=".32"
+    />
+
+
+    <!-- isolated scan points -->
+    <circle
+        cx="201"
+        cy="21"
+        r="1.35"
+        fill="#f59e0b"
+        opacity=".78"
+    >
+        <animate
+            attributeName="r"
+            values="1.0;1.7;1.0"
+            dur="4.2s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+    <circle
+        cx="165"
+        cy="21"
+        r="1"
+        fill="#8ecb7f"
+        opacity=".58"
+    >
+        <animate
+            attributeName="opacity"
+            values=".28;.8;.28"
+            dur="4.2s"
+            begin=".35s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+    <circle
+        cx="130"
+        cy="21"
+        r=".8"
+        fill="#d89a18"
+        opacity=".48"
+    >
+        <animate
+            attributeName="opacity"
+            values=".20;.66;.20"
+            dur="4.2s"
+            begin=".7s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+
+    <!-- distant scanner ticks -->
+    <path
+        d="M35 20 H44"
+        stroke="#11745a"
+        stroke-width=".7"
+        opacity=".30"
+    />
+
+    <path
+        d="M18 20.5 H25"
+        stroke="#11745a"
+        stroke-width=".7"
+        opacity=".20"
+    />
+
+</svg>

@@ -1,0 +1,18 @@
+{
+  "ok": false,
+  "offline": true,
+  "available": false,
+  "connected": false,
+  "reachable": false,
+  "ui_preview": true,
+  "logs": [],
+  "events": [],
+  "items": [],
+  "system": {"running": false},
+  "simulation": {"running": false},
+  "physical": {"running": false},
+  "sonic": {"running": false},
+  "camera": {"running": false},
+  "alignment": {"ready": false},
+  "tracking": {"active": false}
+}

@@ -1,0 +1,130 @@
+
+/* ================================================================
+   STITCH V1.9.46
+   NEW SCANNER-CORRIDOR HEADER ART
+   ================================================================ */
+
+
+body.stitch-live-v12
+header.topbar
+.tabs {
+
+    position:
+        relative !important;
+
+    overflow:
+        visible !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    top:
+        50% !important;
+
+    width:
+        220px !important;
+
+    height:
+        42px !important;
+
+    display:
+        block !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent
+        url("/static/stitch_header_scanner_v1946.svg?v=1946")
+        center / contain
+        no-repeat
+        !important;
+
+    box-shadow:
+        none !important;
+
+    opacity:
+        .94 !important;
+
+    pointer-events:
+        none !important;
+
+    animation:
+        none !important;
+
+    filter:
+        drop-shadow(
+            0 0 3px
+            rgba(17, 118, 90, .10)
+        )
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -217px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -217px !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab {
+
+    position:
+        relative !important;
+
+    z-index:
+        2 !important;
+}
+
+
+/* Small breathing room once units disappear. */
+
+body.stitch-live-v12
+#view-live
+.stitch-real-metrics-compact-v1946
+.stitch-performance-group {
+
+    column-gap:
+        6px !important;
+
+    gap:
+        6px !important;
+}
+

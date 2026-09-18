@@ -1,0 +1,1567 @@
+/* ==================================================================
+   BACALBASA UI V2.0.0
+   CANONICAL LATE-UI LAYER
+
+   Replaces the V1955 -> V1961 polish chain.
+
+   Intentionally DOES NOT own:
+       camera maximize / minimize logic
+       camera drag / dock logic
+       telemetry
+       robot twin behavior
+       resize persistence
+       Camera Teleop functionality
+   ================================================================== */
+
+body.stitch-live-v12 {
+    --baca-radius: 6px;
+}
+
+
+/* ==================================================================
+   COMMON GEOMETRY
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar,
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .camera-panel,
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .twin-panel,
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+}
+
+
+/* Right-side cards */
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+> section,
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+.panel,
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+.hero-state,
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+.health-panel,
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+.stitch-mode-section {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* General controls */
+
+body.stitch-live-v12
+button,
+
+body.stitch-live-v12
+select,
+
+body.stitch-live-v12
+textarea,
+
+body.stitch-live-v12
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+}
+
+
+/* Camera windows */
+
+body.stitch-live-v12
+#view-live
+.camera-tile {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* ==================================================================
+   TOP NAV
+   RETURN TO THE SIMPLE SINGLE-SELECTION VERSION
+   ================================================================== */
+
+/*
+ * All experimental moving selectors are retired.
+ */
+
+body.stitch-live-v12
+.stitch-tab-slider-v1955,
+
+body.stitch-live-v12
+.stitch-tab-slider-v1959 {
+
+    display:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs {
+
+    outline:
+        none
+        !important;
+
+    outline-width:
+        0
+        !important;
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab {
+
+    position:
+        relative
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    border:
+        1px solid transparent
+        !important;
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+
+    outline:
+        none
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    transition:
+        background-color 180ms ease,
+        border-color 180ms ease,
+        color 180ms ease
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab.active,
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab.stitch-active-green-v193.active {
+
+    background:
+        rgba(142,203,127,.075)
+        !important;
+
+    border-color:
+        rgba(142,203,127,.42)
+        !important;
+
+    color:
+        #98d982
+        !important;
+
+    outline:
+        none
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab::after {
+
+    content:
+        none
+        !important;
+
+    display:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   CONNECT / DISCONNECT — V2.1.0
+
+   Brand-new component.
+
+   There are no old V159 presentation classes involved.
+   The original functional IDs remain:
+       cameraConnectBtn
+       cameraStopBtn
+   ================================================================== */
+
+
+/* ================================================================
+   OUTER SHELL
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#stitchCameraPowerSwitchV158.baca-power-switch-v2100 {
+
+    position:
+        relative
+        !important;
+
+    display:
+        grid
+        !important;
+
+    grid-template-columns:
+        1fr 1fr
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    flex:
+        0 0 auto
+        !important;
+
+    width:
+        190px
+        !important;
+
+    min-width:
+        190px
+        !important;
+
+    max-width:
+        190px
+        !important;
+
+    height:
+        34px
+        !important;
+
+    min-height:
+        34px
+        !important;
+
+    max-height:
+        34px
+        !important;
+
+    padding:
+        3px
+        !important;
+
+    gap:
+        2px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    box-sizing:
+        border-box
+        !important;
+
+    border:
+        1px solid
+        #333333
+        !important;
+
+    /*
+     * Exact same outer radius as the rest of the dashboard.
+     */
+    border-radius:
+        6px
+        !important;
+
+    background:
+        #171817
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    outline:
+        none
+        !important;
+}
+
+
+/* ================================================================
+   MOVING SELECTED SURFACE
+
+   It is measured against the REAL button rectangles by JS, so it
+   cannot overflow or become vertically misaligned.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#stitchCameraPowerSwitchV158
+> .baca-power-indicator-v2100 {
+
+    position:
+        absolute
+        !important;
+
+    z-index:
+        0
+        !important;
+
+    left:
+        0
+        !important;
+
+    top:
+        0
+        !important;
+
+    width:
+        var(
+            --baca-power-w-v2100,
+            88px
+        )
+        !important;
+
+    height:
+        var(
+            --baca-power-h-v2100,
+            26px
+        )
+        !important;
+
+    /*
+     * Since this surface is inset inside the 6px shell,
+     * 4px gives a clean concentric shape.
+     */
+    border-radius:
+        4px
+        !important;
+
+    pointer-events:
+        none
+        !important;
+
+    background:
+        rgba(142,203,127,.12)
+        !important;
+
+    border:
+        0
+        !important;
+
+    box-shadow:
+        inset
+        0 0 0 1px
+        rgba(142,203,127,.30)
+        !important;
+
+    transform:
+        translate3d(
+            var(
+                --baca-power-x-v2100,
+                3px
+            ),
+            var(
+                --baca-power-y-v2100,
+                3px
+            ),
+            0
+        )
+        !important;
+
+    will-change:
+        transform,
+        width,
+        height,
+        background-color,
+        box-shadow
+        !important;
+
+    transition:
+        transform
+            340ms
+            cubic-bezier(.16,1,.3,1),
+
+        width
+            340ms
+            cubic-bezier(.16,1,.3,1),
+
+        height
+            340ms
+            cubic-bezier(.16,1,.3,1),
+
+        background-color
+            220ms ease,
+
+        box-shadow
+            220ms ease
+        !important;
+}
+
+
+/* Disconnect selected state */
+
+body.stitch-live-v12
+#view-live
+#stitchCameraPowerSwitchV158[
+    data-baca-power-state="disconnect"
+]
+> .baca-power-indicator-v2100 {
+
+    background:
+        rgba(245,158,11,.12)
+        !important;
+
+    box-shadow:
+        inset
+        0 0 0 1px
+        rgba(245,158,11,.28)
+        !important;
+}
+
+
+/* ================================================================
+   BOTH REAL BUTTONS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraConnectBtn.baca-power-segment-v2100,
+
+body.stitch-live-v12
+#view-live
+#cameraStopBtn.baca-power-segment-v2100 {
+
+    appearance:
+        none
+        !important;
+
+    -webkit-appearance:
+        none
+        !important;
+
+    position:
+        relative
+        !important;
+
+    z-index:
+        1
+        !important;
+
+    inset:
+        auto
+        !important;
+
+    transform:
+        none
+        !important;
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        center
+        !important;
+
+    gap:
+        6px
+        !important;
+
+    width:
+        100%
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    height:
+        26px
+        !important;
+
+    min-height:
+        26px
+        !important;
+
+    max-height:
+        26px
+        !important;
+
+    padding:
+        0 8px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    box-sizing:
+        border-box
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        4px
+        !important;
+
+    outline:
+        none
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    background-image:
+        none
+        !important;
+
+    font:
+        inherit
+        !important;
+
+    font-size:
+        12px
+        !important;
+
+    font-weight:
+        700
+        !important;
+
+    line-height:
+        1
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+
+    cursor:
+        pointer
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    transition:
+        color
+            180ms ease,
+        opacity
+            180ms ease,
+        filter
+            180ms ease
+        !important;
+}
+
+
+/*
+ * Explicitly kill any historical ID-based pseudo styling still
+ * defined in older stylesheets.
+ */
+
+
+
+
+/* ================================================================
+   PERMANENT POWER ICONS — V2.1.1
+
+   Icons are CSS-owned rather than DOM-owned.
+
+   Existing dashboard code can freely rewrite button text/state and
+   the icons will remain present.
+   ================================================================ */
+
+
+/*
+ * Hide the old nested SVG spans.
+ *
+ * They can remain harmlessly in the source markup; the visible icon
+ * is now generated by ::before.
+ */
+
+
+
+
+/* ------------------------------------------------------------
+   CONNECT — link/connection symbol
+   ------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+#cameraConnectBtn.baca-power-segment-v2100::before {
+
+    content:
+        ""
+        !important;
+
+    display:
+        inline-block
+        !important;
+
+    width:
+        11px
+        !important;
+
+    height:
+        11px
+        !important;
+
+    flex:
+        0 0 11px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    background-color:
+        currentColor
+        !important;
+
+    -webkit-mask:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.1 5.2 7.5 3.8a2.9 2.9 0 0 1 4.1 4.1l-1.5 1.5'/%3E%3Cpath d='m9.9 10.8-1.4 1.4a2.9 2.9 0 0 1-4.1-4.1l1.5-1.5'/%3E%3Cpath d='m6.4 9.6 3.2-3.2'/%3E%3C/g%3E%3C/svg%3E")
+        center / contain
+        no-repeat
+        !important;
+
+    mask:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.1 5.2 7.5 3.8a2.9 2.9 0 0 1 4.1 4.1l-1.5 1.5'/%3E%3Cpath d='m9.9 10.8-1.4 1.4a2.9 2.9 0 0 1-4.1-4.1l1.5-1.5'/%3E%3Cpath d='m6.4 9.6 3.2-3.2'/%3E%3C/g%3E%3C/svg%3E")
+        center / contain
+        no-repeat
+        !important;
+
+    transform:
+        none
+        !important;
+
+    opacity:
+        .90
+        !important;
+}
+
+
+/* ------------------------------------------------------------
+   DISCONNECT — pause bars
+   ------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-live
+#cameraStopBtn.baca-power-segment-v2100::before {
+
+    content:
+        ""
+        !important;
+
+    display:
+        inline-block
+        !important;
+
+    width:
+        10px
+        !important;
+
+    height:
+        10px
+        !important;
+
+    flex:
+        0 0 10px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    background:
+        linear-gradient(
+            45deg,
+            transparent 42%,
+            currentColor 43%,
+            currentColor 57%,
+            transparent 58%
+        ),
+        linear-gradient(
+            -45deg,
+            transparent 42%,
+            currentColor 43%,
+            currentColor 57%,
+            transparent 58%
+        )
+        !important;
+
+    transform:
+        none
+        !important;
+
+    opacity:
+        .92
+        !important;
+}
+
+
+/*
+ * No second generated layer.
+ */
+
+body.stitch-live-v12
+#view-live
+#cameraConnectBtn.baca-power-segment-v2100::after,
+
+body.stitch-live-v12
+#view-live
+#cameraStopBtn.baca-power-segment-v2100::after {
+
+    content:
+        none
+        !important;
+
+    display:
+        none
+        !important;
+}
+
+
+/* ================================================================
+   REAL SVG ICONS
+   ================================================================ */
+
+
+
+
+
+
+
+
+
+
+/* ================================================================
+   COLORS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraConnectBtn.baca-power-connect-v2100 {
+
+    color:
+        #9ddd8f
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#cameraStopBtn.baca-power-disconnect-v2100 {
+
+    color:
+        #f4a612
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#stitchCameraPowerSwitchV158[
+    data-baca-power-state="connect"
+]
+#cameraConnectBtn {
+
+    color:
+        #a9e59b
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#stitchCameraPowerSwitchV158[
+    data-baca-power-state="disconnect"
+]
+#cameraConnectBtn {
+
+    color:
+        #84be78
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#stitchCameraPowerSwitchV158[
+    data-baca-power-state="disconnect"
+]
+#cameraStopBtn {
+
+    color:
+        #ffd16b
+        !important;
+}
+
+
+/* ================================================================
+   HOVER / DISABLED
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraConnectBtn.baca-power-segment-v2100:hover:not(:disabled),
+
+body.stitch-live-v12
+#view-live
+#cameraStopBtn.baca-power-segment-v2100:hover:not(:disabled) {
+
+    filter:
+        brightness(1.08)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-power-segment-v2100:disabled {
+
+    cursor:
+        default
+        !important;
+
+    opacity:
+        .48
+        !important;
+
+    filter:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   CAMERA ICON BAR
+   Preserve the accepted equal-spacing version.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-live
+.camera-mode-buttons {
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        flex-start
+        !important;
+
+    gap:
+        4px
+        !important;
+
+    padding:
+        4px
+        !important;
+
+    width:
+        max-content
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    max-width:
+        max-content
+        !important;
+
+    box-sizing:
+        border-box
+        !important;
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.camera-mode-btn,
+
+body.stitch-live-v12
+#view-live
+.camera-mode-btn.stitch-camera-dock-btn {
+
+    margin:
+        0
+        !important;
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+}
+
+
+/* ==================================================================
+   TOP-LEFT EMBLEM
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.rv-brand-emblem {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* ==================================================================
+   RIGHT CARD MINI CONTROLS
+   JS marks the ACTUAL painted shells for both:
+       CONTROLLER PROCESS
+       HANDS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-mini-control-v2000 {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    clip-path:
+        inset(
+            0
+            round
+            var(--baca-radius)
+        )
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-mini-control-v2000::before,
+
+body.stitch-live-v12
+#view-live
+.baca-mini-control-v2000::after {
+
+    border-radius:
+        inherit
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-mini-control-v2000
+> * {
+
+    border-radius:
+        var(--baca-radius)
+        !important;
+}
+
+
+/* ==================================================================
+   ROBOT / WEBGL BOUNDARY
+   Preserve the corrected full-height environment.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-live
+.twin-stage {
+
+    position:
+        relative
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    overflow-clip-margin:
+        0
+        !important;
+
+    contain:
+        paint
+        !important;
+
+    isolation:
+        isolate
+        !important;
+
+    clip-path:
+        inset(0)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.twin-stage
+canvas,
+
+body.stitch-live-v12
+#view-live
+#robotTwinCanvas {
+
+    clip-path:
+        none
+        !important;
+
+    -webkit-clip-path:
+        none
+        !important;
+}
+
+/* ==================================================================
+   BACALBASA_RIGHT_RAIL_SCROLL_V2104
+   ================================================================== */
+
+/*
+ * Keep the right operator rail reachable in a short browser window.
+ *
+ * The viewport-aware max height is supplied by the tiny V2104
+ * resize handler below.
+ *
+ * overflow-y:auto means:
+ *
+ *     content fits     -> NO scrollbar
+ *     content clipped  -> thin scrollbar
+ *
+ * The whole dashboard page is not turned into the scroll surface.
+ */
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail {
+
+    min-height:
+        0
+        !important;
+
+    max-height:
+        var(
+            --baca-right-rail-viewport-max-v2104,
+            calc(100dvh - 120px)
+        )
+        !important;
+
+    overflow-x:
+        hidden
+        !important;
+
+    overflow-y:
+        auto
+        !important;
+
+    overscroll-behavior-y:
+        contain;
+
+    scrollbar-width:
+        thin;
+
+    scrollbar-color:
+        rgba(142,203,127,.34)
+        transparent;
+}
+
+
+/*
+ * Chromium/WebKit equivalent.
+ * Firefox uses scrollbar-width / scrollbar-color above.
+ */
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail::-webkit-scrollbar {
+
+    width:
+        7px;
+}
+
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail::-webkit-scrollbar-track {
+
+    background:
+        transparent;
+}
+
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(142,203,127,.28);
+
+    border-radius:
+        999px;
+
+    border:
+        2px solid transparent;
+
+    background-clip:
+        padding-box;
+}
+
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail::-webkit-scrollbar-thumb:hover {
+
+    background:
+        rgba(142,203,127,.48);
+
+    background-clip:
+        padding-box;
+}
+
+
+
+/* ==================================================================
+   BACALBASA_RIGHT_RAIL_RESPONSIVE_V2105
+
+   Narrow / half-screen behavior:
+
+       - right rail stays ONE vertical column
+       - cards never become side-by-side skinny strips
+       - rail keeps a usable width
+       - overflow continues vertically inside the rail
+       - wide-screen layout is untouched
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+   HALF SCREEN / NARROW DESKTOP
+   ------------------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+
+    /*
+     * Do not allow the right rail itself to collapse into an
+     * unusably narrow strip.
+     */
+
+    body.stitch-live-v12
+    #view-live
+    .combined-live-grid
+    > .combined-rail {
+
+        min-width:
+            230px
+            !important;
+
+        width:
+            auto
+            !important;
+
+        /*
+         * Most important part:
+         * absolutely no two-column card arrangement.
+         */
+
+        display:
+            grid
+            !important;
+
+        grid-template-columns:
+            minmax(0, 1fr)
+            !important;
+
+        grid-template-rows:
+            none
+            !important;
+
+        grid-auto-columns:
+            minmax(0, 1fr)
+            !important;
+
+        grid-auto-rows:
+            max-content
+            !important;
+
+        grid-auto-flow:
+            row
+            !important;
+
+        align-content:
+            start
+            !important;
+
+        align-items:
+            stretch
+            !important;
+
+        gap:
+            7px
+            !important;
+
+        /*
+         * Keep the V2104 behavior.
+         */
+
+        overflow-x:
+            hidden
+            !important;
+
+        overflow-y:
+            auto
+            !important;
+
+        scrollbar-gutter:
+            stable;
+
+        box-sizing:
+            border-box
+            !important;
+    }
+
+
+    /*
+     * Every major right-rail card occupies the ENTIRE rail width.
+     */
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    > *,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    > section,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .stitch-mode-section,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .hero-state,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .health-panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .quick-panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .hand-panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .joint-inspector {
+
+        grid-column:
+            1 / -1
+            !important;
+
+        width:
+            100%
+            !important;
+
+        min-width:
+            0
+            !important;
+
+        max-width:
+            none
+            !important;
+
+        box-sizing:
+            border-box
+            !important;
+    }
+
+
+    /*
+     * Slightly tighter card padding at half screen.
+     * This gives the actual information more room without making
+     * the cards look different from the full-size design.
+     */
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .stitch-mode-section,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .hero-state,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .health-panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .quick-panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .hand-panel,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .joint-inspector {
+
+        padding-left:
+            9px
+            !important;
+
+        padding-right:
+            9px
+            !important;
+    }
+
+
+    /*
+     * Never allow headings to disappear sideways.
+     */
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .panel-kicker,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    strong {
+
+        min-width:
+            0
+            !important;
+
+        max-width:
+            100%
+            !important;
+    }
+
+
+    /*
+     * Controller Process buttons still remain side-by-side where
+     * they fit, but are allowed to shrink correctly.
+     */
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    button {
+
+        min-width:
+            0
+            !important;
+    }
+}
+
+
+/* ------------------------------------------------------------------
+   EVEN NARROWER WINDOW
+
+   Preserve the same structure but let the rail give a few pixels
+   back to Camera/Twin.
+   ------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+
+    body.stitch-live-v12
+    #view-live
+    .combined-live-grid
+    > .combined-rail {
+
+        min-width:
+            215px
+            !important;
+
+        gap:
+            6px
+            !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    .panel-kicker,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    strong {
+
+        font-size:
+            11px
+            !important;
+    }
+
+
+    /*
+     * Preserve readable status/data text rather than letting browser
+     * grid compression cut individual characters in half.
+     */
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    span,
+
+    body.stitch-live-v12
+    #view-live
+    .combined-rail
+    small {
+
+        min-width:
+            0
+            !important;
+    }
+}
+
+
+/* ------------------------------------------------------------------
+   VERY NARROW DESKTOP WINDOW
+
+   Still one rail column. Never create the ugly two-card-across
+   arrangement seen in the screenshot.
+   ------------------------------------------------------------------ */
+
+@media (max-width: 780px) {
+
+    body.stitch-live-v12
+    #view-live
+    .combined-live-grid
+    > .combined-rail {
+
+        min-width:
+            205px
+            !important;
+    }
+}
+

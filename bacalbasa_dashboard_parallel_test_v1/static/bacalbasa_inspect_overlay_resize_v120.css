@@ -1,0 +1,334 @@
+/* ================================================================
+   BACALBASA INSPECT V1.20
+   Service Inventory:
+   - proper overlap stacking while moving
+   - top-edge upward expansion
+   ================================================================ */
+
+
+/* ---------------------------------------------------------------
+   TOP FOUR PANELS / HANDLES
+
+   Do NOT hide their handles during Service Inventory movement.
+   They remain rendered normally and are only visually covered where
+   the moving Service Inventory physically overlaps them.
+   --------------------------------------------------------------- */
+
+#view-inspect
+.inspect-health-grid
+> .panel:not(.unitree-services-card) {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+
+#view-inspect:has(
+    .baca-inspect-service-handle-v114.is-active
+)
+.baca-inspect-drag-handle-v16:not(
+    .baca-inspect-service-handle-v114
+) {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+
+/* ---------------------------------------------------------------
+   SERVICE INVENTORY FOREGROUND
+   --------------------------------------------------------------- */
+
+#view-inspect
+.unitree-services-card {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+
+#view-inspect:has(
+    .baca-inspect-service-handle-v114.is-active
+)
+.unitree-services-card {
+    z-index: 1000 !important;
+}
+
+
+/*
+ * Keep the existing MOVE grip above the new resize hit-zone.
+ */
+
+#view-inspect
+.baca-inspect-service-handle-v114 {
+    position: relative !important;
+    z-index: 1002 !important;
+}
+
+
+/*
+ * Expanded card is intentionally allowed to overflow upward over the
+ * first row rather than requesting more grid space.
+ */
+
+#view-inspect
+.inspect-health-grid {
+    overflow: visible !important;
+}
+
+
+/* ================================================================
+   BACALBASA INSPECT SERVICE INTERACTION V1.24
+   ================================================================ */
+
+
+/*
+ * The generic Inspect handle rule has higher specificity than the
+ * earlier Service override. Make the Service move handle explicitly
+ * win over both resize hit zones.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+> .baca-inspect-service-handle-v114 {
+    z-index: 1202 !important;
+    pointer-events: auto !important;
+}
+
+
+/* New top/bottom resize hit zones. */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124 {
+    position: absolute !important;
+
+    left: 0 !important;
+    right: 0 !important;
+
+    height: 13px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    background: transparent !important;
+
+    cursor: ns-resize !important;
+    touch-action: none !important;
+
+    z-index: 1201 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124 {
+    top: -5px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124 {
+    bottom: -5px !important;
+}
+
+
+/*
+ * Only the correct edge owns scaling for the current Service
+ * Inventory position.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card:not(.baca-inspect-service-top-v124)
+> .baca-inspect-service-resize-bottom-v124 {
+    pointer-events: none !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card.baca-inspect-service-top-v124
+> .baca-inspect-service-resize-top-v124 {
+    pointer-events: none !important;
+}
+
+
+/*
+ * Same visual language as the other resize mechanics:
+ * faint centered green line on the edge being scaled.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124::after {
+    content: "" !important;
+
+    position: absolute !important;
+
+    left: 50% !important;
+    top: 50% !important;
+
+    width: 74px !important;
+    height: 2px !important;
+
+    transform:
+        translate(-50%, -50%) !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        rgba(142, 203, 127, 0) !important;
+
+    box-shadow:
+        none !important;
+
+    transition:
+        background 120ms ease,
+        box-shadow 120ms ease !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124.is-active::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124.is-active::after {
+    background:
+        rgba(142, 203, 127, .32) !important;
+
+    box-shadow:
+        0 0 8px
+        rgba(52, 211, 153, .24) !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card.baca-inspect-service-resizing-v124,
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card.baca-inspect-service-expanded-v124 {
+    z-index: 1000 !important;
+}
+
+
+/* ================================================================
+   BACALBASA INSPECT SERVICE RESIZE HOVER V1.26
+   ================================================================ */
+
+
+/*
+ * Match the upper-card resize mechanic:
+ *
+ * merely hovering the usable Service Inventory resize edge shows
+ * the faint green guide. Dragging keeps the exact same guide.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124:hover::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124:hover::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124.is-active::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124.is-active::after {
+
+    background:
+        rgba(142, 203, 127, .32) !important;
+
+    box-shadow:
+        0 0 8px
+        rgba(52, 211, 153, .24) !important;
+}
+
+
+/*
+ * Slightly larger invisible hit zone so the hover behavior feels
+ * the same as the upper-panel resizing boundaries.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124 {
+
+    height:
+        16px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124 {
+
+    top:
+        -8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124 {
+
+    bottom:
+        -8px !important;
+}
+
+
+/* ================================================================
+   BACALBASA_INSPECT_SERVICE_HOVER_V128
+
+   Match the other Inspect resize edges:
+   show the faint green guide on hover, not only while dragging.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124:hover::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124:hover::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-top-v124.is-active::after,
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-service-resize-bottom-v124.is-active::after {
+
+    background:
+        rgba(142, 203, 127, .32) !important;
+
+    box-shadow:
+        0 0 8px
+        rgba(52, 211, 153, .24) !important;
+}

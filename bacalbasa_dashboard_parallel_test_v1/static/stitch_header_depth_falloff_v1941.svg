@@ -1,0 +1,237 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 225 36"
+    fill="none"
+>
+
+  <!--
+      STITCH V1.9.41
+
+      Perspective direction:
+
+          NAV
+           ||
+        [ LARGE ]
+             [ medium ]
+                  [ small ]
+                       [ tiny ]
+
+      Largest depth plane nearest the navigation capsule.
+      Geometry progressively shrinks moving outward.
+  -->
+
+
+  <!-- ==========================================================
+       INNER NAV CONNECTION
+       ========================================================== -->
+
+  <path
+      d="M224 18H207"
+      stroke="#159873"
+      stroke-width="1"
+      stroke-linecap="round"
+      opacity=".46"
+  />
+
+
+  <circle
+      cx="210"
+      cy="18"
+      r="1.4"
+      fill="#8ecb7f"
+      opacity=".7"
+  >
+      <animate
+          attributeName="opacity"
+          values=".25;.9;.25"
+          dur="2.8s"
+          repeatCount="indefinite"
+      />
+  </circle>
+
+
+  <!-- ==========================================================
+       LARGE INNER DEPTH GATE
+       ========================================================== -->
+
+  <rect
+      x="174"
+      y="5"
+      width="28"
+      height="26"
+      rx="2"
+      stroke="#159873"
+      stroke-width="1.05"
+      opacity=".58"
+  >
+      <animate
+          attributeName="opacity"
+          values=".42;.76;.42"
+          dur="4s"
+          repeatCount="indefinite"
+      />
+  </rect>
+
+
+  <!-- small amber reference inside large gate -->
+
+  <path
+      d="M180 10H195V26H180"
+      stroke="#b77c0b"
+      stroke-width=".8"
+      opacity=".42"
+  />
+
+
+  <!-- ==========================================================
+       MEDIUM GATE
+       ========================================================== -->
+
+  <rect
+      x="141"
+      y="8"
+      width="22"
+      height="20"
+      rx="2"
+      stroke="#108866"
+      stroke-width="1"
+      opacity=".50"
+  >
+      <animate
+          attributeName="opacity"
+          values=".34;.34;.68;.34"
+          dur="4s"
+          repeatCount="indefinite"
+      />
+  </rect>
+
+
+  <!-- ==========================================================
+       SMALL GATE
+       ========================================================== -->
+
+  <rect
+      x="114"
+      y="11"
+      width="16"
+      height="14"
+      rx="1.5"
+      stroke="#0d795d"
+      stroke-width=".9"
+      opacity=".43"
+  >
+      <animate
+          attributeName="opacity"
+          values=".28;.28;.28;.60;.28"
+          dur="4s"
+          repeatCount="indefinite"
+      />
+  </rect>
+
+
+  <!-- ==========================================================
+       TINY OUTER GATE
+       ========================================================== -->
+
+  <rect
+      x="92"
+      y="13.5"
+      width="11"
+      height="9"
+      rx="1.3"
+      stroke="#0a6f56"
+      stroke-width=".8"
+      opacity=".34"
+  />
+
+
+  <!-- ==========================================================
+       DEPTH AXIS
+       ========================================================== -->
+
+  <path
+      d="M206 18H72"
+      stroke="#148161"
+      stroke-width=".7"
+      stroke-dasharray="5 7"
+      opacity=".20"
+  />
+
+
+  <!-- ==========================================================
+       OUTWARD TRAVELLING SAMPLE
+       ========================================================== -->
+
+  <circle
+      cy="18"
+      r="1.55"
+      fill="#8ecb7f"
+  >
+      <animate
+          attributeName="cx"
+          values="198;177;151;122;96;75"
+          dur="4.2s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="opacity"
+          values="0;.85;.62;.42;.20;0"
+          dur="4.2s"
+          repeatCount="indefinite"
+      />
+  </circle>
+
+
+  <!-- ==========================================================
+       AMBER DEPTH SAMPLE
+       ========================================================== -->
+
+  <circle
+      cx="188"
+      cy="18"
+      r="1.6"
+      fill="#f59e0b"
+      opacity=".66"
+  >
+      <animate
+          attributeName="r"
+          values="1.1;1.9;1.1"
+          dur="3s"
+          repeatCount="indefinite"
+      />
+  </circle>
+
+
+  <!-- ==========================================================
+       QUIET OUTER TICKS
+       ========================================================== -->
+
+  <g
+      stroke-linecap="round"
+  >
+
+      <path
+          d="M56 12H76"
+          stroke="#0b7b5d"
+          stroke-width=".8"
+          opacity=".27"
+      />
+
+      <path
+          d="M44 18H78"
+          stroke="#0d8766"
+          stroke-width=".9"
+          opacity=".34"
+      />
+
+      <path
+          d="M59 24H77"
+          stroke="#a8750c"
+          stroke-width=".8"
+          opacity=".23"
+      />
+
+  </g>
+
+</svg>

@@ -1,0 +1,4466 @@
+/* ==================================================================
+   BACALBASA SLAM V2.2.0
+
+   SLAM-only visual layer.
+
+   Owns presentation only:
+       - point-cloud workspace shell
+       - SLAM side rail
+       - Localization / Layers / Initial Pose cards
+       - SLAM controls / toggles / status presentation
+
+   DOES NOT own:
+       - SLAM polling
+       - SLAM map loading
+       - initialization API
+       - layer enable logic
+       - SlamWorld3D
+       - robot-local backend behavior
+   ================================================================== */
+
+
+/* ==================================================================
+   0. LOCAL DESIGN TOKENS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam {
+
+    --slam-bg:
+        #141414;
+
+    --slam-shell:
+        #1c1c1c;
+
+    --slam-card:
+        #171717;
+
+    --slam-card-head:
+        #202020;
+
+    --slam-stage:
+        #0e1010;
+
+    --slam-line:
+        #333333;
+
+    --slam-line-soft:
+        #292929;
+
+    --slam-text:
+        #e4e7e4;
+
+    --slam-muted:
+        #858d88;
+
+    --slam-muted-2:
+        #616863;
+
+    --slam-green:
+        #8ecb7f;
+
+    --slam-green-bright:
+        #a1d494;
+
+    --slam-green-bg:
+        rgba(142, 203, 127, .075);
+
+    --slam-green-border:
+        rgba(142, 203, 127, .34);
+
+    --slam-amber:
+        #f59e0b;
+
+    --slam-amber-bg:
+        rgba(245, 158, 11, .07);
+
+    --slam-amber-border:
+        rgba(245, 158, 11, .30);
+
+    --slam-radius:
+        6px;
+
+    background:
+        var(--slam-bg);
+
+    color:
+        var(--slam-text);
+
+    font-family:
+        "Plus Jakarta Sans",
+        sans-serif;
+}
+
+
+/* ==================================================================
+   1. TWO MAJOR SECTIONS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layout {
+
+    height:
+        100%;
+
+    display:
+        grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        292px;
+
+    gap:
+        8px;
+
+    min-height:
+        0;
+}
+
+
+/* ==================================================================
+   2. MAIN LABORATORY POINT CLOUD PANEL
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-world-panel {
+
+    position:
+        relative;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    min-width:
+        0;
+
+    min-height:
+        0;
+
+    padding:
+        0;
+
+    overflow:
+        hidden;
+
+    background:
+        var(--slam-shell);
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    box-shadow:
+        none;
+}
+
+
+/* ------------------------------------------------------------------
+   Header
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-head {
+
+    height:
+        52px;
+
+    min-height:
+        52px;
+
+    flex:
+        0 0 52px;
+
+    margin:
+        0;
+
+    padding:
+        0 12px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        12px;
+
+    background:
+        #191919;
+
+    border:
+        0;
+
+    border-bottom:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        0;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+> div:first-child {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    min-width:
+        0;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+.panel-title-line {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    min-width:
+        0;
+
+    gap:
+        0;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+.panel-title-line
+> strong {
+
+    color:
+        var(--slam-text);
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        .025em;
+
+    white-space:
+        nowrap;
+}
+
+
+/*
+ * app.js still updates this ID.
+ * Keep the data hook intact but remove it from the visible main title,
+ * as requested.
+ */
+
+body.stitch-live-v12
+#view-slam
+#slamMapMeta {
+
+    position:
+        absolute;
+
+    width:
+        1px;
+
+    height:
+        1px;
+
+    padding:
+        0;
+
+    margin:
+        -1px;
+
+    overflow:
+        hidden;
+
+    clip:
+        rect(0, 0, 0, 0);
+
+    white-space:
+        nowrap;
+
+    border:
+        0;
+}
+
+
+/* ------------------------------------------------------------------
+   Header actions
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-head-actions {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        7px;
+
+    flex:
+        0 0 auto;
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamStateChip {
+
+    min-height:
+        26px;
+
+    padding:
+        0 9px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    background:
+        #171717;
+
+    color:
+        var(--slam-muted);
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        9px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        .04em;
+}
+
+
+/* Green state */
+
+body.stitch-live-v12
+#view-slam
+#slamStateChip.good {
+
+    border-color:
+        var(--slam-green-border);
+
+    background:
+        var(--slam-green-bg);
+
+    color:
+        var(--slam-green);
+}
+
+
+/*
+ * Warning AND bad remain amber in the Bacalbasa visual language.
+ */
+
+body.stitch-live-v12
+#view-slam
+#slamStateChip.warn,
+
+body.stitch-live-v12
+#view-slam
+#slamStateChip.bad {
+
+    border-color:
+        var(--slam-amber-border);
+
+    background:
+        var(--slam-amber-bg);
+
+    color:
+        var(--slam-amber);
+}
+
+
+/* Reset view */
+
+body.stitch-live-v12
+#view-slam
+#slamResetView {
+
+    min-height:
+        28px;
+
+    padding:
+        0 11px;
+
+    border:
+        1px solid
+        var(--slam-green-border);
+
+    border-radius:
+        var(--slam-radius);
+
+    background:
+        var(--slam-green-bg);
+
+    color:
+        var(--slam-green);
+
+    box-shadow:
+        none;
+
+    font-family:
+        "Plus Jakarta Sans",
+        sans-serif;
+
+    font-size:
+        9px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamResetView:hover {
+
+    background:
+        rgba(142, 203, 127, .12);
+
+    border-color:
+        rgba(142, 203, 127, .52);
+
+    color:
+        var(--slam-green-bright);
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamResetView:active {
+
+    transform:
+        scale(.975);
+}
+
+
+/* ==================================================================
+   3. POINT-CLOUD STAGE
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-stage {
+
+    position:
+        relative;
+
+    flex:
+        1 1 auto;
+
+    min-height:
+        0;
+
+    overflow:
+        hidden;
+
+    background:
+        var(--slam-stage);
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamCanvas {
+
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    width:
+        100%;
+
+    height:
+        100%;
+
+    display:
+        block;
+
+    background:
+        var(--slam-stage);
+
+    touch-action:
+        none;
+
+    cursor:
+        grab;
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamCanvas.dragging {
+
+    cursor:
+        grabbing;
+}
+
+
+/* ------------------------------------------------------------------
+   Bottom-left interaction helper
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-help {
+
+    position:
+        absolute;
+
+    left:
+        10px;
+
+    bottom:
+        10px;
+
+    padding:
+        5px 8px;
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    background:
+        rgba(18, 18, 18, .84);
+
+    color:
+        var(--slam-muted-2);
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        7px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        .035em;
+
+    pointer-events:
+        none;
+}
+
+
+/* ------------------------------------------------------------------
+   Map loading / offline overlay
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-overlay {
+
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    gap:
+        7px;
+
+    background:
+        rgba(12, 13, 13, .76);
+
+    pointer-events:
+        none;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-overlay.hidden {
+
+    display:
+        none;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-overlay
+strong {
+
+    color:
+        #dde2dd;
+
+    font-family:
+        "Plus Jakarta Sans",
+        sans-serif;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-overlay
+span {
+
+    color:
+        var(--slam-muted);
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        8px;
+}
+
+
+/* ==================================================================
+   4. RIGHT SIDE — ONE LIVE-STYLE OUTER RAIL
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar {
+
+    position:
+        relative;
+
+    display:
+        grid;
+
+    grid-template-columns:
+        minmax(0, 1fr);
+
+    grid-template-rows:
+        auto
+        auto
+        minmax(0, 1fr);
+
+    align-content:
+        stretch;
+
+    gap:
+        8px;
+
+    min-width:
+        0;
+
+    min-height:
+        0;
+
+    padding:
+        28px 8px 8px;
+
+    overflow-x:
+        hidden;
+
+    overflow-y:
+        auto;
+
+    box-sizing:
+        border-box;
+
+    background:
+        var(--slam-shell);
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    scrollbar-width:
+        thin;
+
+    scrollbar-color:
+        rgba(142,203,127,.28)
+        transparent;
+}
+
+
+/*
+ * Same small top rail marker used visually by the Live workspace.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    top:
+        12px;
+
+    left:
+        50%;
+
+    width:
+        56px;
+
+    height:
+        4px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        3px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #3b3e3b 0%,
+            #3b3e3b 30%,
+            var(--slam-green) 30%,
+            var(--slam-green) 70%,
+            #3b3e3b 70%,
+            #3b3e3b 100%
+        );
+
+    opacity:
+        .9;
+
+    pointer-events:
+        none;
+}
+
+
+/* Firefox / WebKit scrollbar */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar::-webkit-scrollbar {
+
+    width:
+        7px;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar::-webkit-scrollbar-track {
+
+    background:
+        transparent;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(142,203,127,.24);
+
+    border:
+        2px solid transparent;
+
+    border-radius:
+        99px;
+
+    background-clip:
+        padding-box;
+}
+
+
+/* ==================================================================
+   5. RIGHT-RAIL INTERNAL CARDS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel {
+
+    min-width:
+        0;
+
+    margin:
+        0;
+
+    padding:
+        10px;
+
+    box-sizing:
+        border-box;
+
+    background:
+        var(--slam-card);
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    box-shadow:
+        none;
+
+    overflow:
+        hidden;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.panel-head,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.panel-head,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel
+.panel-head {
+
+    min-height:
+        25px;
+
+    margin:
+        0 0 7px;
+
+    padding:
+        0;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        8px;
+
+    border:
+        0;
+
+    background:
+        transparent;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.panel-head
+> strong,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.panel-head
+> strong,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel
+.panel-head
+> strong {
+
+    color:
+        #dfe4df;
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        11px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        .035em;
+
+    text-transform:
+        uppercase;
+}
+
+
+/* small top-right metadata values */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar
+.panel-head
+.dim {
+
+    flex:
+        0 0 auto;
+
+    padding:
+        3px 6px;
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    background:
+        #151515;
+
+    color:
+        var(--slam-muted);
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        7px;
+
+    line-height:
+        1;
+}
+
+
+/* ==================================================================
+   6. LOCALIZATION VALUES
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list {
+
+    display:
+        grid;
+
+    gap:
+        1px;
+
+    overflow:
+        hidden;
+
+    background:
+        var(--slam-line-soft);
+
+    border:
+        1px solid
+        var(--slam-line-soft);
+
+    border-radius:
+        var(--slam-radius);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div {
+
+    min-width:
+        0;
+
+    padding:
+        7px 8px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        8px;
+
+    background:
+        #161616;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+span {
+
+    color:
+        var(--slam-muted);
+
+    font-size:
+        8px;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+strong {
+
+    min-width:
+        0;
+
+    max-width:
+        62%;
+
+    overflow:
+        hidden;
+
+    text-overflow:
+        ellipsis;
+
+    white-space:
+        nowrap;
+
+    text-align:
+        right;
+
+    color:
+        #c8cfca;
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        8px;
+
+    font-weight:
+        400;
+}
+
+
+/* state colors */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.good {
+
+    color:
+        var(--slam-green)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.warn,
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.bad {
+
+    color:
+        var(--slam-amber)
+        !important;
+}
+
+
+/* ==================================================================
+   7. LAYERS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        6px;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.toggle {
+
+    min-height:
+        29px;
+
+    padding:
+        5px 7px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        7px;
+
+    box-sizing:
+        border-box;
+
+    background:
+        #161616;
+
+    border:
+        1px solid
+        var(--slam-line-soft);
+
+    border-radius:
+        var(--slam-radius);
+
+    color:
+        #bac2bc;
+
+    cursor:
+        pointer;
+
+    transition:
+        border-color 150ms ease,
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.toggle:hover {
+
+    border-color:
+        rgba(142,203,127,.28);
+
+    background:
+        rgba(142,203,127,.045);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.toggle
+input {
+
+    width:
+        13px;
+
+    height:
+        13px;
+
+    margin:
+        0;
+
+    flex:
+        0 0 auto;
+
+    accent-color:
+        var(--slam-green);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.toggle
+span {
+
+    min-width:
+        0;
+
+    color:
+        inherit;
+
+    font-size:
+        8px;
+
+    font-weight:
+        600;
+}
+
+
+/* ------------------------------------------------------------------
+   Layer legend — Bacalbasa green/amber only
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend {
+
+    display:
+        grid;
+
+    gap:
+        6px;
+
+    margin-top:
+        4px;
+
+    padding-top:
+        9px;
+
+    border-top:
+        1px solid
+        var(--slam-line-soft);
+
+    color:
+        var(--slam-muted);
+
+    font-size:
+        8px;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+span {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        7px;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+i {
+
+    display:
+        inline-block;
+
+    width:
+        7px;
+
+    height:
+        7px;
+
+    flex:
+        0 0 auto;
+
+    border-radius:
+        2px;
+
+    box-shadow:
+        none;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-map-dot {
+
+    width:
+        20px
+        !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            var(--slam-green) 0 52%,
+            var(--slam-amber) 52% 100%
+        )
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-live-dot {
+
+    background:
+        var(--slam-green)
+        !important;
+
+    box-shadow:
+        0 0 5px rgba(142,203,127,.25)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-robot-dot {
+
+    background:
+        var(--slam-amber)
+        !important;
+}
+
+
+/* ==================================================================
+   8. INITIAL POSE
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    min-height:
+        0;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel
+p {
+
+    margin:
+        0 0 9px;
+
+    color:
+        var(--slam-muted);
+
+    font-size:
+        8px;
+
+    line-height:
+        1.5;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-selection {
+
+    min-height:
+        30px;
+
+    margin:
+        0 0 8px;
+
+    padding:
+        7px 8px;
+
+    box-sizing:
+        border-box;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    border:
+        1px solid
+        var(--slam-line);
+
+    border-radius:
+        var(--slam-radius);
+
+    background:
+        #141414;
+
+    color:
+        #c7cec9;
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        8px;
+
+    line-height:
+        1.35;
+}
+
+
+/* ------------------------------------------------------------------
+   Pose buttons
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-actions {
+
+    display:
+        flex;
+
+    gap:
+        6px;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-actions
+button {
+
+    flex:
+        1 1 0;
+
+    min-width:
+        0;
+
+    min-height:
+        29px;
+
+    padding:
+        0 8px;
+
+    border-radius:
+        var(--slam-radius);
+
+    box-shadow:
+        none;
+
+    font-family:
+        "Plus Jakarta Sans",
+        sans-serif;
+
+    font-size:
+        8px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease,
+        transform 150ms ease,
+        opacity 150ms ease;
+}
+
+
+/* Set / Confirm = green language */
+
+body.stitch-live-v12
+#view-slam
+#slamInitialStartBtn,
+
+body.stitch-live-v12
+#view-slam
+#slamInitialConfirmBtn {
+
+    border:
+        1px solid
+        var(--slam-green-border);
+
+    background:
+        var(--slam-green-bg);
+
+    color:
+        var(--slam-green);
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamInitialStartBtn:hover:not(:disabled),
+
+body.stitch-live-v12
+#view-slam
+#slamInitialConfirmBtn:hover:not(:disabled) {
+
+    border-color:
+        rgba(142,203,127,.55);
+
+    background:
+        rgba(142,203,127,.12);
+
+    color:
+        var(--slam-green-bright);
+}
+
+
+/* Cancel = amber language */
+
+body.stitch-live-v12
+#view-slam
+#slamInitialCancelBtn {
+
+    border:
+        1px solid
+        var(--slam-amber-border);
+
+    background:
+        var(--slam-amber-bg);
+
+    color:
+        var(--slam-amber);
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamInitialCancelBtn:hover {
+
+    border-color:
+        rgba(245,158,11,.52);
+
+    background:
+        rgba(245,158,11,.11);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-actions
+button:active:not(:disabled) {
+
+    transform:
+        scale(.975);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-actions
+button:disabled {
+
+    opacity:
+        .34;
+
+    cursor:
+        not-allowed;
+}
+
+
+/* ------------------------------------------------------------------
+   Initialization status text
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-result {
+
+    min-height:
+        28px;
+
+    margin-top:
+        8px;
+
+    padding-top:
+        8px;
+
+    border-top:
+        1px solid
+        var(--slam-line-soft);
+
+    color:
+        var(--slam-muted);
+
+    font-family:
+        "Space Mono",
+        monospace;
+
+    font-size:
+        7px;
+
+    line-height:
+        1.45;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-result.good {
+
+    color:
+        var(--slam-green);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-result.warn,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-result.bad {
+
+    color:
+        var(--slam-amber);
+}
+
+
+/* ==================================================================
+   9. HIDDEN STATE — preserve existing functionality
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.hidden {
+
+    display:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   10. CURRENT EXISTING <=900px STRUCTURE
+       Keep the old functional responsive topology for now.
+       Only restyle it.
+   ================================================================== */
+
+@media (max-width: 900px) {
+
+    body.stitch-live-v12
+    #view-slam
+    .slam-layout {
+
+        grid-template-columns:
+            1fr;
+
+        grid-template-rows:
+            520px
+            auto;
+    }
+
+
+    body.stitch-live-v12
+    #view-slam
+    .slam-sidebar {
+
+        grid-template-columns:
+            1fr
+            1fr;
+
+        grid-template-rows:
+            auto;
+
+        overflow:
+            visible;
+    }
+
+
+    body.stitch-live-v12
+    #view-slam
+    .slam-initial-pose-panel {
+
+        grid-column:
+            span 2;
+    }
+}
+
+
+/* ==================================================================
+   BACALBASA_SLAM_MATCH_LIVE_V2201
+
+   Exact cross-view matching:
+       - headings <- CAMERA MULTIVIEW
+       - localization typography <- Pinky
+       - sidebar width <- Live right rail starting width
+   ================================================================== */
+
+
+/* ==================================================================
+   RIGHT RAIL WIDTH
+
+   JS supplies the REAL rendered Live right-rail width at startup.
+   292px remains only a safe fallback.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layout {
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        var(
+            --slam-live-rail-width-v2201,
+            292px
+        )
+        !important;
+}
+
+
+/* ==================================================================
+   FOUR SLAM SECTION TITLES
+
+   Values below are populated from getComputedStyle() of the REAL
+   CAMERA MULTIVIEW title.
+
+   This deliberately does not approximate its typography.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-heading-v2201 {
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    color:
+        var(
+            --slam-live-heading-color-v2201,
+            #dfe4df
+        )
+        !important;
+
+    font-family:
+        var(
+            --slam-live-heading-family-v2201,
+            "Space Mono", monospace
+        )
+        !important;
+
+    font-size:
+        var(
+            --slam-live-heading-size-v2201,
+            10px
+        )
+        !important;
+
+    font-weight:
+        var(
+            --slam-live-heading-weight-v2201,
+            700
+        )
+        !important;
+
+    font-style:
+        var(
+            --slam-live-heading-style-v2201,
+            normal
+        )
+        !important;
+
+    line-height:
+        var(
+            --slam-live-heading-line-v2201,
+            normal
+        )
+        !important;
+
+    letter-spacing:
+        var(
+            --slam-live-heading-spacing-v2201,
+            normal
+        )
+        !important;
+
+    word-spacing:
+        var(
+            --slam-live-heading-word-spacing-v2201,
+            normal
+        )
+        !important;
+
+    text-transform:
+        var(
+            --slam-live-heading-transform-v2201,
+            none
+        )
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+}
+
+
+/*
+ * Remove the previous V2200 sidebar-heading typography ownership.
+ * The new title hook above is authoritative.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.panel-head
+> .baca-slam-heading-v2201,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.panel-head
+> .baca-slam-heading-v2201,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel
+.panel-head
+> .baca-slam-heading-v2201 {
+
+    color:
+        var(
+            --slam-live-heading-color-v2201
+        )
+        !important;
+
+    font-family:
+        var(
+            --slam-live-heading-family-v2201
+        )
+        !important;
+
+    font-size:
+        var(
+            --slam-live-heading-size-v2201
+        )
+        !important;
+
+    font-weight:
+        var(
+            --slam-live-heading-weight-v2201
+        )
+        !important;
+
+    line-height:
+        var(
+            --slam-live-heading-line-v2201
+        )
+        !important;
+
+    letter-spacing:
+        var(
+            --slam-live-heading-spacing-v2201
+        )
+        !important;
+
+    text-transform:
+        var(
+            --slam-live-heading-transform-v2201
+        )
+        !important;
+}
+
+
+/* ==================================================================
+   LOCALIZATION — REMOVE THE "TABLE"
+
+   Keep the exact existing DOM IDs and rows.
+   Only the visible table/card treatment disappears.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list {
+
+    display:
+        grid
+        !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        !important;
+
+    gap:
+        7px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    overflow:
+        visible
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div {
+
+    display:
+        grid
+        !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, auto)
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    column-gap:
+        12px
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    min-height:
+        16px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   LOCALIZATION TYPOGRAPHY
+
+   Source is the ACTUAL rendered Pinky label from Live.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> span,
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> strong {
+
+    min-width:
+        0
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    font-family:
+        var(
+            --slam-live-pinky-family-v2201,
+            "Plus Jakarta Sans", sans-serif
+        )
+        !important;
+
+    font-size:
+        var(
+            --slam-live-pinky-size-v2201,
+            8px
+        )
+        !important;
+
+    font-weight:
+        var(
+            --slam-live-pinky-weight-v2201,
+            400
+        )
+        !important;
+
+    font-style:
+        var(
+            --slam-live-pinky-style-v2201,
+            normal
+        )
+        !important;
+
+    line-height:
+        var(
+            --slam-live-pinky-line-v2201,
+            normal
+        )
+        !important;
+
+    letter-spacing:
+        var(
+            --slam-live-pinky-spacing-v2201,
+            normal
+        )
+        !important;
+
+    word-spacing:
+        var(
+            --slam-live-pinky-word-spacing-v2201,
+            normal
+        )
+        !important;
+
+    text-transform:
+        var(
+            --slam-live-pinky-transform-v2201,
+            none
+        )
+        !important;
+}
+
+
+/* Left-hand descriptors: exact Pinky color */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> span {
+
+    color:
+        var(
+            --slam-live-pinky-color-v2201,
+            #858d88
+        )
+        !important;
+
+    text-align:
+        left
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+}
+
+
+/*
+ * Values use the same base typography.
+ * They are simply aligned on the right.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> strong {
+
+    max-width:
+        none
+        !important;
+
+    overflow:
+        visible
+        !important;
+
+    text-overflow:
+        clip
+        !important;
+
+    color:
+        var(
+            --slam-live-pinky-color-v2201,
+            #858d88
+        );
+
+    text-align:
+        right
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+}
+
+
+/*
+ * Preserve semantic status colors from the real SLAM renderer.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> strong.good {
+
+    color:
+        var(--slam-green)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> strong.warn,
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> strong.bad {
+
+    color:
+        var(--slam-amber)
+        !important;
+}
+
+
+/* ==================================================================
+   SLIGHTLY MORE DIRECT LOCALIZATION CARD
+
+   Since the table disappeared, the card itself supplies the spacing.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel {
+
+    padding:
+        10px 11px 11px
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.panel-head {
+
+    margin-bottom:
+        10px
+        !important;
+}
+
+
+
+/* ==================================================================
+   BACALBASA_SLAM_SURFACE_MATCH_V2203
+
+   This version intentionally DOES NOT mirror positions.
+
+   It only shares:
+       Live startup rail width
+       Live rail surface
+       MODE card surface
+
+   No SLAM functionality or DOM structure is changed.
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+   SLAM MAJOR LAYOUT
+
+   The sidebar uses the exact startup width of the Live sidebar,
+   supplied once by V2203 JS.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layout {
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        var(
+            --slam-live-rail-width-v2203,
+            275px
+        )
+        !important;
+
+    gap:
+        8px
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   OUTER SLAM SIDEBAR == OUTER LIVE SIDEBAR
+
+   This is the gray visible BETWEEN the internal cards.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar {
+
+    background:
+        var(
+            --slam-live-rail-bg-v2203,
+            #161616
+        )
+        !important;
+
+    border-color:
+        var(
+            --slam-live-rail-border-v2203,
+            #333333
+        )
+        !important;
+
+    border-radius:
+        var(
+            --slam-live-rail-radius-v2203,
+            6px
+        )
+        !important;
+
+    box-shadow:
+        var(
+            --slam-live-rail-shadow-v2203,
+            none
+        )
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   ALL THREE SLAM INTERNAL SECTIONS == LIVE MODE SURFACE
+
+       LOCALIZATION
+       LAYERS
+       INITIAL POSE
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel {
+
+    background:
+        var(
+            --slam-live-mode-bg-v2203,
+            #161616
+        )
+        !important;
+
+    border-color:
+        var(
+            --slam-live-mode-border-v2203,
+            #333333
+        )
+        !important;
+
+    border-radius:
+        var(
+            --slam-live-mode-radius-v2203,
+            6px
+        )
+        !important;
+
+    box-shadow:
+        var(
+            --slam-live-mode-shadow-v2203,
+            none
+        )
+        !important;
+}
+
+/* ==================================================================
+   BACALBASA_SLAM_LIVE_DETAIL_MATCH_V2209
+
+   Clean replacement for V2206.
+
+   - SLAM rail keeps accepted Live geometry.
+   - Laboratory header now mirrors the ACTUAL Live robot control row.
+   - SLAM state + Reset view get the exact Live Reset view dimensions.
+   - Layer legend uses the same visual language as Hands command /
+     feedback markers.
+   - Bottom-left SLAM helper text is removed from HTML.
+   ================================================================== */
+
+
+/* ==================================================================
+   MAIN SLAM GRID
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layout {
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        var(--slam-live-rail-width-v2207, 274px)
+        !important;
+
+    gap:
+        8px
+        !important;
+}
+
+
+/* ==================================================================
+   RIGHT SLAM RAIL
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar {
+
+    position:
+        relative
+        !important;
+
+    box-sizing:
+        border-box
+        !important;
+
+    width:
+        100%
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    padding-top:
+        30px
+        !important;
+
+    padding-right:
+        var(--slam-live-mode-right-pad-v2207, 8px)
+        !important;
+
+    padding-bottom:
+        8px
+        !important;
+
+    padding-left:
+        var(--slam-live-mode-left-pad-v2207, 8px)
+        !important;
+
+    display:
+        grid
+        !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        !important;
+
+    grid-template-rows:
+        auto auto auto
+        !important;
+
+    grid-auto-rows:
+        max-content
+        !important;
+
+    align-content:
+        start
+        !important;
+
+    gap:
+        8px
+        !important;
+
+    background:
+        var(--slam-live-rail-bg-v2203, #161616)
+        !important;
+
+    border:
+        1px solid
+        var(--slam-live-rail-border-v2203, #333333)
+        !important;
+
+    border-radius:
+        6px
+        !important;
+
+    box-shadow:
+        var(--slam-live-rail-shadow-v2203, none)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* rail handle */
+
+body.stitch-live-v12
+#view-slam
+.slam-sidebar::before {
+
+    content:
+        ""
+        !important;
+
+    position:
+        absolute
+        !important;
+
+    top:
+        13px
+        !important;
+
+    left:
+        50%
+        !important;
+
+    width:
+        72px
+        !important;
+
+    height:
+        4px
+        !important;
+
+    transform:
+        translateX(-50%)
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        2px
+        !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgb(55,57,55) 0%,
+            rgb(55,57,55) 32%,
+            rgb(142,203,127) 32%,
+            rgb(142,203,127) 68%,
+            rgb(55,57,55) 68%,
+            rgb(55,57,55) 100%
+        )
+        !important;
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   SLAM RIGHT-SIDE CARDS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel {
+
+    box-sizing:
+        border-box
+        !important;
+
+    width:
+        100%
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    max-width:
+        none
+        !important;
+
+    height:
+        auto
+        !important;
+
+    min-height:
+        0
+        !important;
+
+    max-height:
+        none
+        !important;
+
+    margin:
+        0
+        !important;
+
+    justify-self:
+        stretch
+        !important;
+
+    align-self:
+        start
+        !important;
+
+    background:
+        var(--slam-live-mode-bg-v2203, #161616)
+        !important;
+
+    border:
+        1px solid
+        var(--slam-live-mode-border-v2203, #333333)
+        !important;
+
+    border-radius:
+        6px
+        !important;
+
+    box-shadow:
+        var(--slam-live-mode-shadow-v2203, none)
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel {
+
+    grid-row:
+        1
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel {
+
+    grid-row:
+        2
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel {
+
+    grid-row:
+        3
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.panel-head,
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+.panel-head,
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel
+.panel-head {
+
+    justify-content:
+        flex-start
+        !important;
+}
+
+
+/* ==================================================================
+   LAYERS CHECKBOXES — KEEP ACCEPTED V2206 APPEARANCE
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+> label.baca-slam-live-toggle-v2206 {
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        flex-start
+        !important;
+
+    align-self:
+        flex-start
+        !important;
+
+    width:
+        auto
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    min-height:
+        var(--slam-live-check-label-height-v2207, 18px)
+        !important;
+
+    gap:
+        var(--slam-live-check-gap-v2207, 5px)
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    color:
+        var(--slam-live-check-color-v2207, #aab2aa)
+        !important;
+
+    font-family:
+        var(
+            --slam-live-check-family-v2207,
+            "Plus Jakarta Sans",
+            sans-serif
+        )
+        !important;
+
+    font-size:
+        var(--slam-live-check-size-v2207, 10px)
+        !important;
+
+    font-weight:
+        var(--slam-live-check-weight-v2207, 400)
+        !important;
+
+    line-height:
+        var(--slam-live-check-line-v2207, normal)
+        !important;
+
+    letter-spacing:
+        var(--slam-live-check-spacing-v2207, normal)
+        !important;
+
+    cursor:
+        pointer
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+> label.baca-slam-live-toggle-v2206
+> input {
+
+    appearance:
+        auto
+        !important;
+
+    -webkit-appearance:
+        auto
+        !important;
+
+    width:
+        var(--slam-live-check-width-v2207, 13px)
+        !important;
+
+    height:
+        var(--slam-live-check-height-v2207, 13px)
+        !important;
+
+    min-width:
+        var(--slam-live-check-width-v2207, 13px)
+        !important;
+
+    flex:
+        0 0 var(--slam-live-check-width-v2207, 13px)
+        !important;
+
+    margin:
+        var(--slam-live-check-margin-v2207, 0)
+        !important;
+
+    accent-color:
+        var(--slam-live-check-accent-v2207, #8ecb7f)
+        !important;
+
+    cursor:
+        pointer
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+> label.baca-slam-live-toggle-v2206
+> span {
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    color:
+        inherit
+        !important;
+
+    font:
+        inherit
+        !important;
+
+    letter-spacing:
+        inherit
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+> label.baca-slam-live-toggle-v2206:hover {
+
+    border:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    color:
+        var(--slam-live-check-color-v2207, #aab2aa)
+        !important;
+}
+
+
+/* ==================================================================
+   LAYERS LEGEND
+   Match the compact command / feedback language from HANDS:
+   short rounded horizontal mark + muted text.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend {
+
+    box-sizing:
+        border-box
+        !important;
+
+    display:
+        flex
+        !important;
+
+    flex-direction:
+        row
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        flex-end
+        !important;
+
+    flex-wrap:
+        nowrap
+        !important;
+
+    gap:
+        9px
+        !important;
+
+    width:
+        100%
+        !important;
+
+    margin:
+        8px 0 0
+        !important;
+
+    padding:
+        7px 0 0
+        !important;
+
+    border-top:
+        1px solid rgba(90, 92, 90, .28)
+        !important;
+
+    color:
+        var(--slam-hands-legend-color-v2207, #8c96a7)
+        !important;
+
+    font-family:
+        var(
+            --slam-hands-legend-family-v2207,
+            "Plus Jakarta Sans",
+            sans-serif
+        )
+        !important;
+
+    font-size:
+        var(--slam-hands-legend-size-v2207, 10px)
+        !important;
+
+    font-weight:
+        var(--slam-hands-legend-weight-v2207, 400)
+        !important;
+
+    line-height:
+        var(--slam-hands-legend-line-v2207, normal)
+        !important;
+
+    letter-spacing:
+        var(--slam-hands-legend-spacing-v2207, normal)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+> span {
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    flex:
+        0 0 auto
+        !important;
+
+    gap:
+        4px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+
+    color:
+        inherit
+        !important;
+
+    font:
+        inherit
+        !important;
+
+    letter-spacing:
+        inherit
+        !important;
+}
+
+
+/*
+ * Replace the little square indicators with the same tiny horizontal
+ * rounded bars used by the Hands command / feedback key.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+i {
+
+    display:
+        inline-block
+        !important;
+
+    width:
+        var(--slam-hands-legend-mark-width-v2207, 12px)
+        !important;
+
+    min-width:
+        var(--slam-hands-legend-mark-width-v2207, 12px)
+        !important;
+
+    height:
+        var(--slam-hands-legend-mark-height-v2207, 3px)
+        !important;
+
+    margin:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        999px
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+.slam-map-dot {
+
+    background:
+        #8ecb7f
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+.slam-live-dot {
+
+    background:
+        #79bf70
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+.slam-robot-dot {
+
+    background:
+        #d39a22
+        !important;
+}
+
+
+/* ==================================================================
+   LABORATORY POINT CLOUD OUTER PANEL
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-world-panel {
+
+    position:
+        relative
+        !important;
+
+    display:
+        flex
+        !important;
+
+    flex-direction:
+        column
+        !important;
+
+    padding:
+        0
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* top center gray/green handle */
+
+body.stitch-live-v12
+#view-slam
+.slam-world-panel::before {
+
+    content:
+        ""
+        !important;
+
+    position:
+        absolute
+        !important;
+
+    z-index:
+        30
+        !important;
+
+    top:
+        13px
+        !important;
+
+    left:
+        50%
+        !important;
+
+    width:
+        72px
+        !important;
+
+    height:
+        4px
+        !important;
+
+    transform:
+        translateX(-50%)
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        2px
+        !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgb(55,57,55) 0%,
+            rgb(55,57,55) 32%,
+            rgb(142,203,127) 32%,
+            rgb(142,203,127) 68%,
+            rgb(55,57,55) 68%,
+            rgb(55,57,55) 100%
+        )
+        !important;
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   LABORATORY HEADER
+
+   This now receives the geometry of the ACTUAL Live row which owns
+   #twinResetBtn — not a guessed generic .twin-head.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-head {
+
+    box-sizing:
+        border-box
+        !important;
+
+    position:
+        relative
+        !important;
+
+    z-index:
+        10
+        !important;
+
+    display:
+        flex
+        !important;
+
+    flex-direction:
+        row
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        space-between
+        !important;
+
+    flex:
+        0 0 auto
+        !important;
+
+    width:
+        100%
+        !important;
+
+    height:
+        var(--slam-live-control-height-v2207, 45px)
+        !important;
+
+    min-height:
+        var(--slam-live-control-height-v2207, 45px)
+        !important;
+
+    margin:
+        var(--slam-live-control-offset-v2207, 28px)
+        0
+        0
+        !important;
+
+    padding-top:
+        var(--slam-live-control-pad-top-v2207, 0px)
+        !important;
+
+    padding-right:
+        var(--slam-live-control-pad-right-v2207, 12px)
+        !important;
+
+    padding-bottom:
+        var(--slam-live-control-pad-bottom-v2207, 0px)
+        !important;
+
+    padding-left:
+        var(--slam-live-control-pad-left-v2207, 12px)
+        !important;
+
+    background:
+        var(--slam-live-control-bg-v2207, #161616)
+        !important;
+
+    border-top:
+        0
+        !important;
+
+    border-right:
+        0
+        !important;
+
+    border-left:
+        0
+        !important;
+
+    border-bottom-width:
+        var(--slam-live-control-border-width-v2207, 1px)
+        !important;
+
+    border-bottom-style:
+        var(--slam-live-control-border-style-v2207, solid)
+        !important;
+
+    border-bottom-color:
+        var(--slam-live-control-border-color-v2207, #333333)
+        !important;
+
+    border-radius:
+        0
+        !important;
+
+    box-shadow:
+        var(--slam-live-control-shadow-v2207, none)
+        !important;
+}
+
+
+/* Make sure the left title itself vertically centers in the row. */
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+> div:first-child {
+
+    display:
+        flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    height:
+        100%
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+}
+
+
+/* Accepted SLAM skin already hides the old MID360/meta extras.
+   Keep the actual Laboratory Point Cloud title centered. */
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+.panel-title-line {
+
+    display:
+        flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+}
+
+
+/* ==================================================================
+   SLAM HEADER ACTIONS
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-head-actions {
+
+    display:
+        flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        flex-end
+        !important;
+
+    gap:
+        8px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    height:
+        var(--slam-live-reset-height-v2207, 30px)
+        !important;
+}
+
+
+/*
+ * BOTH controls use the physical dimensions of Live #twinResetBtn.
+ *
+ * Color/state semantics are left alone:
+ *     SLAM chip may still reflect status,
+ *     Reset view remains green.
+ */
+
+body.stitch-live-v12
+#view-slam
+#slamStateChip,
+
+body.stitch-live-v12
+#view-slam
+#slamResetView {
+
+    box-sizing:
+        border-box
+        !important;
+
+    width:
+        var(--slam-live-reset-width-v2207, 96px)
+        !important;
+
+    min-width:
+        var(--slam-live-reset-width-v2207, 96px)
+        !important;
+
+    max-width:
+        var(--slam-live-reset-width-v2207, 96px)
+        !important;
+
+    height:
+        var(--slam-live-reset-height-v2207, 30px)
+        !important;
+
+    min-height:
+        var(--slam-live-reset-height-v2207, 30px)
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        var(--slam-live-reset-padding-v2207, 5px 12px)
+        !important;
+
+    border-radius:
+        var(--slam-live-reset-radius-v2207, 6px)
+        !important;
+
+    font-family:
+        var(
+            --slam-live-reset-family-v2207,
+            "Plus Jakarta Sans",
+            sans-serif
+        )
+        !important;
+
+    font-size:
+        var(--slam-live-reset-size-v2207, 10px)
+        !important;
+
+    font-weight:
+        var(--slam-live-reset-weight-v2207, 600)
+        !important;
+
+    line-height:
+        var(--slam-live-reset-line-v2207, normal)
+        !important;
+
+    letter-spacing:
+        var(--slam-live-reset-spacing-v2207, normal)
+        !important;
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        center
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+}
+
+
+/* ==================================================================
+   POINT-CLOUD STAGE
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-stage {
+
+    position:
+        relative
+        !important;
+
+    flex:
+        1 1 auto
+        !important;
+
+    min-height:
+        0
+        !important;
+
+    margin:
+        0
+        !important;
+}
+
+
+/*
+ * Safety in case a cached DOM somehow retained .slam-help.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-help {
+
+    display:
+        none
+        !important;
+}
+
+
+/* ==================================================================
+   DESKTOP RAIL MUST REMAIN VERTICAL
+   ================================================================== */
+
+@media (min-width: 901px) {
+
+    body.stitch-live-v12
+    #view-slam
+    .slam-sidebar {
+
+        grid-template-columns:
+            minmax(0, 1fr)
+            !important;
+
+        grid-template-rows:
+            auto auto auto
+            !important;
+    }
+}
+
+
+
+/* ==================================================================
+   V2209 FINAL SLAM REFINEMENTS
+   ================================================================== */
+
+
+/* ================================================================
+   LABORATORY TOP BAND
+
+   One uninterrupted dark surface.
+   No lighter second strip.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-slam
+.slam-world-panel,
+
+body.stitch-live-v12
+#view-slam
+.slam-head {
+
+    background:
+        #171717
+        !important;
+}
+
+
+/* ================================================================
+   LABORATORY POINT CLOUD
+   typography + final X/Y offset come from CAMERA MULTIVIEW.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-slam
+#slamLabTitleV2209 {
+
+    display:
+        inline-block
+        !important;
+
+    position:
+        relative
+        !important;
+
+    left:
+        var(
+            --slam-lab-title-dx-v2209,
+            0px
+        )
+        !important;
+
+    top:
+        var(
+            --slam-lab-title-dy-v2209,
+            0px
+        )
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    transform:
+        none
+        !important;
+
+    color:
+        var(
+            --slam-camera-title-color-v2209,
+            #d9dce3
+        )
+        !important;
+
+    font-family:
+        var(
+            --slam-camera-title-family-v2209,
+            "Space Mono",
+            monospace
+        )
+        !important;
+
+    font-size:
+        var(
+            --slam-camera-title-size-v2209,
+            14px
+        )
+        !important;
+
+    font-weight:
+        var(
+            --slam-camera-title-weight-v2209,
+            700
+        )
+        !important;
+
+    line-height:
+        var(
+            --slam-camera-title-line-v2209,
+            normal
+        )
+        !important;
+
+    letter-spacing:
+        var(
+            --slam-camera-title-spacing-v2209,
+            normal
+        )
+        !important;
+
+    text-transform:
+        var(
+            --slam-camera-title-transform-v2209,
+            uppercase
+        )
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+}
+
+
+/* ================================================================
+   LOCALIZATION
+   exact typography + X/Y reference from MODE.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-slam
+#slamLocalizationTitleV2209 {
+
+    display:
+        inline-block
+        !important;
+
+    position:
+        relative
+        !important;
+
+    left:
+        var(
+            --slam-localization-title-dx-v2209,
+            0px
+        )
+        !important;
+
+    top:
+        var(
+            --slam-localization-title-dy-v2209,
+            0px
+        )
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    transform:
+        none
+        !important;
+
+    color:
+        var(
+            --slam-mode-title-color-v2209,
+            #d9dce3
+        )
+        !important;
+
+    font-family:
+        var(
+            --slam-mode-title-family-v2209,
+            "Space Mono",
+            monospace
+        )
+        !important;
+
+    font-size:
+        var(
+            --slam-mode-title-size-v2209,
+            14px
+        )
+        !important;
+
+    font-weight:
+        var(
+            --slam-mode-title-weight-v2209,
+            700
+        )
+        !important;
+
+    line-height:
+        var(
+            --slam-mode-title-line-v2209,
+            normal
+        )
+        !important;
+
+    letter-spacing:
+        var(
+            --slam-mode-title-spacing-v2209,
+            normal
+        )
+        !important;
+
+    text-transform:
+        var(
+            --slam-mode-title-transform-v2209,
+            uppercase
+        )
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+}
+
+
+/* ================================================================
+   LAYERS LEGEND
+
+   Typography is copied from the real HANDS "command"/"feedback".
+   ================================================================ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend {
+
+    color:
+        #8d96a4
+        !important;
+
+    font-family:
+        var(
+            --slam-hands-key-family-v2209,
+            "Plus Jakarta Sans",
+            sans-serif
+        )
+        !important;
+
+    font-size:
+        var(
+            --slam-hands-key-size-v2209,
+            10px
+        )
+        !important;
+
+    font-weight:
+        var(
+            --slam-hands-key-weight-v2209,
+            400
+        )
+        !important;
+
+    line-height:
+        var(
+            --slam-hands-key-line-v2209,
+            normal
+        )
+        !important;
+
+    letter-spacing:
+        var(
+            --slam-hands-key-spacing-v2209,
+            normal
+        )
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+> span {
+
+    color:
+        inherit
+        !important;
+
+    font:
+        inherit
+        !important;
+
+    letter-spacing:
+        inherit
+        !important;
+}
+
+
+/* ================================================================
+   SEMANTIC MAP KEY
+
+   Saved PCD  = actual multicolor PCD
+   Live Mid360 = green
+   G1 + heading = amber
+   ================================================================ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+i {
+
+    display:
+        inline-block
+        !important;
+
+    width:
+        13px
+        !important;
+
+    min-width:
+        13px
+        !important;
+
+    height:
+        3px
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        999px
+        !important;
+
+    margin:
+        0
+        !important;
+}
+
+
+/* Saved PCD: its actual point cloud is vertex-colored. */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+.slam-map-dot {
+
+    width:
+        18px
+        !important;
+
+    min-width:
+        18px
+        !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            #7b45f5 0%,
+            #31d8e8 25%,
+            #42dc72 50%,
+            #f3db4d 75%,
+            #f75b64 100%
+        )
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+/* Live Mid360 */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+.slam-live-dot {
+
+    background:
+        #8ecb7f
+        !important;
+
+    box-shadow:
+        0 0 5px
+        rgba(
+            142,
+            203,
+            127,
+            .30
+        )
+        !important;
+}
+
+
+/* G1 + heading */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-legend
+.slam-robot-dot {
+
+    background:
+        #d39a22
+        !important;
+
+    box-shadow:
+        0 0 5px
+        rgba(
+            211,
+            154,
+            34,
+            .28
+        )
+        !important;
+}
+
+
+
+/* ==================================================================
+   BACALBASA_SLAM_WORKSPACE_V2210
+
+   Two-panel SLAM workspace using the same interaction language as
+   Live V1.9.24 / V1.9.31:
+
+       top grip     -> reorder
+       side edge    -> resize
+       290 ms FLIP
+       section-owned width
+       localStorage persistence
+       no polling / MutationObserver
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+   MAP LEGEND — LIVE ROBOT HUD LANGUAGE
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-stage
+> .baca-slam-map-legend-v2210 {
+
+    position:
+        absolute
+        !important;
+
+    left:
+        10px
+        !important;
+
+    right:
+        auto
+        !important;
+
+    top:
+        auto
+        !important;
+
+    bottom:
+        10px
+        !important;
+
+    z-index:
+        8
+        !important;
+
+    width:
+        max-content
+        !important;
+
+    max-width:
+        calc(100% - 20px)
+        !important;
+
+    display:
+        flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    flex-wrap:
+        wrap
+        !important;
+
+    gap:
+        11px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        5px 7px
+        !important;
+
+    background:
+        rgba(7, 11, 16, .76)
+        !important;
+
+    backdrop-filter:
+        blur(7px);
+
+    border:
+        1px solid rgba(82, 105, 128, .38)
+        !important;
+
+    border-radius:
+        6px
+        !important;
+
+    color:
+        #9eb0c2
+        !important;
+
+    font-size:
+        9px
+        !important;
+
+    font-weight:
+        400
+        !important;
+
+    line-height:
+        1.2
+        !important;
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-map-legend-v2210
+> span {
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    gap:
+        5px
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+
+    color:
+        #9eb0c2
+        !important;
+
+    font-size:
+        9px
+        !important;
+
+    font-weight:
+        400
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   INITIAL POSE — explicitly retire the two unwanted visible texts
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-initial-pose-panel
+> p,
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-hidden-result-v2210 {
+
+    display:
+        none
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   TWO REAL MAJOR PANELS
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layout {
+
+    position:
+        relative
+        !important;
+
+    grid-template-rows:
+        minmax(0, 1fr)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-major-v2210 {
+
+    position:
+        relative
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    min-height:
+        0
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   TOP GRIP HIT AREA
+
+   Intentionally transparent:
+   the approved gray/green horizontal grip already visible on each
+   SLAM section remains the visual grip. This simply makes that exact
+   area interactive instead of drawing a second bar.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-major-grip-v2210 {
+
+    position:
+        absolute
+        !important;
+
+    top:
+        0
+        !important;
+
+    left:
+        50%
+        !important;
+
+    width:
+        78px
+        !important;
+
+    height:
+        27px
+        !important;
+
+    transform:
+        translateX(-50%)
+        !important;
+
+    z-index:
+        40
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    cursor:
+        grab
+        !important;
+
+    touch-action:
+        none
+        !important;
+
+    user-select:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-major-grip-v2210:active,
+
+body.stitch-live-v12.baca-slam-major-dragging-v2210
+#view-slam
+.baca-slam-major-grip-v2210 {
+
+    cursor:
+        grabbing
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   DRAGGING
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-major-v2210.baca-slam-dragging-v2210 {
+
+    z-index:
+        60
+        !important;
+
+    will-change:
+        transform
+        !important;
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12.baca-slam-major-dragging-v2210 {
+
+    user-select:
+        none
+        !important;
+}
+
+
+/* ------------------------------------------------------------------
+   SIDE RESIZE EDGES
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210 {
+
+    position:
+        absolute
+        !important;
+
+    top:
+        28px
+        !important;
+
+    bottom:
+        4px
+        !important;
+
+    width:
+        6px
+        !important;
+
+    z-index:
+        35
+        !important;
+
+    touch-action:
+        none
+        !important;
+
+    cursor:
+        col-resize
+        !important;
+
+    background:
+        transparent
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210[data-side="left"] {
+
+    left:
+        -3px
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210[data-side="right"] {
+
+    right:
+        -3px
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210::after {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    top:
+        0;
+
+    bottom:
+        0;
+
+    left:
+        50%;
+
+    width:
+        1px;
+
+    transform:
+        translateX(-50%);
+
+    background:
+        rgba(142, 203, 127, 0);
+
+    transition:
+        background 120ms ease;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210:hover::after,
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210.baca-slam-resize-active-v2210::after {
+
+    background:
+        rgba(142, 203, 127, .58);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-resize-edge-v2210.baca-slam-resize-disabled-v2210 {
+
+    pointer-events:
+        none
+        !important;
+
+    display:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12.baca-slam-major-resizing-v2210,
+
+body.stitch-live-v12.baca-slam-major-resizing-v2210 * {
+
+    cursor:
+        col-resize
+        !important;
+
+    user-select:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12.baca-slam-major-resizing-v2210
+#view-slam
+.baca-slam-major-v2210 {
+
+    transition-property:
+        none
+        !important;
+}

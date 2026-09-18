@@ -1,0 +1,274 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 230 38"
+    fill="none"
+>
+
+  <!--
+      STITCH V1.9.42 — DEPTH CORRIDOR
+
+      Direction:
+          NAV | BIG FRAME > MEDIUM > SMALL > TINY
+
+      Designed as broken UI/window frames rather than plain squares.
+  -->
+
+
+  <!-- ==========================================================
+       CENTRAL CONNECTION TO NAV
+       ========================================================== -->
+
+  <path
+      d="M230 19H215"
+      stroke="#159873"
+      stroke-width="1"
+      stroke-linecap="round"
+      opacity=".48"
+  />
+
+
+  <!-- ==========================================================
+       LARGE INNER FRAME
+       ========================================================== -->
+
+  <g
+      stroke="#159873"
+      stroke-width="1.15"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity=".72"
+  >
+
+      <path d="M208 7H193V12"/>
+      <path d="M193 26V31H208"/>
+      <path d="M214 7H219V14"/>
+      <path d="M219 24V31H214"/>
+
+      <animate
+          attributeName="opacity"
+          values=".48;.82;.48"
+          dur="3.8s"
+          repeatCount="indefinite"
+      />
+
+  </g>
+
+
+  <!-- inner amber locator -->
+
+  <path
+      d="M202 13H211V25H202"
+      stroke="#b77d0b"
+      stroke-width=".85"
+      stroke-linecap="round"
+      opacity=".56"
+  />
+
+
+  <!-- ==========================================================
+       MEDIUM FRAME
+       ========================================================== -->
+
+  <g
+      stroke="#108867"
+      stroke-width="1"
+      stroke-linecap="round"
+      opacity=".56"
+  >
+
+      <path d="M181 9H169V13"/>
+      <path d="M169 25V29H181"/>
+      <path d="M187 9H191V14"/>
+      <path d="M191 24V29H187"/>
+
+      <animate
+          attributeName="opacity"
+          values=".35;.35;.72;.35"
+          dur="3.8s"
+          repeatCount="indefinite"
+      />
+
+  </g>
+
+
+  <!-- ==========================================================
+       SMALL FRAME
+       ========================================================== -->
+
+  <g
+      stroke="#0d785d"
+      stroke-width=".9"
+      stroke-linecap="round"
+      opacity=".43"
+  >
+
+      <path d="M154 12H145V15"/>
+      <path d="M145 23V26H154"/>
+      <path d="M159 12H162V16"/>
+      <path d="M162 22V26H159"/>
+
+  </g>
+
+
+  <!-- ==========================================================
+       TINY FRAME
+       ========================================================== -->
+
+  <g
+      stroke="#0a6a52"
+      stroke-width=".8"
+      stroke-linecap="round"
+      opacity=".32"
+  >
+
+      <path d="M132 14H126V17"/>
+      <path d="M126 21V24H132"/>
+      <path d="M136 14H139V17"/>
+      <path d="M139 21V24H136"/>
+
+  </g>
+
+
+  <!-- ==========================================================
+       DEPTH RAIL
+       ========================================================== -->
+
+  <path
+      d="M218 19H91"
+      stroke="#108465"
+      stroke-width=".65"
+      stroke-dasharray="3 7"
+      opacity=".22"
+  />
+
+
+  <!-- ==========================================================
+       MOVING SCAN SAMPLE
+       ========================================================== -->
+
+  <rect
+      y="17.4"
+      width="8"
+      height="3.2"
+      rx="1.6"
+      fill="#8ecb7f"
+  >
+
+      <animate
+          attributeName="x"
+          values="207;180;153;130;106;91"
+          dur="4.4s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="opacity"
+          values="0;.82;.58;.38;.18;0"
+          dur="4.4s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="width"
+          values="8;7;6;5;4;3"
+          dur="4.4s"
+          repeatCount="indefinite"
+      />
+
+  </rect>
+
+
+  <!-- ==========================================================
+       QUIET AMBER DEPTH MARKERS
+       ========================================================== -->
+
+  <circle
+      cx="198"
+      cy="19"
+      r="1.55"
+      fill="#f59e0b"
+      opacity=".75"
+  >
+      <animate
+          attributeName="opacity"
+          values=".35;.85;.35"
+          dur="2.6s"
+          repeatCount="indefinite"
+      />
+  </circle>
+
+
+  <path
+      d="M113 15L108 19L113 23"
+      stroke="#a8740c"
+      stroke-width=".8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity=".31"
+  />
+
+
+  <!-- ==========================================================
+       OUTER DATA TICKS
+       ========================================================== -->
+
+  <g
+      stroke-linecap="round"
+  >
+
+      <path
+          d="M74 13H91"
+          stroke="#0a7358"
+          stroke-width=".8"
+          opacity=".25"
+      />
+
+      <path
+          d="M61 19H92"
+          stroke="#0d7e60"
+          stroke-width=".9"
+          opacity=".32"
+      />
+
+      <path
+          d="M77 25H91"
+          stroke="#9d6c0b"
+          stroke-width=".8"
+          opacity=".22"
+      />
+
+      <path
+          d="M51 19H56"
+          stroke="#128564"
+          stroke-width="1"
+          opacity=".27"
+      />
+
+  </g>
+
+
+  <!-- small outward pulse -->
+
+  <circle
+      cy="19"
+      r="1"
+      fill="#159873"
+  >
+
+      <animate
+          attributeName="cx"
+          values="90;75;61;50"
+          dur="2.9s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="opacity"
+          values=".55;.35;.18;0"
+          dur="2.9s"
+          repeatCount="indefinite"
+      />
+
+  </circle>
+
+</svg>

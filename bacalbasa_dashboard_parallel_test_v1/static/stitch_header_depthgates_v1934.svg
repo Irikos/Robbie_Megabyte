@@ -1,0 +1,295 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 170 38"
+    fill="none"
+>
+
+  <defs>
+
+    <filter
+      id="softGreen"
+      x="-50%"
+      y="-100%"
+      width="200%"
+      height="300%"
+    >
+      <feGaussianBlur
+        stdDeviation=".55"
+        result="blur"
+      />
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter
+      id="softAmber"
+      x="-50%"
+      y="-100%"
+      width="200%"
+      height="300%"
+    >
+      <feGaussianBlur
+        stdDeviation=".45"
+        result="blur"
+      />
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+  </defs>
+
+
+  <!-- ==========================================================
+       NAV PORT
+       ========================================================== -->
+
+  <path
+    d="M169 19H151"
+    stroke="#159873"
+    stroke-width="1.2"
+    stroke-linecap="round"
+    opacity=".62"
+  />
+
+  <circle
+    cx="150"
+    cy="19"
+    r="1.8"
+    fill="#8ecb7f"
+    filter="url(#softGreen)"
+  >
+    <animate
+      attributeName="opacity"
+      values=".35;1;.35"
+      dur="2.2s"
+      repeatCount="indefinite"
+    />
+  </circle>
+
+
+  <!-- ==========================================================
+       DEPTH GATE 1
+       ========================================================== -->
+
+  <g
+    stroke="#159873"
+    stroke-width="1"
+    stroke-linejoin="round"
+    opacity=".42"
+  >
+
+    <path d="M142 12L131 15V23L142 26"/>
+
+    <animate
+      attributeName="opacity"
+      values=".28;.82;.28;.28"
+      keyTimes="0;.22;.48;1"
+      dur="3.6s"
+      repeatCount="indefinite"
+    />
+
+  </g>
+
+
+  <!-- ==========================================================
+       DEPTH GATE 2
+       ========================================================== -->
+
+  <g
+    stroke="#159873"
+    stroke-width="1"
+    stroke-linejoin="round"
+    opacity=".42"
+  >
+
+    <path d="M124 9L110 14V24L124 29"/>
+
+    <animate
+      attributeName="opacity"
+      values=".28;.28;.82;.28"
+      keyTimes="0;.18;.46;1"
+      dur="3.6s"
+      repeatCount="indefinite"
+    />
+
+  </g>
+
+
+  <!-- ==========================================================
+       DEPTH GATE 3 — AMBER
+       ========================================================== -->
+
+  <g
+    stroke="#c68a0b"
+    stroke-width=".95"
+    stroke-linejoin="round"
+    opacity=".34"
+  >
+
+    <path d="M102 7L84 13V25L102 31"/>
+
+    <animate
+      attributeName="opacity"
+      values=".22;.22;.22;.72;.22"
+      keyTimes="0;.2;.42;.66;1"
+      dur="3.6s"
+      repeatCount="indefinite"
+    />
+
+  </g>
+
+
+  <!-- ==========================================================
+       SCANNER BODY
+       ========================================================== -->
+
+  <g
+    transform="translate(57 19)"
+  >
+
+    <!-- square corner frame -->
+
+    <g
+      stroke="#108264"
+      stroke-width="1"
+      stroke-linecap="round"
+      opacity=".58"
+    >
+      <path d="M-15 -8V-13H-10"/>
+      <path d="M10 -13H15V-8"/>
+      <path d="M15 8V13H10"/>
+      <path d="M-10 13H-15V8"/>
+    </g>
+
+
+    <!-- rotating diamond -->
+
+    <path
+      d="M0 -8L8 0L0 8L-8 0Z"
+      stroke="#18a67b"
+      stroke-width="1.1"
+      opacity=".78"
+      filter="url(#softGreen)"
+    >
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        from="0"
+        to="360"
+        dur="9s"
+        repeatCount="indefinite"
+      />
+    </path>
+
+
+    <!-- inner amber focus -->
+
+    <circle
+      r="2.2"
+      stroke="#f59e0b"
+      stroke-width="1"
+      filter="url(#softAmber)"
+    >
+      <animate
+        attributeName="r"
+        values="1.4;2.5;1.4"
+        dur="2.5s"
+        repeatCount="indefinite"
+      />
+
+      <animate
+        attributeName="opacity"
+        values=".4;1;.4"
+        dur="2.5s"
+        repeatCount="indefinite"
+      />
+    </circle>
+
+
+    <!-- horizontal scan -->
+
+    <path
+      d="M-11 0H11"
+      stroke="#159873"
+      stroke-width=".8"
+      stroke-linecap="round"
+      opacity=".45"
+    >
+      <animate
+        attributeName="d"
+        values="
+          M-11 -6H11;
+          M-11 0H11;
+          M-11 6H11;
+          M-11 0H11;
+          M-11 -6H11
+        "
+        dur="4.2s"
+        repeatCount="indefinite"
+      />
+    </path>
+
+  </g>
+
+
+  <!-- ==========================================================
+       OUTER IDLE BARS
+       ========================================================== -->
+
+  <g
+    stroke-linecap="round"
+  >
+
+    <path
+      d="M7 12H31"
+      stroke="#0d7459"
+      stroke-width=".8"
+      opacity=".32"
+    />
+
+    <path
+      d="M2 19H35"
+      stroke="#159873"
+      stroke-width="1"
+      opacity=".45"
+    />
+
+    <path
+      d="M11 26H33"
+      stroke="#a8750c"
+      stroke-width=".8"
+      opacity=".30"
+    />
+
+    <rect
+      x="14"
+      y="17.7"
+      width="8"
+      height="2.6"
+      rx="1.3"
+      fill="#1cab80"
+      stroke="none"
+      filter="url(#softGreen)"
+    >
+      <animate
+        attributeName="x"
+        values="5;25;5"
+        dur="3.2s"
+        repeatCount="indefinite"
+      />
+
+      <animate
+        attributeName="opacity"
+        values=".15;.9;.15"
+        dur="3.2s"
+        repeatCount="indefinite"
+      />
+    </rect>
+
+  </g>
+
+</svg>

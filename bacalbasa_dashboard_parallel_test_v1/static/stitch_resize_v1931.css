@@ -1,0 +1,2253 @@
+/* ==================================================================
+   STITCH V1.9.31 — SIDE RESIZE + HEADER SCANNER
+   ================================================================== */
+
+
+/* ================================================================
+   HEADER SCANNER
+
+   Replaces V1.9.30 waveform completely.
+
+   Animation lives inside the SVG itself. The entire ornament no
+   longer pulses/wobbles as one object.
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        126px !important;
+
+    height:
+        34px !important;
+
+    background-image:
+        url("/static/stitch_header_scanner_v1931.svg?v=1931")
+        !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    background-size:
+        contain !important;
+
+    opacity:
+        .95 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -139px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -139px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* ================================================================
+   MAJOR SECTION SIDE RESIZERS
+
+   Top horizontal grips continue to REORDER.
+
+   Vertical section edges RESIZE.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-major-v1924 {
+
+    position:
+        relative !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931 {
+
+    position:
+        absolute !important;
+
+    top:
+        30px !important;
+
+    bottom:
+        4px !important;
+
+    width:
+        12px !important;
+
+    z-index:
+        180 !important;
+
+    display:
+        block !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    outline:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    touch-action:
+        none !important;
+
+    user-select:
+        none !important;
+
+    cursor:
+        col-resize !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931[data-side="left"] {
+
+    left:
+        -6px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931[data-side="right"] {
+
+    right:
+        -6px !important;
+}
+
+
+/*
+ * Nothing permanently visible.
+ *
+ * When the pointer reaches a resizable boundary, a short, subtle
+ * scanner line appears exactly on the section edge.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931::after {
+
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    left:
+        5px !important;
+
+    top:
+        50% !important;
+
+    width:
+        2px !important;
+
+    height:
+        58px !important;
+
+    border-radius:
+        999px !important;
+
+    transform:
+        translateY(-50%)
+        scaleY(.76)
+        !important;
+
+    background:
+        rgba(
+            142,
+            203,
+            127,
+            0
+        ) !important;
+
+    box-shadow:
+        none !important;
+
+    transition:
+        background 120ms ease,
+        box-shadow 120ms ease,
+        transform 120ms ease
+        !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931:hover::after {
+
+    background:
+        rgba(
+            142,
+            203,
+            127,
+            .32
+        ) !important;
+
+    box-shadow:
+        0 0 8px
+        rgba(
+            52,
+            211,
+            153,
+            .12
+        ) !important;
+
+    transform:
+        translateY(-50%)
+        scaleY(1)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931.stitch-resize-active-v1931::after {
+
+    background:
+        rgba(
+            142,
+            203,
+            127,
+            .62
+        ) !important;
+
+    box-shadow:
+        0 0 10px
+        rgba(
+            52,
+            211,
+            153,
+            .22
+        ) !important;
+
+    transform:
+        translateY(-50%)
+        scaleY(1.14)
+        !important;
+}
+
+
+/*
+ * Exterior edges do not resize anything.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-resize-edge-v1931.stitch-resize-disabled-v1931 {
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   ACTIVE RESIZE STATE
+   ================================================================ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931,
+
+body.stitch-live-v12.stitch-major-resizing-v1931 * {
+
+    cursor:
+        col-resize !important;
+}
+
+
+body.stitch-live-v12.stitch-major-resizing-v1931 {
+
+    user-select:
+        none !important;
+}
+
+
+/*
+ * Avoid transitions fighting live pointer resizing.
+ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+.combined-live-grid
+> .stitch-major-v1924 {
+
+    transition:
+        none !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.32 — NAV-ORIGIN SCANNER
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        164px !important;
+
+    height:
+        38px !important;
+
+    background-image:
+        url("/static/stitch_header_scanner_v1932.svg?v=1932")
+        !important;
+
+    background-size:
+        contain !important;
+
+    background-position:
+        center !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    opacity:
+        .96 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+/*
+ * Almost touch the navigation capsule.
+ * The SVG's INNER port is at its nav-facing edge.
+ */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -164px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -164px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.33 — ROBOT VIEW RESIZE STABILITY
+   ================================================================== */
+
+
+/*
+ * While an edge is actively moving, isolate repainting of the
+ * Three.js surface from the Camera / operator panels.
+ *
+ * We do NOT hide or freeze the robot.
+ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"] {
+
+    isolation:
+        isolate !important;
+
+    contain:
+        layout paint !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * Keep the WebGL canvas on its own compositor layer while its parent
+ * changes width.
+ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"]
+canvas {
+
+    backface-visibility:
+        hidden !important;
+
+    transform:
+        translateZ(0) !important;
+
+    will-change:
+        transform !important;
+}
+
+
+/*
+ * Do not animate dimensions while the resize pointer is down.
+ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"],
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"]
+* {
+
+    transition-property:
+        none !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.33 — SIMPLE OUTWARD HEADER SIGNAL
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        160px !important;
+
+    height:
+        34px !important;
+
+    background-image:
+        url("/static/stitch_header_signal_v1933.svg?v=1933")
+        !important;
+
+    background-size:
+        contain !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    opacity:
+        .92 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -160px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -160px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.34 — WEBGL RESIZE STABILITY
+
+   V1.9.33 tried compositor isolation.
+   V1.9.34 fixes the renderer itself, so retire those workarounds.
+   ================================================================== */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"] {
+
+    contain:
+        none !important;
+
+    isolation:
+        auto !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"]
+canvas {
+
+    transform:
+        none !important;
+
+    will-change:
+        auto !important;
+
+    backface-visibility:
+        visible !important;
+}
+
+
+/*
+ * Canvas continues to fill the changing panel visually while the
+ * actual WebGL backing buffer stays stable until pointer release.
+ */
+
+body.stitch-live-v12
+#robotTwinCanvas {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.34 — DEPTH-GATE HEADER
+
+   Completely replaces V1.9.33 art.
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        158px !important;
+
+    height:
+        36px !important;
+
+    background-image:
+        url("/static/stitch_header_depthgates_v1934.svg?v=1934")
+        !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    background-size:
+        contain !important;
+
+    opacity:
+        .93 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -158px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -158px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+
+/* ==================================================================
+   STITCH V1.9.35 — PIXEL-STABLE TWIN + MINIMAL HEADER SIGNAL
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+   During a major resize the WebGL canvas receives an inline fixed
+   pixel width/height from g1_model.js.
+
+   Do not allow flex/grid sizing rules to squeeze that fixed canvas.
+   The twin panel clips it instead.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"] {
+
+    overflow:
+        hidden !important;
+}
+
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+#robotTwinCanvas {
+
+    max-width:
+        none !important;
+
+    max-height:
+        none !important;
+
+    min-width:
+        0 !important;
+
+    flex:
+        none !important;
+
+    flex-shrink:
+        0 !important;
+
+    transition:
+        none !important;
+}
+
+
+/* Normal state returns to responsive sizing after pointer release. */
+
+body.stitch-live-v12:not(.stitch-major-resizing-v1931)
+#view-live
+#robotTwinCanvas {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+}
+
+
+/* ------------------------------------------------------------------
+   V1.9.35 HEADER
+
+   Simpler than the depth-gate animation.
+   Slightly wider in X, but visually quieter.
+   ------------------------------------------------------------------ */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        180px !important;
+
+    height:
+        30px !important;
+
+    background-image:
+        url("/static/stitch_header_signal_v1935.svg?v=1935")
+        !important;
+
+    background-size:
+        contain !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    opacity:
+        .88 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -180px !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -180px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* Respect OS reduced-motion preference. */
+
+@media (prefers-reduced-motion: reduce) {
+
+    body.stitch-live-v12
+    header.topbar
+    .tabs::before,
+
+    body.stitch-live-v12
+    header.topbar
+    .tabs::after {
+
+        background-image:
+            none !important;
+    }
+}
+
+/* ==================================================================
+   STITCH V1.9.36 — RESPONSIVE TWIN TOOLBAR + BOTTOM LEGENDS
+   ================================================================== */
+
+
+/* ================================================================
+   CENTER SECTION BECOMES ITS OWN RESPONSIVE CONTAINER
+
+   This reacts to the RESIZED PANEL WIDTH instead of viewport width.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-twin-responsive-v1936 {
+
+    container-type:
+        inline-size !important;
+
+    container-name:
+        stitch-twin-v1936;
+}
+
+
+/* ================================================================
+   COMPOSITE — COMPACT HORIZONTAL FOOTPRINT
+
+   Same styling; less unused horizontal room.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-composite-compact-v1936 {
+
+    width:
+        106px !important;
+
+    min-width:
+        106px !important;
+
+    max-width:
+        106px !important;
+
+    box-sizing:
+        border-box !important;
+
+    padding-left:
+        11px !important;
+
+    padding-right:
+        23px !important;
+}
+
+
+/* ================================================================
+   RESET VIEW — FIT AROUND THE WORDS
+
+   No unnecessarily large empty sides.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-reset-compact-v1936 {
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    padding-left:
+        12px !important;
+
+    padding-right:
+        12px !important;
+
+    box-sizing:
+        border-box !important;
+
+    white-space:
+        nowrap !important;
+
+    justify-content:
+        center !important;
+
+    text-align:
+        center !important;
+}
+
+
+/* ================================================================
+   EXTRA-COMPACT STATE
+
+   At the width shown in your screenshot, squeeze these two controls
+   a little further without touching their typography.
+   ================================================================ */
+
+@container stitch-twin-v1936 (max-width: 560px) {
+
+    .stitch-composite-compact-v1936 {
+
+        width:
+            96px !important;
+
+        min-width:
+            96px !important;
+
+        max-width:
+            96px !important;
+
+        padding-left:
+            9px !important;
+
+        padding-right:
+            19px !important;
+    }
+
+
+    .stitch-reset-compact-v1936 {
+
+        padding-left:
+            9px !important;
+
+        padding-right:
+            9px !important;
+    }
+}
+
+
+/* ================================================================
+   BOTTOM INFORMATION STRIPS
+
+   Normal / comfortable center width:
+   retain the existing side-by-side presentation.
+   ================================================================ */
+
+.stitch-twin-measured-legend-v1936,
+.stitch-twin-health-legend-v1936 {
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ================================================================
+   NARROW CENTER SECTION
+
+   Once the center reaches the collision range, explicitly stack the
+   health strip ABOVE the measured/published strip.
+
+   We keep both completely visible and retain their existing design.
+   ================================================================ */
+
+@container stitch-twin-v1936 (max-width: 640px) {
+
+    .stitch-twin-measured-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            8px !important;
+
+        max-width:
+            calc(100% - 20px) !important;
+
+        z-index:
+            12 !important;
+    }
+
+
+    .stitch-twin-health-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            36px !important;
+
+        max-width:
+            calc(100% - 20px) !important;
+
+        z-index:
+            12 !important;
+    }
+}
+
+
+/*
+ * At widths above the stacking threshold, explicitly let the
+ * dashboard's original placement rules take control again.
+ */
+
+@container stitch-twin-v1936 (min-width: 641px) {
+
+    .stitch-twin-measured-legend-v1936,
+    .stitch-twin-health-legend-v1936 {
+
+        transform:
+            none;
+    }
+}
+
+
+/* ==================================================================
+   STITCH V1.9.37 — NARROW TWIN REFINEMENT
+   ================================================================== */
+
+
+/* ================================================================
+   FIXED ROBOT VIEWPORT DURING RESIZE
+   ================================================================ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+[data-stitch-major-key="twin"] {
+
+    overflow:
+        hidden !important;
+}
+
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+.twin-stage[data-stitch-stage-frozen-v1937="true"] {
+
+    flex-shrink:
+        0 !important;
+
+    transition:
+        none !important;
+}
+
+
+/*
+ * The canvas fills the FROZEN stage, not the changing outer panel.
+ */
+
+body.stitch-live-v12.stitch-major-resizing-v1931
+#view-live
+.twin-stage[data-stitch-stage-frozen-v1937="true"]
+#robotTwinCanvas {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    max-width:
+        none !important;
+
+    transition:
+        none !important;
+}
+
+
+/* ================================================================
+   COMPOSITE
+
+   Direct real ID — no runtime-discovered class.
+
+   Previous base rule:
+       min-width 105px
+       right padding 22px
+
+   New:
+       94px total
+       arrow much closer to the word
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#healthModeSelect {
+
+    box-sizing:
+        border-box !important;
+
+    flex:
+        0 0 94px !important;
+
+    width:
+        94px !important;
+
+    min-width:
+        94px !important;
+
+    max-width:
+        94px !important;
+
+    padding-left:
+        8px !important;
+
+    padding-right:
+        15px !important;
+}
+
+
+/* ================================================================
+   RESET VIEW
+
+   Direct real ID.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#twinResetBtn {
+
+    box-sizing:
+        border-box !important;
+
+    flex:
+        0 0 auto !important;
+
+    width:
+        84px !important;
+
+    min-width:
+        84px !important;
+
+    max-width:
+        84px !important;
+
+    padding-left:
+        7px !important;
+
+    padding-right:
+        7px !important;
+
+    justify-content:
+        center !important;
+
+    text-align:
+        center !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ================================================================
+   STACK BOTTOM LEGENDS EARLIER
+
+   V1.9.36 waited until 640px.
+   That leaves the small collision range visible.
+
+   Start stacking at 720px instead.
+   ================================================================ */
+
+@container stitch-twin-v1936 (max-width: 720px) {
+
+    .stitch-twin-measured-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            8px !important;
+
+        max-width:
+            calc(100% - 20px) !important;
+
+        z-index:
+            12 !important;
+    }
+
+
+    .stitch-twin-health-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            36px !important;
+
+        max-width:
+            calc(100% - 20px) !important;
+
+        z-index:
+            12 !important;
+    }
+}
+
+
+/* ================================================================
+   EXTRA NARROW TOOLBAR
+
+   Preserve the text; remove wasted horizontal room.
+   ================================================================ */
+
+@container stitch-twin-v1936 (max-width: 620px) {
+
+    #healthModeSelect {
+
+        flex-basis:
+            90px !important;
+
+        width:
+            90px !important;
+
+        min-width:
+            90px !important;
+
+        max-width:
+            90px !important;
+
+        padding-right:
+            13px !important;
+    }
+
+
+    #twinResetBtn {
+
+        width:
+            80px !important;
+
+        min-width:
+            80px !important;
+
+        max-width:
+            80px !important;
+
+        padding-left:
+            5px !important;
+
+        padding-right:
+            5px !important;
+    }
+}
+
+
+/* ==================================================================
+   STITCH V1.9.37 — OVERLAPPING WINDOWS HEADER
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        190px !important;
+
+    height:
+        32px !important;
+
+    background-image:
+        url("/static/stitch_header_windows_v1937.svg?v=1937")
+        !important;
+
+    background-size:
+        contain !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    opacity:
+        .88 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -190px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -190px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.38 — FINAL NARROW TWIN RESPONSIVENESS
+   ================================================================== */
+
+
+/* ================================================================
+   PIXEL-FIXED SNAPSHOT
+
+   This is NOT 100% width.
+   Its explicit pixel dimensions come from JS at pointer-down.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.twin-stage {
+
+    position:
+        relative !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-twin-resize-snapshot-v1938 {
+
+    position:
+        absolute !important;
+
+    z-index:
+        20 !important;
+
+    top:
+        0 !important;
+
+    left:
+        50% !important;
+
+    max-width:
+        none !important;
+
+    max-height:
+        none !important;
+
+    min-width:
+        0 !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    pointer-events:
+        none !important;
+
+    display:
+        block !important;
+
+    object-fit:
+        none !important;
+}
+
+
+/* ================================================================
+   CAMERA MULTIVIEW TITLE Y ALIGNMENT
+
+   The actual CAMERA · MULTIVIEW node is .panel-kicker.
+
+   Move only its visual position downward so its baseline aligns
+   with MODE in the right rail.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+.panel-head.compact-head
+.panel-kicker {
+
+    position:
+        relative !important;
+
+    top:
+        12px !important;
+
+    transform:
+        none !important;
+}
+
+
+/* ================================================================
+   BOTTOM LEGENDS
+
+   The screenshot shows collision beginning substantially before
+   the previous 720px breakpoint.
+
+   Stack starting at 900px center-panel width.
+   ================================================================ */
+
+@container stitch-twin-v1936 (max-width: 780px) {
+
+    .stitch-twin-measured-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            7px !important;
+
+        max-width:
+            calc(100% - 20px) !important;
+
+        z-index:
+            12 !important;
+    }
+
+
+    .stitch-twin-health-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            34px !important;
+
+        max-width:
+            calc(100% - 20px) !important;
+
+        z-index:
+            12 !important;
+    }
+}
+
+
+/* ================================================================
+   COMPOSITE / RESET PARENT FLEX
+
+   Remove any parent minimum size that could preserve empty space
+   even though the controls themselves are now compact.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.health-control-group {
+
+    flex:
+        0 0 auto !important;
+
+    min-width:
+        0 !important;
+
+    width:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#twinResetBtn {
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.38 — HORIZONTAL DEPTH HEADER
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        195px !important;
+
+    height:
+        34px !important;
+
+    background-image:
+        url("/static/stitch_header_depth_horizontal_v1938.svg?v=1938")
+        !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    background-size:
+        contain !important;
+
+    opacity:
+        .90 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -195px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -195px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+/* ==================================================================
+   STITCH V1.9.39 — EXACT COMPACT TOOLBAR GEOMETRY
+
+   HTML carries the dimensions too.
+   These rules additionally prevent the surrounding flex layout
+   from stretching the controls back out.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-live
+.health-control-group {
+
+    display:
+        flex !important;
+
+    flex:
+        0 0 auto !important;
+
+    flex-grow:
+        0 !important;
+
+    flex-shrink:
+        0 !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#healthModeSelect {
+
+    inline-size:
+        94px !important;
+
+    flex-grow:
+        0 !important;
+
+    flex-shrink:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#twinResetBtn {
+
+    inline-size:
+        82px !important;
+
+    flex-grow:
+        0 !important;
+
+    flex-shrink:
+        0 !important;
+
+    margin-left:
+        auto !important;
+}
+
+
+/* ================================================================
+   TRUE SIDE-BY-SIDE RANGE
+
+   This explicitly undoes the older 900px stack between 781–900px.
+   ================================================================ */
+
+@container stitch-twin-v1936 (min-width: 781px) {
+
+    .stitch-twin-measured-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            8px !important;
+    }
+
+
+    .stitch-twin-health-legend-v1936 {
+
+        left:
+            auto !important;
+
+        right:
+            10px !important;
+
+        bottom:
+            8px !important;
+    }
+}
+
+
+/* ================================================================
+   ACTUAL COLLISION RANGE
+   ================================================================ */
+
+@container stitch-twin-v1936 (max-width: 780px) {
+
+    .stitch-twin-health-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            34px !important;
+    }
+
+
+    .stitch-twin-measured-legend-v1936 {
+
+        left:
+            10px !important;
+
+        right:
+            auto !important;
+
+        bottom:
+            7px !important;
+    }
+}
+
+
+/* ==================================================================
+   STITCH V1.9.39 — ROTATED DEPTH PLANES HEADER
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        198px !important;
+
+    height:
+        36px !important;
+
+    background-image:
+        url("/static/stitch_header_depth_v1939.svg?v=1939")
+        !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    background-size:
+        contain !important;
+
+    opacity:
+        .90 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -198px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -198px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.40 — RESPONSIVE TOOLBAR LABELS +
+                     CAMERA TITLE WRAPPER ALIGNMENT
+   ================================================================== */
+
+
+/* ================================================================
+   COMPOSITE + RESET VIEW
+
+   Stop trying to shrink these.
+
+   Return them to content-driven sizing and let shortening the
+   checkbox names solve the narrow-toolbar problem.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#healthModeSelect {
+
+    inline-size:
+        auto !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        105px !important;
+
+    max-width:
+        none !important;
+
+    flex:
+        0 0 auto !important;
+
+    padding-left:
+        10px !important;
+
+    padding-right:
+        22px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#twinResetBtn {
+
+    inline-size:
+        auto !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    flex:
+        0 0 auto !important;
+
+    padding-left:
+        12px !important;
+
+    padding-right:
+        12px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ================================================================
+   RESPONSIVE NAMES
+
+   Normal width:
+       Command ghost
+       Joint markers
+       Health
+
+   Narrow center:
+       Ghost
+       Joint
+       Health
+
+   Functional inputs/IDs are completely untouched.
+   ================================================================ */
+
+.stitch-overlay-short-v1940 {
+
+    display:
+        none;
+}
+
+
+@container stitch-twin-v1936 (max-width: 650px) {
+
+    .stitch-overlay-full-v1940 {
+
+        display:
+            none !important;
+    }
+
+
+    .stitch-overlay-short-v1940 {
+
+        display:
+            inline !important;
+    }
+
+
+    .twin-control-group {
+
+        gap:
+            4px !important;
+    }
+}
+
+
+/* ================================================================
+   CAMERA MULTIVIEW
+
+   IMPORTANT:
+   We are NOT moving .panel-kicker anymore.
+
+   We move its whole containing wrapper downward.
+
+   This bypasses the accumulated title-specific transform/top rules.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+> .panel-head
+> .stitch-camera-title-block-v1940 {
+
+    position:
+        relative !important;
+
+    top:
+        21px !important;
+
+    transform:
+        none !important;
+
+    z-index:
+        5 !important;
+}
+
+
+/*
+ * Neutralize all older movement applied directly to the title.
+ */
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+.stitch-camera-title-block-v1940
+> .panel-kicker {
+
+    position:
+        relative !important;
+
+    top:
+        0 !important;
+
+    transform:
+        none !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.41 — ACTUAL CAMERA HEADER ROW
+
+   The real fix:
+       Camera Multiview        Connect | Disconnect
+
+   They now share one flex row and one align-items:center axis.
+   ================================================================== */
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+> .panel-head.compact-head {
+
+    display:
+        flex !important;
+
+    flex-direction:
+        row !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    min-height:
+        34px !important;
+
+    height:
+        34px !important;
+
+    gap:
+        12px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+> .panel-head.compact-head
+> div:first-child {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    flex:
+        0 0 auto !important;
+
+    position:
+        static !important;
+
+    top:
+        auto !important;
+
+    transform:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+.panel-kicker {
+
+    width:
+        auto !important;
+
+    min-height:
+        0 !important;
+
+    position:
+        static !important;
+
+    top:
+        auto !important;
+
+    transform:
+        none !important;
+
+    margin:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+.camera-actions {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    align-self:
+        center !important;
+
+    flex:
+        0 0 auto !important;
+
+    width:
+        auto !important;
+
+    margin-left:
+        auto !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.41 — DEPTH FALLOFF HEADER
+
+   Largest gate nearest nav.
+   Smaller gates progressively farther away.
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        210px !important;
+
+    height:
+        36px !important;
+
+    background-image:
+        url("/static/stitch_header_depth_falloff_v1941.svg?v=1941")
+        !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    background-size:
+        contain !important;
+
+    opacity:
+        .91 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -210px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -210px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.42 — BRAND + CAMERA FINAL ALIGNMENT
+   ================================================================== */
+
+
+/* ================================================================
+   TELEOP CONTROL CENTER — WHITE
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar
+.rv-brand-title,
+
+body.stitch-live-v12
+header.topbar
+.title-row h1 {
+
+    color:
+        #f4f4f5 !important;
+}
+
+
+/* ================================================================
+   GREEN ONLINE DOT — RETIRED
+
+   The DOM source has been removed as well.
+   These selectors are only defensive against stale cached markup.
+   ================================================================ */
+
+body.stitch-live-v12
+.rv-brand-online-dot,
+
+body.stitch-live-v12
+.rv-brand-online-dot::before {
+
+    display:
+        none !important;
+
+    content:
+        none !important;
+
+    animation:
+        none !important;
+}
+
+
+/* ================================================================
+   CAMERA MULTIVIEW
+
+   Same structural row as Connect / Disconnect from V1.9.41,
+   with the title itself shifted the final 5px downward.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-panel
+> .panel-head.compact-head
+.panel-kicker {
+
+    transform:
+        translateY(5px) !important;
+}
+
+
+/* ==================================================================
+   STITCH V1.9.42 — DEPTH CORRIDOR HEADER
+   ================================================================== */
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    width:
+        218px !important;
+
+    height:
+        38px !important;
+
+    background-image:
+        url("/static/stitch_header_corridor_v1942.svg?v=1942")
+        !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    background-position:
+        center !important;
+
+    background-size:
+        contain !important;
+
+    opacity:
+        .88 !important;
+
+    animation:
+        none !important;
+
+    filter:
+        none !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -218px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -218px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+

@@ -1,0 +1,387 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 170 38"
+    fill="none"
+>
+
+    <defs>
+
+        <filter
+            id="greenGlow"
+            x="-50%"
+            y="-100%"
+            width="200%"
+            height="300%"
+        >
+            <feGaussianBlur
+                stdDeviation=".65"
+                result="blur"
+            />
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+
+
+        <filter
+            id="amberGlow"
+            x="-50%"
+            y="-100%"
+            width="200%"
+            height="300%"
+        >
+            <feGaussianBlur
+                stdDeviation=".55"
+                result="blur"
+            />
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+
+    </defs>
+
+
+    <!-- ==========================================================
+         ORIGIN PORT
+         Right edge of this SVG sits directly beside the nav capsule.
+         Everything grows OUTWARD from here toward the left.
+         ========================================================== -->
+
+    <g
+        stroke="#159873"
+        stroke-linecap="round"
+        filter="url(#greenGlow)"
+    >
+
+        <path
+            d="M168 19H151"
+            stroke-width="1.5"
+            opacity=".82"
+        />
+
+        <path
+            d="M160 15V23"
+            stroke-width="1"
+            opacity=".45"
+        />
+
+        <circle
+            cx="150"
+            cy="19"
+            r="2"
+            stroke-width="1"
+            opacity=".9"
+        >
+
+            <animate
+                attributeName="r"
+                values="1.4;2.6;1.4"
+                dur="2.4s"
+                repeatCount="indefinite"
+            />
+
+            <animate
+                attributeName="opacity"
+                values=".45;1;.45"
+                dur="2.4s"
+                repeatCount="indefinite"
+            />
+
+        </circle>
+
+    </g>
+
+
+    <!-- ==========================================================
+         PRIMARY OUTWARD DATA SPINES
+         ========================================================== -->
+
+    <g
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+    >
+
+        <path
+            d="
+                M149 19
+                H132
+                L123 11
+                H103
+                L94 6
+                H76
+            "
+            stroke="#128b69"
+            stroke-width="1.15"
+            stroke-dasharray="12 7"
+            opacity=".74"
+            filter="url(#greenGlow)"
+        >
+            <animate
+                attributeName="stroke-dashoffset"
+                from="0"
+                to="38"
+                dur="3.8s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+
+        <path
+            d="
+                M149 19
+                H127
+                L116 27
+                H95
+                L86 32
+                H67
+            "
+            stroke="#f59e0b"
+            stroke-width="1.05"
+            stroke-dasharray="9 8"
+            opacity=".62"
+            filter="url(#amberGlow)"
+        >
+            <animate
+                attributeName="stroke-dashoffset"
+                from="0"
+                to="34"
+                dur="4.5s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+
+        <path
+            d="M145 19H91"
+            stroke="#0d7459"
+            stroke-width=".85"
+            stroke-dasharray="2 6"
+            opacity=".48"
+        >
+            <animate
+                attributeName="stroke-dashoffset"
+                from="0"
+                to="24"
+                dur="3.1s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+    </g>
+
+
+    <!-- ==========================================================
+         MOVING PACKETS — visibly launched from the nav-side port
+         ========================================================== -->
+
+    <circle
+        r="1.8"
+        fill="#20b889"
+        filter="url(#greenGlow)"
+    >
+
+        <animateMotion
+            dur="3.4s"
+            repeatCount="indefinite"
+            path="
+                M149 19
+                H132
+                L123 11
+                H103
+                L94 6
+                H76
+            "
+        />
+
+        <animate
+            attributeName="opacity"
+            values=".15;1;.7;.15"
+            dur="3.4s"
+            repeatCount="indefinite"
+        />
+
+    </circle>
+
+
+    <circle
+        r="1.65"
+        fill="#f59e0b"
+        filter="url(#amberGlow)"
+    >
+
+        <animateMotion
+            dur="4.1s"
+            repeatCount="indefinite"
+            path="
+                M149 19
+                H127
+                L116 27
+                H95
+                L86 32
+                H67
+            "
+        />
+
+        <animate
+            attributeName="opacity"
+            values=".12;.9;.65;.12"
+            dur="4.1s"
+            repeatCount="indefinite"
+        />
+
+    </circle>
+
+
+    <!-- ==========================================================
+         OUTER SCANNER MODULE
+         Same geometric family as the camera idle animations.
+         ========================================================== -->
+
+    <g
+        transform="translate(47 19)"
+    >
+
+        <circle
+            r="15"
+            stroke="#0b7259"
+            stroke-width=".9"
+            stroke-dasharray="2.5 4"
+            opacity=".48"
+        >
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0"
+                to="360"
+                dur="10s"
+                repeatCount="indefinite"
+            />
+        </circle>
+
+
+        <circle
+            r="11"
+            stroke="#149671"
+            stroke-width="1"
+            stroke-dasharray="8 3 2 3"
+            opacity=".7"
+            filter="url(#greenGlow)"
+        >
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="360"
+                to="0"
+                dur="7.5s"
+                repeatCount="indefinite"
+            />
+        </circle>
+
+
+        <path
+            d="M0 -7L7 0L0 7L-7 0Z"
+            stroke="#13a078"
+            stroke-width="1.15"
+            opacity=".82"
+            filter="url(#greenGlow)"
+        >
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0"
+                to="360"
+                dur="12s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+
+        <circle
+            r="2"
+            stroke="#f59e0b"
+            stroke-width="1"
+            opacity=".88"
+            filter="url(#amberGlow)"
+        >
+            <animate
+                attributeName="r"
+                values="1.2;2.6;1.2"
+                dur="2.2s"
+                repeatCount="indefinite"
+            />
+        </circle>
+
+
+        <!-- little depth planes -->
+
+        <g
+            stroke="#0e8061"
+            stroke-width=".8"
+            opacity=".47"
+        >
+            <path d="M-28 -8H-19"/>
+            <path d="M-31 -3H-20"/>
+            <path d="M-34 2H-21"/>
+            <path d="M-31 7H-20"/>
+        </g>
+
+    </g>
+
+
+    <!-- ==========================================================
+         OUTER TERMINAL FLASHES
+         ========================================================== -->
+
+    <g
+        stroke-linecap="round"
+    >
+
+        <path
+            d="M6 19H25"
+            stroke="#128d6a"
+            stroke-width="1.15"
+            opacity=".5"
+        >
+            <animate
+                attributeName="opacity"
+                values=".16;.72;.16"
+                dur="2.8s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+        <path
+            d="M12 14H24"
+            stroke="#f59e0b"
+            stroke-width=".9"
+            opacity=".42"
+        >
+            <animate
+                attributeName="opacity"
+                values=".55;.12;.55"
+                dur="3.1s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+        <path
+            d="M12 24H28"
+            stroke="#0c775b"
+            stroke-width=".9"
+            opacity=".42"
+        >
+            <animate
+                attributeName="opacity"
+                values=".12;.6;.12"
+                dur="3.5s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+    </g>
+
+</svg>

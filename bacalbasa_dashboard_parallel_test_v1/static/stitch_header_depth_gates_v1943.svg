@@ -1,0 +1,268 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 220 38"
+    fill="none"
+>
+
+  <!-- ============================================================
+       V1.9.43 DEPTH GATES
+
+       NAV IS ON THE RIGHT.
+
+       Large gate near nav.
+       Progressively smaller gates moving outward.
+
+       No internal twig / branch / glyph.
+       ============================================================ -->
+
+
+  <!-- quiet center rail -->
+  <path
+      d="M217 19H48"
+      stroke="#118064"
+      stroke-width=".65"
+      stroke-dasharray="2 6"
+      opacity=".20"
+  />
+
+
+  <!-- ============================================================
+       LARGE INNER DEPTH FRAME
+       ============================================================ -->
+
+  <g
+      stroke="#159873"
+      stroke-width="1.05"
+      stroke-linejoin="round"
+      opacity=".70"
+  >
+
+      <path
+          d="
+            M191 6
+            L214 10
+            L214 28
+            L191 32
+            Z
+          "
+      />
+
+      <animate
+          attributeName="opacity"
+          values=".48;.78;.48"
+          dur="4.0s"
+          repeatCount="indefinite"
+      />
+
+  </g>
+
+
+  <!-- amber lower depth edge -->
+  <path
+      d="M191 32L214 28"
+      stroke="#b77d0b"
+      stroke-width=".9"
+      opacity=".58"
+  />
+
+
+  <!-- ============================================================
+       SECOND DEPTH FRAME
+       ============================================================ -->
+
+  <g
+      stroke="#128b6b"
+      stroke-width=".95"
+      stroke-linejoin="round"
+      opacity=".57"
+  >
+
+      <path
+          d="
+            M163 9
+            L181 12
+            L181 26
+            L163 29
+            Z
+          "
+      />
+
+      <animate
+          attributeName="opacity"
+          values=".36;.36;.68;.36"
+          dur="4.0s"
+          repeatCount="indefinite"
+      />
+
+  </g>
+
+
+  <!-- small amber edge -->
+  <path
+      d="M163 9L181 12"
+      stroke="#a8740c"
+      stroke-width=".8"
+      opacity=".46"
+  />
+
+
+  <!-- ============================================================
+       THIRD DEPTH FRAME
+       ============================================================ -->
+
+  <g
+      stroke="#0f7c61"
+      stroke-width=".85"
+      stroke-linejoin="round"
+      opacity=".44"
+  >
+
+      <path
+          d="
+            M139 12
+            L153 14
+            L153 24
+            L139 26
+            Z
+          "
+      />
+
+  </g>
+
+
+  <!-- ============================================================
+       FOURTH DEPTH FRAME
+       ============================================================ -->
+
+  <g
+      stroke="#0c7057"
+      stroke-width=".8"
+      stroke-linejoin="round"
+      opacity=".34"
+  >
+
+      <path
+          d="
+            M119 14
+            L129 15.5
+            L129 22.5
+            L119 24
+            Z
+          "
+      />
+
+  </g>
+
+
+  <!-- ============================================================
+       FIFTH / DISTANT FRAME
+       ============================================================ -->
+
+  <g
+      stroke="#09634e"
+      stroke-width=".7"
+      stroke-linejoin="round"
+      opacity=".25"
+  >
+
+      <path
+          d="
+            M102 15.5
+            L109 16.5
+            L109 21.5
+            L102 22.5
+            Z
+          "
+      />
+
+  </g>
+
+
+  <!-- ============================================================
+       OUTER DEPTH LINES
+       ============================================================ -->
+
+  <path
+      d="M89 16H76"
+      stroke="#0b6b53"
+      stroke-width=".75"
+      opacity=".25"
+  />
+
+  <path
+      d="M89 22H68"
+      stroke="#0b7358"
+      stroke-width=".75"
+      opacity=".20"
+  />
+
+  <path
+      d="M59 19H46"
+      stroke="#9b6d0d"
+      stroke-width=".75"
+      opacity=".20"
+  />
+
+
+  <!-- ============================================================
+       DEPTH SCAN
+
+       Starts wide near navigation and shrinks outward.
+       ============================================================ -->
+
+  <rect
+      y="17.4"
+      width="9"
+      height="3.2"
+      rx="1.6"
+      fill="#8ecb7f"
+  >
+
+      <animate
+          attributeName="x"
+          values="205;174;146;123;104;79;55"
+          dur="4.8s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="width"
+          values="9;8;7;6;5;4;2"
+          dur="4.8s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="opacity"
+          values="0;.72;.58;.44;.28;.14;0"
+          dur="4.8s"
+          repeatCount="indefinite"
+      />
+
+  </rect>
+
+
+  <!-- tiny amber depth pulse -->
+  <circle
+      cy="19"
+      r="1.2"
+      fill="#f59e0b"
+  >
+
+      <animate
+          attributeName="cx"
+          values="198;165;137;116;97"
+          dur="3.7s"
+          repeatCount="indefinite"
+      />
+
+      <animate
+          attributeName="opacity"
+          values=".65;.48;.32;.16;0"
+          dur="3.7s"
+          repeatCount="indefinite"
+      />
+
+  </circle>
+
+</svg>

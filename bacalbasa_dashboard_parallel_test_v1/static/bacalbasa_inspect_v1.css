@@ -1,0 +1,4300 @@
+/* ==================================================================
+   BACALBASA INSPECT V1.0
+
+   PRESENTATION ONLY.
+
+   Existing Dragos Inspect DOM, IDs, telemetry rendering,
+   service controls, filtering and backend functionality remain
+   untouched.
+
+   Visual source:
+       current Bacalbasa Live + SLAM language.
+   ================================================================== */
+
+
+/* ==============================================================
+   INSPECT WORKSPACE
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        #0b0c0c !important;
+
+    color:
+        #e2e2e2 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+}
+
+
+/* Main Inspect composition. */
+
+body.stitch-live-v12
+#view-inspect
+.inspect-health-grid.inspect-v45 {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, .95fr)
+        minmax(0, 1.28fr)
+        minmax(0, .90fr)
+        !important;
+
+    grid-template-rows:
+        minmax(270px, .43fr)
+        minmax(300px, .57fr)
+        !important;
+
+    gap:
+        8px !important;
+
+    background:
+        #0b0c0c !important;
+}
+
+
+/* ==============================================================
+   ALL FOUR MAIN INSPECT PANELS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.system-health-card,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card,
+
+body.stitch-live-v12
+#view-inspect
+.runtime-card,
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        12px !important;
+
+    background:
+        #161616 !important;
+
+    border:
+        1px solid #333333 !important;
+
+    border-radius:
+        6px !important;
+
+    box-shadow:
+        none !important;
+
+    color:
+        #e2e2e2 !important;
+}
+
+
+/* Service inventory continues to span the complete lower row. */
+
+body.stitch-live-v12
+#view-inspect
+.service-inventory-wide {
+
+    grid-column:
+        1 / -1 !important;
+
+    grid-row:
+        2 !important;
+}
+
+
+/* ==============================================================
+   PANEL HEADERS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.panel-head {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        30px !important;
+
+    margin:
+        0 0 10px !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        flex-start !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        12px !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.panel-kicker {
+
+    margin:
+        0 0 2px !important;
+
+    color:
+        #737373 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        12px !important;
+
+    letter-spacing:
+        .12em !important;
+
+    text-transform:
+        uppercase !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.panel-head
+strong {
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.dim {
+
+    color:
+        #71717a !important;
+
+    font-size:
+        9px !important;
+
+    line-height:
+        16px !important;
+}
+
+
+/* ==============================================================
+   INSPECT CHIPS
+
+   Keep Dragos good / warn / bad classes and semantics.
+   Only presentation changes.
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.chip {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        24px !important;
+
+    padding:
+        0 8px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    border:
+        1px solid #343634 !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        #121313 !important;
+
+    color:
+        #a1a1aa !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        14px !important;
+
+    letter-spacing:
+        .04em !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.chip.good {
+
+    color:
+        #98d982 !important;
+
+    border-color:
+        rgba(152, 217, 130, .36) !important;
+
+    background:
+        rgba(152, 217, 130, .055) !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.chip.warn {
+
+    color:
+        #eab308 !important;
+
+    border-color:
+        rgba(234, 179, 8, .34) !important;
+
+    background:
+        rgba(234, 179, 8, .055) !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.chip.bad {
+
+    color:
+        #ef6b73 !important;
+
+    border-color:
+        rgba(239, 107, 115, .32) !important;
+
+    background:
+        rgba(239, 107, 115, .055) !important;
+}
+
+
+/* Existing text tones from setTone() remain meaningful. */
+
+body.stitch-live-v12
+#view-inspect
+.good {
+
+    color:
+        #98d982 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.warn {
+
+    color:
+        #eab308 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.bad {
+
+    color:
+        #ef6b73 !important;
+}
+
+
+/* ==============================================================
+   PC2 / SYSTEM HEALTH — METRIC CARDS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr)) !important;
+
+    gap:
+        7px !important;
+
+    margin:
+        2px 0 10px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        72px !important;
+
+    padding:
+        10px !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+span {
+
+    display:
+        block !important;
+
+    margin:
+        0 0 6px !important;
+
+    color:
+        #71717a !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        10px !important;
+
+    letter-spacing:
+        .08em !important;
+
+    text-transform:
+        uppercase !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+strong {
+
+    display:
+        block !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        17px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        20px !important;
+
+    font-variant-numeric:
+        tabular-nums !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+strong.good {
+
+    color:
+        #98d982 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+small {
+
+    display:
+        block !important;
+
+    margin:
+        5px 0 0 !important;
+
+    color:
+        #66666e !important;
+
+    font-size:
+        8px !important;
+
+    line-height:
+        11px !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+}
+
+
+/* ==============================================================
+   SYSTEM KV / GENERAL ROWS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv {
+
+    margin-top:
+        auto !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        25px !important;
+
+    padding:
+        4px 8px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        10px !important;
+
+    border-bottom:
+        1px solid #292929 !important;
+
+    background:
+        transparent !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+> div:last-child {
+
+    border-bottom:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+span {
+
+    color:
+        #71717a !important;
+
+    font-size:
+        9px !important;
+
+    font-weight:
+        500 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+strong {
+
+    min-width:
+        0 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+
+    text-align:
+        right !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+}
+
+
+/* ==============================================================
+   BASE SENSING
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.sensor-split {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1.18fr)
+        minmax(0, .92fr) !important;
+
+    gap:
+        8px !important;
+
+    min-height:
+        0 !important;
+
+    flex:
+        1 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.sensor-block {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    padding:
+        9px !important;
+
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.sensor-block-head {
+
+    min-height:
+        18px !important;
+
+    margin:
+        0 0 7px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.sensor-block-head
+span {
+
+    color:
+        #8a8a91 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+
+    letter-spacing:
+        .08em !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.sensor-block-head
+strong {
+
+    color:
+        #71717a !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+
+    font-weight:
+        700 !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.attitude-grid,
+
+body.stitch-live-v12
+#view-inspect
+.sensor-vector-grid {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+        5px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.attitude-grid {
+
+    margin-bottom:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.attitude-grid
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.sensor-vector-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        0 !important;
+
+    padding:
+        6px !important;
+
+    background:
+        #101111 !important;
+
+    border:
+        1px solid #292b29 !important;
+
+    border-radius:
+        5px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.attitude-grid
+span,
+
+body.stitch-live-v12
+#view-inspect
+.sensor-vector-grid
+span {
+
+    display:
+        block !important;
+
+    color:
+        #71717a !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+
+    font-weight:
+        600 !important;
+
+    letter-spacing:
+        .05em !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.attitude-grid
+strong,
+
+body.stitch-live-v12
+#view-inspect
+.sensor-vector-grid
+strong {
+
+    display:
+        block !important;
+
+    margin-top:
+        3px !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        700 !important;
+
+    font-variant-numeric:
+        tabular-nums !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.sensor-foot {
+
+    margin-top:
+        auto !important;
+
+    padding-top:
+        6px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        8px !important;
+
+    color:
+        #66666e !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.sensor-note {
+
+    margin-top:
+        4px !important;
+
+    color:
+        #66666e !important;
+
+    font-size:
+        7px !important;
+
+    line-height:
+        11px !important;
+}
+
+
+/* ==============================================================
+   RUNTIME / ENDPOINTS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        1fr !important;
+
+    gap:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        29px !important;
+
+    padding:
+        5px 8px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        10px !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+span {
+
+    color:
+        #71717a !important;
+
+    font-size:
+        8px !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong {
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.runtime-note {
+
+    margin-top:
+        auto !important;
+
+    padding-top:
+        8px !important;
+
+    color:
+        #5f5f66 !important;
+
+    font-size:
+        7px !important;
+
+    line-height:
+        11px !important;
+}
+
+
+/* ==============================================================
+   SERVICE INVENTORY HEADER / FILTERS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.service-head {
+
+    margin-bottom:
+        8px !important;
+
+    align-items:
+        center !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-head-actions {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-end !important;
+
+    gap:
+        7px !important;
+
+    flex-wrap:
+        wrap !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-filter,
+
+body.stitch-live-v12
+#view-inspect
+.service-select {
+
+    box-sizing:
+        border-box !important;
+
+    height:
+        30px !important;
+
+    min-height:
+        30px !important;
+
+    margin:
+        0 !important;
+
+    border:
+        1px solid #343634 !important;
+
+    border-radius:
+        6px !important;
+
+    outline:
+        none !important;
+
+    background:
+        #111212 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif !important;
+
+    font-size:
+        9px !important;
+
+    font-weight:
+        500 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-filter {
+
+    width:
+        210px !important;
+
+    max-width:
+        27vw !important;
+
+    padding:
+        0 9px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-select {
+
+    min-width:
+        104px !important;
+
+    padding:
+        0 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-filter:focus,
+
+body.stitch-live-v12
+#view-inspect
+.service-select:focus {
+
+    border-color:
+        rgba(142, 203, 127, .58) !important;
+
+    box-shadow:
+        0 0 0 2px
+        rgba(142, 203, 127, .06) !important;
+}
+
+
+/* ==============================================================
+   ROBOTSTATE SUMMARY
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.robotstate-summary {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr)) !important;
+
+    gap:
+        1px !important;
+
+    margin:
+        0 0 7px !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        #2e2e2e !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.robotstate-summary
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        0 !important;
+
+    padding:
+        7px 9px !important;
+
+    background:
+        #121313 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.robotstate-summary
+span {
+
+    display:
+        block !important;
+
+    margin-bottom:
+        3px !important;
+
+    color:
+        #71717a !important;
+
+    font-size:
+        8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.robotstate-summary
+strong {
+
+    display:
+        block !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        700 !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+}
+
+
+/* ==============================================================
+   SERVICE STATUS LINE
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.service-status-row {
+
+    min-height:
+        17px !important;
+
+    margin:
+        0 0 7px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        12px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.diagnostic-note {
+
+    min-width:
+        0 !important;
+
+    color:
+        #66666e !important;
+
+    font-size:
+        8px !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-counts {
+
+    color:
+        #8a8a91 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-variant-numeric:
+        tabular-nums !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==============================================================
+   SERVICE TABLE
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.service-table {
+
+    min-height:
+        0 !important;
+
+    flex:
+        1 !important;
+
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        #0f1010 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-list {
+
+    min-height:
+        0 !important;
+
+    flex:
+        1 !important;
+
+    overflow:
+        auto !important;
+
+    scrollbar-color:
+        #3a3a3a #111212 !important;
+
+    scrollbar-width:
+        thin !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-row {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        27px !important;
+
+    padding:
+        5px 10px !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(260px, 1fr)
+        120px
+        72px
+        86px !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        12px !important;
+
+    border-bottom:
+        1px solid #252625 !important;
+
+    background:
+        #0f1010 !important;
+
+    color:
+        #c9c9cd !important;
+
+    font-size:
+        9px !important;
+
+    line-height:
+        15px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-row:last-child {
+
+    border-bottom:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-header {
+
+    position:
+        sticky !important;
+
+    top:
+        0 !important;
+
+    z-index:
+        2 !important;
+
+    min-height:
+        28px !important;
+
+    background:
+        #171817 !important;
+
+    color:
+        #8a8a91 !important;
+
+    border-bottom:
+        1px solid #363836 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+
+    font-weight:
+        700 !important;
+
+    letter-spacing:
+        .08em !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-name {
+
+    min-width:
+        0 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-weight:
+        550 !important;
+
+    overflow:
+        hidden !important;
+
+    text-overflow:
+        ellipsis !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-row
+strong {
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+}
+
+
+/* ==============================================================
+   POLICY COLORS
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.service-policy {
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+
+    letter-spacing:
+        .03em !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-policy.allowed {
+
+    color:
+        #98d982 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-policy.protected {
+
+    color:
+        #eab308 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-policy.read_only {
+
+    color:
+        #a1a1aa !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-policy.unknown {
+
+    color:
+        #66666e !important;
+}
+
+
+/* ==============================================================
+   SERVICE CONTROL SWITCH
+
+   Functionality remains the original native input/event handler.
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.service-control-cell {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-end !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-switch {
+
+    position:
+        relative !important;
+
+    width:
+        34px !important;
+
+    height:
+        18px !important;
+
+    display:
+        inline-block !important;
+
+    flex:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-switch-track {
+
+    position:
+        absolute !important;
+
+    inset:
+        0 !important;
+
+    border:
+        1px solid #424442 !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        #252625 !important;
+
+    transition:
+        .14s !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-switch-track::before {
+
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    width:
+        12px !important;
+
+    height:
+        12px !important;
+
+    left:
+        2px !important;
+
+    top:
+        2px !important;
+
+    border-radius:
+        50% !important;
+
+    background:
+        #8a8a91 !important;
+
+    transition:
+        .14s !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-switch
+input:checked
++
+.service-switch-track {
+
+    background:
+        rgba(142, 203, 127, .18) !important;
+
+    border-color:
+        rgba(142, 203, 127, .55) !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-switch
+input:checked
++
+.service-switch-track::before {
+
+    transform:
+        translateX(16px) !important;
+
+    background:
+        #98d982 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-control-na {
+
+    color:
+        #5f5f66 !important;
+
+    font-size:
+        8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-switching {
+
+    color:
+        #eab308 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    font-weight:
+        700 !important;
+}
+
+
+/* ==============================================================
+   EMPTY / PLACEHOLDER STATES
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.empty {
+
+    color:
+        #5f5f66 !important;
+
+    font-size:
+        9px !important;
+
+    text-align:
+        center !important;
+}
+
+
+/* ==============================================================
+   RESPONSIVE FALLBACKS
+
+   Preserve original Inspect functionality at smaller widths.
+   ============================================================== */
+
+@media (max-width: 1280px) {
+
+    body.stitch-live-v12
+    #view-inspect {
+
+        overflow:
+            auto !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-inspect
+    .inspect-health-grid.inspect-v45 {
+
+        height:
+            auto !important;
+
+        min-height:
+            100% !important;
+
+        grid-template-columns:
+            1fr 1fr !important;
+
+        grid-template-rows:
+            auto !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-inspect
+    .runtime-card,
+
+    body.stitch-live-v12
+    #view-inspect
+    .service-inventory-wide {
+
+        grid-column:
+            1 / -1 !important;
+
+        grid-row:
+            auto !important;
+    }
+}
+
+
+@media (max-width: 820px) {
+
+    body.stitch-live-v12
+    #view-inspect
+    .inspect-health-grid.inspect-v45 {
+
+        grid-template-columns:
+            1fr !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-inspect
+    .system-health-card,
+
+    body.stitch-live-v12
+    #view-inspect
+    .base-sensing-card,
+
+    body.stitch-live-v12
+    #view-inspect
+    .runtime-card,
+
+    body.stitch-live-v12
+    #view-inspect
+    .service-inventory-wide {
+
+        grid-column:
+            auto !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-inspect
+    .metric-tiles {
+
+        grid-template-columns:
+            repeat(2, 1fr) !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-inspect
+    .sensor-split {
+
+        grid-template-columns:
+            1fr !important;
+    }
+
+
+    body.stitch-live-v12
+    #view-inspect
+    .service-row {
+
+        grid-template-columns:
+            minmax(150px, 1fr)
+            88px
+            62px
+            70px !important;
+    }
+}
+
+/* ==============================================================
+   BACALBASA INSPECT V1.1 — FOUR-CARD TOP ROW
+   ============================================================== */
+
+/* Four independent-looking sections across the top. */
+#view-inspect .inspect-health-grid.inspect-v45 {
+    grid-template-columns:
+        minmax(0,1.12fr)
+        minmax(0,.92fr)
+        minmax(0,.92fr)
+        minmax(0,1.04fr) !important;
+    gap: 8px !important;
+}
+
+/* --------------------------------------------------------------
+   SYSTEM HEALTH
+   -------------------------------------------------------------- */
+
+#view-inspect .system-health-card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+}
+
+/* Remove PC2 / hostname / MONITOR corner text. */
+#view-inspect .system-health-card .panel-kicker,
+#view-inspect #systemHostname,
+#view-inspect #systemMonitorChip {
+    display: none !important;
+}
+
+/* Make the only visible header title SYSTEM HEALTH. */
+#view-inspect .system-health-card > .panel-head::before {
+    content: "SYSTEM HEALTH";
+    color: #d4d4d8;
+    font-family: "Space Mono", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    letter-spacing: .035em;
+}
+
+#view-inspect .system-health-card > .panel-head {
+    height: 30px !important;
+    min-height: 30px !important;
+    margin-bottom: 10px !important;
+    align-items: center !important;
+}
+
+
+/* --------------------------------------------------------------
+   TORSO IMU + ODOMETRY
+   Turn the existing combined wrapper into transparent structure.
+   The two existing sensor blocks become grid items themselves.
+   -------------------------------------------------------------- */
+
+#view-inspect .base-sensing-card,
+#view-inspect .base-sensing-card > .sensor-split {
+    display: contents !important;
+}
+
+/* Old combined header disappears completely. */
+#view-inspect .base-sensing-card > .panel-head {
+    display: none !important;
+}
+
+/* Existing Torso IMU block -> top-level card 2. */
+#view-inspect .sensor-split > .sensor-block:first-child {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+}
+
+/* Existing Odometry block -> top-level card 3. */
+#view-inspect .sensor-split > .sensor-block:last-child {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+}
+
+/* Make both sensor blocks look exactly like major Inspect cards. */
+#view-inspect .sensor-split > .sensor-block {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 12px !important;
+
+    background: #161616 !important;
+    border: 1px solid #333 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+
+    overflow: hidden !important;
+}
+
+/* Keep only TORSO IMU / ODOMETRY title text in their headers. */
+#view-inspect .sensor-block-head {
+    height: 30px !important;
+    min-height: 30px !important;
+    margin: 0 0 10px !important;
+    align-items: center !important;
+}
+
+#view-inspect .sensor-block-head span {
+    color: #d4d4d8 !important;
+    font-family: "Space Mono", monospace !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+    letter-spacing: .035em !important;
+}
+
+/* Hide rt/secondary_imu, waiting, etc. */
+#view-inspect .sensor-block-head strong {
+    display: none !important;
+}
+
+
+/* --------------------------------------------------------------
+   ENDPOINTS & PROCESSES
+   -------------------------------------------------------------- */
+
+#view-inspect .runtime-card {
+    grid-column: 4 !important;
+    grid-row: 1 !important;
+}
+
+/* Remove RUNTIME and read-only corner labels. */
+#view-inspect .runtime-card .panel-kicker,
+#view-inspect .runtime-card .panel-head .dim {
+    display: none !important;
+}
+
+#view-inspect .runtime-card .panel-head {
+    height: 30px !important;
+    min-height: 30px !important;
+    margin-bottom: 10px !important;
+    align-items: center !important;
+}
+
+#view-inspect .runtime-card .panel-head strong {
+    color: #d4d4d8 !important;
+    font-family: "Space Mono", monospace !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+    letter-spacing: .035em !important;
+    text-transform: uppercase !important;
+}
+
+
+/* --------------------------------------------------------------
+   REMOVE CLIENT API / SERVER API / VERSION MATCH / SERVICES BAR
+
+   The elements stay in the DOM because app.js writes to their IDs.
+   They simply occupy zero visible space.
+   -------------------------------------------------------------- */
+
+#view-inspect .robotstate-summary {
+    display: none !important;
+}
+
+
+/* Service inventory remains full width. */
+#view-inspect .service-inventory-wide {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+}
+
+
+/* Responsive fallback. */
+@media (max-width: 1450px) {
+    #view-inspect .inspect-health-grid.inspect-v45 {
+        height: auto !important;
+        grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+        grid-template-rows: auto !important;
+    }
+
+    #view-inspect .system-health-card,
+    #view-inspect .sensor-split > .sensor-block:first-child,
+    #view-inspect .sensor-split > .sensor-block:last-child,
+    #view-inspect .runtime-card {
+        grid-column: auto !important;
+        grid-row: auto !important;
+    }
+
+    #view-inspect .service-inventory-wide {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+    }
+}
+
+/* END BACALBASA INSPECT V1.1 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.2 — SPECIFICITY FIX
+   ============================================================== */
+
+/* --------------------------------------------------------------
+   FOUR REAL TOP-ROW VISUAL CARDS
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.inspect-health-grid.inspect-v45 {
+    grid-template-columns:
+        minmax(0, 1.12fr)
+        minmax(0, .92fr)
+        minmax(0, .92fr)
+        minmax(0, 1.04fr) !important;
+
+    gap: 8px !important;
+}
+
+
+/* Old combined Base Sensing shell must have ZERO visual box. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+> .sensor-split {
+    display: contents !important;
+}
+
+
+/* Completely remove old BASE SENSING / Torso IMU + odometry header. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+> .panel-head {
+    display: none !important;
+}
+
+
+/* --------------------------------------------------------------
+   TORSO IMU = COLUMN 2
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:first-child {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+
+    box-sizing: border-box !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 12px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    background: #161616 !important;
+
+    border: 1px solid #333333 !important;
+    border-radius: 6px !important;
+
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
+
+
+/* --------------------------------------------------------------
+   ODOMETRY = COLUMN 3
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:last-child {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+
+    box-sizing: border-box !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 12px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    background: #161616 !important;
+
+    border: 1px solid #333333 !important;
+    border-radius: 6px !important;
+
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
+
+
+/* Sensor titles only: TORSO IMU / ODOMETRY. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head {
+    height: 30px !important;
+    min-height: 30px !important;
+
+    margin: 0 0 10px !important;
+    padding: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head
+span {
+    color: #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+
+    letter-spacing: .035em !important;
+}
+
+
+/* Remove rt/secondary_imu / waiting corner text. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head
+strong {
+    display: none !important;
+}
+
+
+/* --------------------------------------------------------------
+   FIX THE OTHER TWO GRID POSITIONS
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.system-health-card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.runtime-card {
+    grid-column: 4 !important;
+    grid-row: 1 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.service-inventory-wide {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+}
+
+
+/* --------------------------------------------------------------
+   COMPLETELY REMOVE THE BOTTOM INFO STRIPS FROM VIEW
+
+   DOM nodes stay alive invisibly so existing JS can still write
+   Client API / Server API / errors / counts without breaking.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+.robotstate-summary,
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+.service-status-row {
+    display: none !important;
+}
+
+
+/* END BACALBASA INSPECT V1.2 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.3
+   TITLE PARITY + AUXILIARY TEXT CLEANUP
+   ============================================================== */
+
+
+/* --------------------------------------------------------------
+   REMOVE SMALL BOTTOM AUXILIARY TEXT
+   Keep underlying elements/IDs alive for JS.
+   -------------------------------------------------------------- */
+
+/* Torso IMU: q / auxiliary footer */
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:first-child
+.sensor-foot {
+    display: none !important;
+}
+
+
+/* Odometry: yaw-rate footer + explanatory note */
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:last-child
+.sensor-foot,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:last-child
+.sensor-note {
+    display: none !important;
+}
+
+
+/* Processes: explanatory footer */
+body.stitch-live-v12
+#view-inspect
+.runtime-card
+.runtime-note {
+    display: none !important;
+}
+
+
+/* --------------------------------------------------------------
+   REMOVE "UNITREE ROBOTSTATE API"
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+.panel-kicker {
+    display: none !important;
+}
+
+
+/* --------------------------------------------------------------
+   ALL FIVE TITLES = EXACT SLAM LOCALIZATION TITLE LANGUAGE
+   -------------------------------------------------------------- */
+
+/*
+   Localization reference:
+
+       color          rgb(201,205,211)
+       Space Mono
+       14px
+       700
+       20px line
+       .35px tracking
+       uppercase
+ */
+
+
+/* SYSTEM HEALTH */
+body.stitch-live-v12
+#view-inspect
+.system-health-card
+> .panel-head::before,
+
+/* TORSO IMU + ODOMETRY */
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head
+span,
+
+/* PROCESSES */
+body.stitch-live-v12
+#view-inspect
+.runtime-card
+.panel-head
+strong,
+
+/* SERVICE INVENTORY */
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+.service-head
+strong {
+
+    color:
+        rgb(201, 205, 211) !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        14px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        20px !important;
+
+    letter-spacing:
+        .35px !important;
+
+    text-transform:
+        uppercase !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* --------------------------------------------------------------
+   SAME TITLE POSITION RELATIVE TO EACH CARD
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.system-health-card
+> .panel-head,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head,
+
+body.stitch-live-v12
+#view-inspect
+.runtime-card
+> .panel-head {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        26px !important;
+
+    min-height:
+        26px !important;
+
+    margin:
+        0 0 10px !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+}
+
+
+/*
+ * Service Inventory keeps its controls on the right,
+ * but its title gets the same vertical origin.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+.service-head {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        26px !important;
+
+    margin:
+        0 0 10px !important;
+
+    padding:
+        0 !important;
+
+    align-items:
+        center !important;
+}
+
+
+/* No residual small heading above Service Inventory title. */
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card
+.service-head
+> div {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    min-height:
+        26px !important;
+}
+
+
+/* END BACALBASA INSPECT V1.3 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.4
+   SENSOR TILE FILL + LOCALIZATION ROW PARITY
+   ============================================================== */
+
+
+/* ==============================================================
+   TORSO IMU / ODOMETRY
+
+   Both cards use the SAME internal 3-column / 3-row tile geometry.
+   Torso fills all 9 cells.
+   Odometry occupies the first 6, therefore its cells remain exactly
+   the same size as Torso instead of stretching larger.
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    grid-template-rows:
+        30px
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+        6px !important;
+
+    align-content:
+        stretch !important;
+}
+
+
+/* Title occupies complete first row. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head {
+
+    grid-column:
+        1 / -1 !important;
+
+    width:
+        100% !important;
+
+    height:
+        30px !important;
+
+    min-height:
+        30px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+/*
+ * Flatten the old internal grids so their telemetry cells become
+ * direct children of the new shared 3x3 card grid.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+
+    display:
+        contents !important;
+}
+
+
+/* One canonical telemetry tile. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        10px !important;
+
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    justify-content:
+        center !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+/* Tile labels. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+span,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+span {
+
+    margin:
+        0 0 7px !important;
+
+    color:
+        #8c96a7 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        9px !important;
+
+    font-weight:
+        600 !important;
+
+    line-height:
+        12px !important;
+
+    letter-spacing:
+        .04em !important;
+}
+
+
+/* Tile values. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+strong,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+strong {
+
+    margin:
+        0 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        16px !important;
+}
+
+
+/* ==============================================================
+   SYSTEM HEALTH BOTTOM ROWS + PROCESSES
+
+   Match current SLAM Localization row language:
+       24px row
+       12px Plus Jakarta Sans
+       16px line
+       muted labels
+       compact label/value spacing
+       no rounded mini-card appearance
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid {
+
+    gap:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        24px !important;
+
+    min-height:
+        24px !important;
+
+    max-height:
+        24px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        9px !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+}
+
+
+/* Localization-style labels. */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+span,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+span {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Localization-style values. */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+strong,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-align:
+        right !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Keep connected-state semantics visible. */
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong.good {
+    color: #98d982 !important;
+}
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong.warn {
+    color: #eab308 !important;
+}
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong.bad {
+    color: #ef6b73 !important;
+}
+
+
+/* END BACALBASA INSPECT V1.4 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.5
+   SQUARE SENSOR GRID + BOXED LOCALIZATION-STYLE ROWS
+   ============================================================== */
+
+
+/* ==============================================================
+   TORSO IMU + ODOMETRY
+
+   One shared 3 x 3 geometry.
+
+   Torso IMU:
+       9 squares -> all 3 rows occupied
+
+   Odometry:
+       6 squares -> first 2 rows occupied
+       third row deliberately remains empty
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    grid-template-rows:
+        30px
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+        8px !important;
+
+    align-content:
+        stretch !important;
+}
+
+
+/* Title occupies its own row. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-block-head {
+
+    grid-column:
+        1 / -1 !important;
+
+    height:
+        30px !important;
+
+    min-height:
+        30px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+/* Let all telemetry cells participate directly in the 3x3 grid. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+
+    display:
+        contents !important;
+}
+
+
+/* --------------------------------------------------------------
+   TRUE SQUARE TILE
+
+   Height comes from the shared 3-row geometry.
+   Width is derived from that height through aspect-ratio.
+
+   This keeps Torso and Odometry tiles IDENTICAL.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    height:
+        100% !important;
+
+    width:
+        auto !important;
+
+    max-width:
+        100% !important;
+
+    aspect-ratio:
+        1 / 1 !important;
+
+    justify-self:
+        center !important;
+
+    align-self:
+        center !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        11px !important;
+
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    justify-content:
+        center !important;
+
+    align-items:
+        flex-start !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+/* Larger labels inside the square. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+span,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+span {
+
+    margin:
+        0 0 8px !important;
+
+    padding:
+        0 !important;
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        600 !important;
+
+    line-height:
+        13px !important;
+
+    letter-spacing:
+        .03em !important;
+}
+
+
+/* Larger telemetry values. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+strong,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+strong {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        13px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        17px !important;
+}
+
+
+/* ==============================================================
+   SYSTEM HEALTH BOTTOM ROWS + PROCESSES
+
+   Restore the small rounded containers.
+
+   Typography remains in the same language as:
+       State
+       Pose
+       Heading
+       etc. in SLAM Localization.
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv {
+
+    margin-top:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.system-kv,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        1fr !important;
+
+    gap:
+        6px !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* Bring back the individual little containers, slightly larger. */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    max-height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 10px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        10px !important;
+
+    background:
+        #121313 !important;
+
+    border:
+        1px solid #2e2e2e !important;
+
+    border-radius:
+        6px !important;
+}
+
+
+/* Localization-style row labels. */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+span,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+span {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Localization-style row values. */
+
+body.stitch-live-v12
+#view-inspect
+.system-kv
+strong,
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        #d4d4d8 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-align:
+        right !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Preserve state colors when real data is connected. */
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong.good {
+    color: #98d982 !important;
+}
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong.warn {
+    color: #eab308 !important;
+}
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+strong.bad {
+    color: #ef6b73 !important;
+}
+
+
+/* END BACALBASA INSPECT V1.5 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.6
+   SQUARE SENSOR TILES + MAJOR GRIPS
+   ============================================================== */
+
+#view-inspect {
+    --baca-inspect-tile: clamp(78px, 5.15vw, 92px);
+}
+
+
+/* --------------------------------------------------------------
+   EXACT LIVE-STYLE 30PX HANDLE LANE
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.system-health-card,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block,
+
+body.stitch-live-v12
+#view-inspect
+.runtime-card,
+
+body.stitch-live-v12
+#view-inspect
+.unitree-services-card {
+    position: relative !important;
+    padding-top: 42px !important; /* original 12 + shared 30px lane */
+}
+
+
+/* 96px hit target, matching Live. */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-drag-handle-v16 {
+    position: absolute !important;
+    z-index: 100 !important;
+
+    left: 50% !important;
+    top: 4px !important;
+    transform: translateX(-50%) !important;
+
+    width: 96px !important;
+    height: 22px !important;
+
+    display: grid !important;
+    place-items: center !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+
+    cursor: grab !important;
+    touch-action: none !important;
+    user-select: none !important;
+}
+
+
+/* Exact 72 x 4 gray/green visible grip. */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-drag-grip-v16 {
+    display: block !important;
+
+    width: 72px !important;
+    height: 4px !important;
+
+    border-radius: 999px !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(121,127,121,.34) 0%,
+            rgba(121,127,121,.34) 32%,
+            #8ecb7f 32%,
+            #8ecb7f 68%,
+            rgba(121,127,121,.34) 68%,
+            rgba(121,127,121,.34) 100%
+        ) !important;
+
+    transition:
+        box-shadow 160ms ease,
+        transform 160ms ease !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-drag-handle-v16.is-active {
+    cursor: grabbing !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-drag-handle-v16.is-active
+.baca-inspect-drag-grip-v16 {
+    box-shadow:
+        0 0 8px rgba(52,211,153,.24) !important;
+
+    transform:
+        scaleX(1.08) !important;
+}
+
+
+/* --------------------------------------------------------------
+   SENSOR GEOMETRY RESET
+
+   Undo the V1.4/V1.5 display:contents experiment.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+    display: grid !important;
+
+    grid-template-columns:
+        repeat(3, var(--baca-inspect-tile)) !important;
+
+    grid-auto-rows:
+        var(--baca-inspect-tile) !important;
+
+    justify-content: center !important;
+
+    gap: 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid {
+    margin: 0 0 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+    margin: 0 !important;
+}
+
+
+/* One canonical TRUE square. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+> div {
+    box-sizing: border-box !important;
+
+    width: var(--baca-inspect-tile) !important;
+    height: var(--baca-inspect-tile) !important;
+
+    min-width: var(--baca-inspect-tile) !important;
+    min-height: var(--baca-inspect-tile) !important;
+
+    max-width: var(--baca-inspect-tile) !important;
+    max-height: var(--baca-inspect-tile) !important;
+
+    aspect-ratio: 1 / 1 !important;
+
+    margin: 0 !important;
+    padding: 10px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    align-items: flex-start !important;
+    justify-content: center !important;
+
+    background: #121313 !important;
+
+    border: 1px solid #2e2e2e !important;
+    border-radius: 6px !important;
+}
+
+
+/* Larger readable tile text. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid span,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid span {
+    margin: 0 0 7px !important;
+
+    font-family: "Space Mono", monospace !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    line-height: 13px !important;
+
+    color: rgb(140,150,167) !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid strong,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid strong {
+    margin: 0 !important;
+
+    font-family: "Space Mono", monospace !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 17px !important;
+
+    color: #d4d4d8 !important;
+}
+
+
+/*
+ * Torso:
+ *   attitude-grid     = 1 row
+ *   sensor-vector    = 2 rows
+ *   => full 3 x 3
+ *
+ * Odometry:
+ *   sensor-vector    = 2 rows
+ *   => same squares, naturally empty third row below.
+ */
+
+
+/* During drag, keep the real section above its neighbours. */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-card-dragging-v16 {
+    z-index: 40000 !important;
+    pointer-events: none !important;
+
+    box-shadow:
+        0 18px 44px rgba(0,0,0,.28) !important;
+}
+
+
+/* END BACALBASA INSPECT V1.6 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.7
+   SENSOR WIDTH + HANDLE/TITLE SPACING PARITY
+   ============================================================== */
+
+#view-inspect {
+    --baca-inspect-sensor-height: 74px;
+}
+
+
+/*
+ * IMPORTANT:
+ * Older first-child / last-child rules had greater specificity and
+ * were keeping Torso/Odometry at the old 12px top padding.
+ *
+ * Explicitly give BOTH sensor cards the same 42px content origin
+ * used by the other Inspect major cards.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:first-child,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:last-child {
+
+    padding:
+        42px 12px 12px
+        !important;
+}
+
+
+/* Same title lane/rhythm as the other top cards. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block
+> .sensor-block-head {
+
+    flex:
+        0 0 26px !important;
+
+    width:
+        100% !important;
+
+    height:
+        26px !important;
+
+    min-height:
+        26px !important;
+
+    margin:
+        0 0 10px !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+}
+
+
+/* --------------------------------------------------------------
+   TELEMETRY GRID
+
+   Width:
+       fill all available horizontal room
+
+   Height:
+       fixed, slightly shorter than before
+
+   Torso = 3 rows
+   Odometry = 2 rows + one row worth of empty space underneath
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr))
+        !important;
+
+    grid-auto-rows:
+        var(--baca-inspect-sensor-height)
+        !important;
+
+    column-gap:
+        8px !important;
+
+    row-gap:
+        8px !important;
+
+    justify-content:
+        stretch !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid
+> div,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    height:
+        var(--baca-inspect-sensor-height)
+        !important;
+
+    min-height:
+        var(--baca-inspect-sensor-height)
+        !important;
+
+    max-height:
+        var(--baca-inspect-sensor-height)
+        !important;
+
+    aspect-ratio:
+        auto !important;
+
+    justify-self:
+        stretch !important;
+
+    align-self:
+        stretch !important;
+}
+
+
+/* Torso first row -> second/third rows. */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid {
+
+    margin:
+        0 0 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+
+    margin:
+        0 !important;
+}
+
+
+/* END BACALBASA INSPECT V1.7 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.8
+   TELEMETRY TYPOGRAPHY + LIVE-STYLE REORDER SUPPORT
+   ============================================================== */
+
+
+/* --------------------------------------------------------------
+   SENSOR TILE LABELS — slightly larger
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid span,
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid span {
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        11px !important;
+
+    font-weight:
+        600 !important;
+
+    line-height:
+        14px !important;
+
+    letter-spacing:
+        .03em !important;
+}
+
+
+/* --------------------------------------------------------------
+   SYSTEM HEALTH TILE TITLES
+
+   CPU / RAM / ROOT DISK / MAX TEMP now use the exact same
+   typography as ROLL / PITCH / YAW / etc.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+> div
+> span {
+
+    display:
+        block !important;
+
+    margin:
+        0 0 8px !important;
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        11px !important;
+
+    font-weight:
+        600 !important;
+
+    line-height:
+        14px !important;
+
+    letter-spacing:
+        .03em !important;
+
+    text-transform:
+        uppercase !important;
+}
+
+
+/* --------------------------------------------------------------
+   FIRST THREE PROCESSES ITEMS
+
+   TeleVuer · 8012
+   Camera · 60001
+   Dashboard · 8080
+
+   Use the OLD small technical CPU-label language.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+> div:nth-child(-n+3)
+> span {
+
+    color:
+        #71717a !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        10px !important;
+
+    letter-spacing:
+        .08em !important;
+
+    text-transform:
+        uppercase !important;
+}
+
+
+/* --------------------------------------------------------------
+   EXACT LIVE-LIKE DRAG PRESENTATION
+
+   Real card moves; no clone.
+   Width stays attached to card identity.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.baca-inspect-following-v18 {
+
+    position:
+        relative !important;
+
+    z-index:
+        40000 !important;
+
+    pointer-events:
+        none !important;
+
+    will-change:
+        transform !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect.baca-inspect-dragging-v18,
+
+body.stitch-live-v12
+#view-inspect.baca-inspect-dragging-v18 * {
+
+    cursor:
+        grabbing !important;
+
+    user-select:
+        none !important;
+}
+
+
+/* END BACALBASA INSPECT V1.8 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.9
+   SENSOR ROW RHYTHM + PROCESS LABEL PARITY
+   ============================================================== */
+
+
+/* --------------------------------------------------------------
+   TORSO IMU
+
+   Prevent flex-gap + attitude margin from stacking.
+   Result:
+       top -> middle    = 8px
+       middle -> bottom = 8px
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block {
+
+    gap:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.attitude-grid {
+
+    margin:
+        0 0 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-vector-grid {
+
+    row-gap:
+        8px !important;
+}
+
+
+/* --------------------------------------------------------------
+   PROCESSES
+
+   TeleVuer / Camera / Dashboard words match Controller exactly.
+   Only the port suffix remains small.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+> div:nth-child(-n+3)
+> span {
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-transform:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.endpoint-grid
+.process-port-v19 {
+
+    margin-left:
+        3px !important;
+
+    color:
+        rgb(140, 150, 167) !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        7px !important;
+
+    font-weight:
+        600 !important;
+
+    line-height:
+        10px !important;
+
+    letter-spacing:
+        .04em !important;
+}
+
+
+/* END BACALBASA INSPECT V1.9 */
+
+/* ==============================================================
+   BACALBASA INSPECT V1.10
+   SENSOR START ALIGNMENT
+   ============================================================== */
+
+/*
+ * Match the top edge of the first Torso/Odometry telemetry row
+ * to the top edge of the System Health metric tiles.
+ */
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:first-child
+.attitude-grid {
+    margin-top: 2px !important;
+    margin-bottom: 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-inspect
+.base-sensing-card
+.sensor-split
+> .sensor-block:last-child
+.sensor-vector-grid {
+    margin-top: 2px !important;
+}
+
+
+/* END BACALBASA INSPECT V1.10 */
+
+
+/* ==============================================================
+   BACALBASA_SYSTEM_METRIC_NOWRAP_V117
+   ============================================================== */
+
+body.stitch-live-v12
+#view-inspect
+.metric-tiles
+> div
+> span {
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* END BACALBASA_SYSTEM_METRIC_NOWRAP_V117 */

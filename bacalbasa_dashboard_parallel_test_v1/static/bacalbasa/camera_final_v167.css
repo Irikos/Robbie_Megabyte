@@ -1,0 +1,1435 @@
+/* ================================================================
+   CAMERA TELEOP FINAL VISUAL OWNER V16.7
+   ================================================================ */
+
+
+/* ---------------------------------------------------------------
+   EMBEDDED PAGE GEOMETRY
+
+   The OUTER host now owns the outside spacing.
+   No additional page gutter here.
+   --------------------------------------------------------------- */
+
+html,
+body,
+body.reference-stitch {
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+body.reference-stitch
+> .app-shell {
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    grid-template-rows:
+        minmax(0, 1fr) !important;
+
+    row-gap:
+        0 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * Do NOT modify column-gap.
+ * Left / center / right keep exactly their existing separation.
+ */
+
+body.reference-stitch
+.sidebar,
+
+body.reference-stitch
+.main,
+
+body.reference-stitch
+.d15-window-dock {
+    grid-row:
+        1 !important;
+
+    height:
+        100% !important;
+
+    min-height:
+        0 !important;
+
+    margin-top:
+        0 !important;
+
+    align-self:
+        stretch !important;
+}
+
+
+/* ---------------------------------------------------------------
+   FOUR CAMERA HEADER BARS
+
+   Same final header surface as the accepted Live camera windows.
+   --------------------------------------------------------------- */
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile-header,
+
+body.reference-stitch
+#mediaWorkspace
+.panel-header,
+
+body.reference-stitch
+#mediaWorkspace
+.camera-feed-label {
+    background:
+        #212121 !important;
+
+    border-bottom:
+        1px solid #333333 !important;
+}
+
+
+/* ================================================================
+   CAMERA TELEOP V16.7.3 — RIGHT DOCK CONTENT ALIGNMENT
+
+   Keep the accepted right-dock outer rectangle exactly as-is.
+
+   Move its INTERNAL contents upward so:
+       right grip == left grip vertical level
+       icon 01    == Live button vertical level
+
+   Individual `translate` composes with normal transform-based
+   hover/drag effects instead of replacing transform.
+   ================================================================ */
+
+body .d15-window-dock > * {
+    translate:
+        0 -19px !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+/* ============================================================
+   CAMERA TELEOP — FINAL MAJOR RAIL CONTRACT BEGIN
+
+   One owner for:
+       physical pointer-follow
+       FLIP reordering
+       8px inter-section gap
+       right-track real width
+       top-left transform origin
+   ============================================================ */
+
+
+/*
+ * The real rail itself follows the pointer.
+ */
+body.reference-stitch
+.stitch-major-v1924.stitch-major-following-v1924 {
+    transform:
+        translate3d(
+            var(
+                --stitch-major-drag-x-v1924,
+                0px
+            ),
+            0,
+            0
+        )
+        !important;
+
+    z-index:
+        40000
+        !important;
+
+    will-change:
+        transform
+        !important;
+
+    transition:
+        none
+        !important;
+
+    animation:
+        none
+        !important;
+
+    pointer-events:
+        none
+        !important;
+
+    box-shadow:
+        0 18px 44px
+        rgba(
+            0,
+            0,
+            0,
+            .36
+        ),
+
+        0 0 0 1px
+        rgba(
+            52,
+            211,
+            153,
+            .14
+        )
+        !important;
+}
+
+
+/*
+ * While dragging, kill every CSS transition/animation on the
+ * three major surfaces.
+ *
+ * Movement is owned exclusively by:
+ *
+ *   held surface -> pointer transform
+ *   other surfaces -> JS Live FLIP
+ */
+body.reference-stitch.stitch-major-dragging-v1924
+.stitch-major-v1924 {
+    transition:
+        none
+        !important;
+
+    animation:
+        none
+        !important;
+}
+
+
+body.reference-stitch.stitch-major-dragging-v1924
+.stitch-major-v1924:not(
+    .stitch-major-following-v1924
+) {
+    will-change:
+        transform
+        !important;
+}
+
+
+/*
+ * Allow the held physical rail to cross the other tracks.
+ */
+body.reference-stitch.stitch-major-dragging-v1924
+> .app-shell {
+    overflow:
+        visible
+        !important;
+}
+
+
+/*
+ * Same active-handle behavior as Live.
+ */
+body.reference-stitch
+.d15k-left-rail-handle.stitch-major-handle-active-v1924,
+
+body.reference-stitch
+.d15-dock-grip.stitch-major-handle-active-v1924 {
+    cursor:
+        grabbing
+        !important;
+}
+
+
+
+
+
+
+
+
+/*
+ * The same gap applies regardless of which physical section sits
+ * in which grid column.
+ */
+body.reference-stitch
+> .app-shell {
+    column-gap:
+        8px
+        !important;
+}
+
+
+/*
+ * Right rail width is now represented by its REAL grid track.
+ *
+ * Never overflow its track again.
+ */
+body.reference-stitch
+> .app-shell
+> .d15-window-dock {
+    box-sizing:
+        border-box
+        !important;
+
+    width:
+        100%
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    max-width:
+        none
+        !important;
+
+    justify-self:
+        stretch
+        !important;
+}
+
+
+/*
+ * Camera surfaces are much taller than Live's major cards.
+ *
+ * Live's tiny scale(0.985) can therefore produce a visible vertical
+ * shift if it scales around the element centre.
+ *
+ * Anchor the exact same scale animation at the top-left.
+ */
+body.reference-stitch
+.stitch-major-v1924 {
+    transform-origin:
+        top left
+        !important;
+}
+
+
+/* ============================================================
+   CAMERA TELEOP — FINAL MAJOR RAIL CONTRACT END
+   ============================================================ */
+
+
+/* ============================================================
+   CAMERA TELEOP — FINAL WINDOW DRAG CONTRACT BEGIN
+
+   One owner for:
+       resting drop slots
+       dashed active target
+       neighboring-window movement
+       held-window presentation
+       cursor feedback
+       clipping / stacking
+   ============================================================ */
+
+
+/* ============================================================
+   1. DROP SLOTS
+
+   Exact D7H language:
+       faint dashed resting boundary
+       dark transparent interior
+       green destination state
+   ============================================================ */
+
+body.reference-stitch
+#mediaWorkspace
+> .workspace-slot {
+    position:
+        relative !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1px dashed
+        rgba(
+            97,
+            227,
+            173,
+            .075
+        )
+        !important;
+
+    border-radius:
+        12px !important;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            .006
+        )
+        !important;
+
+    box-shadow:
+        none !important;
+
+    transition:
+        border-color 180ms ease,
+        background 180ms ease,
+        transform 180ms ease,
+        box-shadow 180ms ease
+        !important;
+}
+
+
+/*
+ * While arranging, keep all four physical cells visible.
+ *
+ * When occupied the tile covers the faint dashed boundary.
+ * As soon as a tile leaves a cell, the Live-style guide becomes
+ * visible underneath it.
+ */
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot {
+    border:
+        1px dashed
+        rgba(
+            121,
+            127,
+            121,
+            .30
+        )
+        !important;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            .008
+        )
+        !important;
+}
+
+
+/* ============================================================
+   2. ACTIVE DROP DESTINATION
+
+   Final accepted target:
+       dashed green edge
+       subtle green interior
+       no solid overlay
+       no inset ring
+       no pseudo-element frame
+   ============================================================ */
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot.workspace-slot-target {
+    border:
+        1px dashed
+        rgba(
+            97,
+            227,
+            173,
+            .75
+        )
+        !important;
+
+    border-style:
+        dashed
+        !important;
+
+    outline:
+        none
+        !important;
+
+    background:
+        rgba(
+            97,
+            227,
+            173,
+            .055
+        )
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot.workspace-slot-target::after {
+    border:
+        0
+        !important;
+
+    outline:
+        0
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+/* ============================================================
+   3. OTHER WINDOWS — LIVE ARRANGING MOTION
+
+   Same subtle alternating D7H movement instead of a static set
+   of surrounding windows.
+   ============================================================ */
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+.workspace-tile:not(
+    .workspace-dragging
+):not(
+    .hidden
+) {
+    animation:
+        bacaCameraWorkspaceJiggle
+        210ms
+        ease-in-out
+        infinite
+        alternate
+        !important;
+}
+
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+.workspace-slot:nth-child(even)
+.workspace-tile:not(
+    .workspace-dragging
+):not(
+    .hidden
+) {
+    animation-direction:
+        alternate-reverse
+        !important;
+}
+
+
+@keyframes bacaCameraWorkspaceJiggle {
+
+    from {
+        transform:
+            rotate(-.18deg)
+            translateY(-.4px);
+    }
+
+    to {
+        transform:
+            rotate(.18deg)
+            translateY(.4px);
+    }
+}
+
+
+/* ============================================================
+   4. THE WINDOW IN THE HAND
+
+   Actual tile follows the pointer.
+   Same raised/lifted Live presentation:
+       green edge
+       deep shadow
+       slight scale
+       tiny rotation
+   ============================================================ */
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.workspace-dragging {
+    z-index:
+        10000 !important;
+
+    pointer-events:
+        none !important;
+
+    cursor:
+        grabbing !important;
+
+    animation:
+        none !important;
+
+    border-color:
+        rgba(
+            97,
+            227,
+            173,
+            .44
+        )
+        !important;
+
+    box-shadow:
+        0 22px 45px
+        rgba(
+            0,
+            0,
+            0,
+            .36
+        ),
+
+        0 0 0 1px
+        rgba(
+            97,
+            227,
+            173,
+            .13
+        ),
+
+        0 0 20px
+        rgba(
+            97,
+            227,
+            173,
+            .035
+        )
+        !important;
+
+    transform:
+        translate3d(
+            var(
+                --workspace-drag-x,
+                0px
+            ),
+            var(
+                --workspace-drag-y,
+                0px
+            ),
+            0
+        )
+        scale(1.018)
+        rotate(.18deg)
+        !important;
+
+    transform-origin:
+        center center
+        !important;
+
+    transition:
+        none !important;
+
+    will-change:
+        transform !important;
+}
+
+
+/* ============================================================
+   5. HEADER / CURSOR FEEDBACK
+   ============================================================ */
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile
+> .workspace-tile-header {
+    cursor:
+        grab !important;
+}
+
+
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.workspace-dragging
+> .workspace-tile-header {
+    cursor:
+        grabbing !important;
+}
+
+
+/* ============================================================
+   6. STACKING / CLIPPING
+
+   Dragged Camera Teleop windows must visually pass over their
+   surrounding cells exactly like the Live workspace.
+   ============================================================ */
+
+body.reference-stitch:has(
+    #mediaWorkspace.workspace-arranging
+)
+.main {
+    overflow:
+        visible !important;
+}
+
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging {
+    overflow:
+        visible !important;
+}
+
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot {
+    overflow:
+        visible !important;
+}
+
+
+/* ============================================================
+   7. RETIRE SOFTER SKIN TARGET PRESENTATION
+
+   The authoritative states above own the entire drag visual
+   while D7H is active.
+   ============================================================ */
+
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+.workspace-tile:not(
+    .workspace-dragging
+) {
+    border-color:
+        var(--st-border, #333333)
+        !important;
+}
+
+
+
+
+
+
+/* ============================================================
+   FINAL WINDOW DRAG — STACKING CORRECTION
+   ============================================================ */
+/* ============================================================
+   1. DRAGGED CAMERA WINDOW ALWAYS ABOVE ALL OTHER WINDOWS
+   ============================================================ */
+
+/*
+ * Every slot gets a known stacking level while arranging.
+ *
+ * This is important because the surrounding tiles are transformed
+ * by the Live/D7H jiggle, which creates their own stacking contexts.
+ */
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot {
+    position:
+        relative
+        !important;
+
+    z-index:
+        1
+        !important;
+
+    overflow:
+        visible
+        !important;
+}
+
+
+/*
+ * Raise the SLOT that owns the physical dragged window.
+ *
+ * Raising only .workspace-dragging is insufficient because the
+ * neighboring slot can otherwise remain above its parent.
+ */
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot:has(
+    > .workspace-tile.workspace-dragging
+) {
+    position:
+        relative
+        !important;
+
+    z-index:
+        1000000
+        !important;
+
+    overflow:
+        visible
+        !important;
+}
+
+
+/*
+ * And then raise the real dragged tile inside that top slot.
+ */
+body.reference-stitch
+#mediaWorkspace
+.workspace-tile.workspace-dragging {
+    position:
+        relative
+        !important;
+
+    z-index:
+        1000001
+        !important;
+
+    isolation:
+        isolate
+        !important;
+
+    overflow:
+        visible
+        !important;
+}
+
+
+/*
+ * Explicitly keep all neighboring tiles below it.
+ */
+body.reference-stitch
+#mediaWorkspace.workspace-arranging
+> .workspace-slot:not(
+    :has(
+        > .workspace-tile.workspace-dragging
+    )
+)
+> .workspace-tile {
+    z-index:
+        1
+        !important;
+}
+
+
+
+
+
+
+
+/* ============================================================
+   CAMERA TELEOP — FINAL WINDOW DRAG CONTRACT END
+   ============================================================ */
+
+
+/* ============================================================
+   CAMERA TELEOP — FINAL START / STOP PRESENTATION BEGIN
+   ============================================================ */
+
+
+/* ============================================================
+   LEGACY FUNCTIONAL CONTROL
+
+   Keep the real buttons in DOM for their event handlers.
+   Give them ZERO visible footprint.
+   ============================================================ */
+
+body.reference-stitch
+.sidebar
+.bacalbasa-system-switch {
+    display:
+        none
+        !important;
+
+    visibility:
+        hidden
+        !important;
+
+    position:
+        absolute
+        !important;
+
+    width:
+        0
+        !important;
+
+    height:
+        0
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    min-height:
+        0
+        !important;
+
+    max-width:
+        0
+        !important;
+
+    max-height:
+        0
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0
+        !important;
+
+    border:
+        0
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+/* ============================================================
+   CLEAN OUTER SHELL
+
+   Live Connect / Disconnect visual language.
+   ============================================================ */
+
+body.reference-stitch
+.sidebar
+.baca-live-power-switch-v16720 {
+    position:
+        relative
+        !important;
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        center
+        !important;
+
+    gap:
+        3px
+        !important;
+
+    box-sizing:
+        border-box
+        !important;
+
+    width:
+        202px
+        !important;
+
+    min-width:
+        202px
+        !important;
+
+    max-width:
+        202px
+        !important;
+
+    height:
+        32px
+        !important;
+
+    min-height:
+        32px
+        !important;
+
+    max-height:
+        32px
+        !important;
+
+    margin:
+        0 auto 12px
+        !important;
+
+    padding:
+        3px
+        !important;
+
+    border:
+        1px solid
+        #333333
+        !important;
+
+    border-radius:
+        6px
+        !important;
+
+    background:
+        #171817
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    clip-path:
+        inset(
+            0
+            round
+            6px
+        )
+        !important;
+}
+
+
+/* ============================================================
+   CLEAN BUTTON BASE
+   ============================================================ */
+
+body.reference-stitch
+.sidebar
+.baca-live-power-btn-v16720 {
+    appearance:
+        none
+        !important;
+
+    -webkit-appearance:
+        none
+        !important;
+
+    position:
+        relative
+        !important;
+
+    display:
+        inline-flex
+        !important;
+
+    align-items:
+        center
+        !important;
+
+    justify-content:
+        center
+        !important;
+
+    gap:
+        6px
+        !important;
+
+    flex:
+        1 1 0
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    height:
+        24px
+        !important;
+
+    min-height:
+        24px
+        !important;
+
+    max-height:
+        24px
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding:
+        0 8px
+        !important;
+
+    box-sizing:
+        border-box
+        !important;
+
+    border-radius:
+        3px
+        !important;
+
+    outline:
+        none
+        !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif
+        !important;
+
+    font-size:
+        12px
+        !important;
+
+    font-weight:
+        700
+        !important;
+
+    line-height:
+        1
+        !important;
+
+    letter-spacing:
+        normal
+        !important;
+
+    white-space:
+        nowrap
+        !important;
+
+    cursor:
+        pointer
+        !important;
+
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease
+        !important;
+}
+
+
+/* ============================================================
+   ICONS
+   ============================================================ */
+
+body.reference-stitch
+.sidebar
+.baca-live-power-icon-v16720 {
+    width:
+        11px
+        !important;
+
+    height:
+        11px
+        !important;
+
+    min-width:
+        11px
+        !important;
+
+    flex:
+        0 0 11px
+        !important;
+
+    fill:
+        none
+        !important;
+
+    stroke:
+        currentColor
+        !important;
+
+    stroke-width:
+        2
+        !important;
+
+    stroke-linecap:
+        round
+        !important;
+
+    stroke-linejoin:
+        round
+        !important;
+
+    overflow:
+        visible
+        !important;
+}
+
+
+/* ============================================================
+   STOPPED STATE
+   ============================================================ */
+
+
+/*
+ * START — green EDGE + green-ish translucent interior.
+ * NOT solid pale green.
+ */
+body.reference-stitch
+.sidebar
+.baca-live-power-switch-v16720[
+    data-state="stopped"
+]
+.baca-live-power-start-v16720 {
+    border:
+        1px solid
+        rgba(
+            142,
+            203,
+            127,
+            .48
+        )
+        !important;
+
+    background:
+        rgba(
+            142,
+            203,
+            127,
+            .075
+        )
+        !important;
+
+    color:
+        #8ecb7f
+        !important;
+
+    box-shadow:
+        inset
+        0 0 0
+        1px
+        rgba(
+            142,
+            203,
+            127,
+            .03
+        )
+        !important;
+}
+
+
+/*
+ * STOP — transparent amber.
+ */
+body.reference-stitch
+.sidebar
+.baca-live-power-switch-v16720[
+    data-state="stopped"
+]
+.baca-live-power-stop-v16720 {
+    border:
+        1px solid
+        transparent
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    color:
+        #f2aa21
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+/* ============================================================
+   RUNNING STATE
+   ============================================================ */
+
+body.reference-stitch
+.sidebar
+.baca-live-power-switch-v16720[
+    data-state="running"
+]
+.baca-live-power-start-v16720 {
+    border:
+        1px solid
+        transparent
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    color:
+        #8ecb7f
+        !important;
+
+    box-shadow:
+        none
+        !important;
+}
+
+
+body.reference-stitch
+.sidebar
+.baca-live-power-switch-v16720[
+    data-state="running"
+]
+.baca-live-power-stop-v16720 {
+    border:
+        1px solid
+        rgba(
+            245,
+            164,
+            0,
+            .28
+        )
+        !important;
+
+    background:
+        rgba(
+            245,
+            164,
+            0,
+            .10
+        )
+        !important;
+
+    color:
+        #ffd271
+        !important;
+
+    box-shadow:
+        inset
+        0 0 0
+        1px
+        rgba(
+            245,
+            164,
+            0,
+            .03
+        )
+        !important;
+}
+
+
+/* ============================================================
+   HOVER
+   ============================================================ */
+
+body.reference-stitch
+.sidebar
+.baca-live-power-start-v16720:hover {
+    background:
+        rgba(
+            142,
+            203,
+            127,
+            .11
+        )
+        !important;
+}
+
+
+body.reference-stitch
+.sidebar
+.baca-live-power-stop-v16720:hover {
+    background:
+        rgba(
+            245,
+            164,
+            0,
+            .055
+        )
+        !important;
+}
+
+
+/*
+ * Functional disabled states do NOT make the visual disappear.
+ */
+body.reference-stitch
+.sidebar
+.baca-live-power-btn-v16720[
+    data-disabled="true"
+] {
+    opacity:
+        1
+        !important;
+
+    cursor:
+        default
+        !important;
+}
+
+
+/* ============================================================
+   CAMERA TELEOP — FINAL START / STOP PRESENTATION END
+   ============================================================ */
+
+
+
+
+
+
+
+
+
+/* ============================================================
+   CAMERA TELEOP — SIDEBAR POWER LAYOUT
+
+   One spacing contract:
+       nav -> 12px sidebar gap -> Start/Stop
+   ============================================================ */
+/*
+ * Live + Logs occupy only their real 64px measured height.
+ */
+body.reference-stitch
+.sidebar
+> nav {
+    flex:
+        0 0 auto
+        !important;
+
+    height:
+        auto
+        !important;
+
+    min-height:
+        0
+        !important;
+
+    max-height:
+        none
+        !important;
+
+    margin:
+        0
+        !important;
+
+    padding-bottom:
+        0
+        !important;
+}
+
+
+/*
+ * Sidebar already owns gap: 12px.
+ * Do not add another 12px through margins.
+ */
+body.reference-stitch
+.sidebar
+> .baca-live-power-switch-v16720 {
+    flex:
+        0 0 32px
+        !important;
+
+    margin:
+        0 auto
+        !important;
+
+    align-self:
+        center
+        !important;
+}
+

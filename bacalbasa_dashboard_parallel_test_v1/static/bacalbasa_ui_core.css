@@ -1,0 +1,1901 @@
+/*
+ * BACALBASA SHARED UI CORE V1.9.1
+ *
+ * Canonical visual/layout primitives shared across dashboard tabs.
+ *
+ * IMPORTANT:
+ * - functional/legacy classes remain on their elements;
+ * - these baca-ui-* classes own shared presentation only;
+ * - no tab measures another tab;
+ * - no MutationObserver;
+ * - no runtime geometry copying.
+ */
+
+:root {
+    /* ----------------------------------------------------------
+       Major surfaces
+       ---------------------------------------------------------- */
+
+    --baca-ui-panel-bg:
+        rgb(22, 22, 22);
+
+    --baca-ui-panel-border:
+        rgb(51, 51, 51);
+
+    --baca-ui-divider:
+        rgb(40, 42, 41);
+
+    --baca-ui-panel-radius:
+        6px;
+
+    --baca-ui-major-grip-space:
+        30px;
+
+
+    /* ----------------------------------------------------------
+       Major panel rows
+       ---------------------------------------------------------- */
+
+    --baca-ui-primary-row-height:
+        48px;
+
+    --baca-ui-primary-row-bg:
+        rgb(21, 22, 22);
+
+    --baca-ui-primary-row-padding-x:
+        14px;
+
+    --baca-ui-primary-row-gap:
+        14px;
+
+
+    --baca-ui-secondary-row-height:
+        42px;
+
+    --baca-ui-secondary-row-bg:
+        rgb(18, 19, 19);
+
+    --baca-ui-secondary-row-padding-x:
+        14px;
+
+    --baca-ui-secondary-row-gap:
+        16px;
+
+
+    /* ----------------------------------------------------------
+       Typography
+       ---------------------------------------------------------- */
+
+    --baca-ui-font-main:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    --baca-ui-font-control:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    --baca-ui-font-mono:
+        ui-monospace,
+        "SFMono-Regular",
+        Menlo,
+        Consolas,
+        monospace;
+
+    --baca-ui-main-text:
+        rgb(203, 213, 225);
+
+
+    /* ----------------------------------------------------------
+       Standard Reset / small green action
+       ---------------------------------------------------------- */
+
+    --baca-ui-reset-width:
+        106px;
+
+    --baca-ui-action-height:
+        32px;
+
+    --baca-ui-action-radius:
+        6px;
+
+    --baca-ui-action-padding-x:
+        10px;
+
+    --baca-ui-action-color:
+        rgb(142, 203, 127);
+
+    --baca-ui-action-bg:
+        rgba(142, 203, 127, 0.055);
+
+    --baca-ui-action-border:
+        rgba(142, 203, 127, 0.38);
+
+    --baca-ui-action-font-size:
+        12px;
+
+    --baca-ui-action-font-weight:
+        650;
+
+    --baca-ui-action-line-height:
+        16px;
+}
+
+
+/* ==============================================================
+   MAJOR PANEL
+   ============================================================== */
+
+.baca-ui-major-panel {
+    box-sizing:
+        border-box !important;
+
+    background:
+        var(--baca-ui-panel-bg) !important;
+
+    border:
+        1px solid var(--baca-ui-panel-border) !important;
+
+    border-radius:
+        var(--baca-ui-panel-radius) !important;
+
+    padding:
+        var(--baca-ui-major-grip-space)
+        0
+        0
+        0 !important;
+
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    color:
+        var(--baca-ui-main-text) !important;
+}
+
+
+/* ==============================================================
+   PRIMARY ROW
+   ============================================================== */
+
+.baca-ui-primary-row {
+    box-sizing:
+        border-box !important;
+
+    height:
+        var(--baca-ui-primary-row-height) !important;
+
+    min-height:
+        var(--baca-ui-primary-row-height) !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 var(--baca-ui-primary-row-padding-x) !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        var(--baca-ui-primary-row-gap) !important;
+
+    background:
+        var(--baca-ui-primary-row-bg) !important;
+
+    border-top:
+        0 !important;
+
+    border-right:
+        0 !important;
+
+    border-bottom:
+        1px solid var(--baca-ui-divider) !important;
+
+    border-left:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    color:
+        var(--baca-ui-main-text) !important;
+
+    font-family:
+        var(--baca-ui-font-main) !important;
+
+    font-size:
+        13px !important;
+}
+
+
+/* ==============================================================
+   SECONDARY ROW
+   ============================================================== */
+
+.baca-ui-secondary-row {
+    box-sizing:
+        border-box !important;
+
+    height:
+        var(--baca-ui-secondary-row-height) !important;
+
+    min-height:
+        var(--baca-ui-secondary-row-height) !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 var(--baca-ui-secondary-row-padding-x) !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        var(--baca-ui-secondary-row-gap) !important;
+
+    background:
+        var(--baca-ui-secondary-row-bg) !important;
+
+    border-top:
+        0 !important;
+
+    border-right:
+        0 !important;
+
+    border-bottom:
+        1px solid var(--baca-ui-divider) !important;
+
+    border-left:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    color:
+        var(--baca-ui-main-text) !important;
+
+    font-family:
+        var(--baca-ui-font-mono) !important;
+
+    font-size:
+        7px !important;
+}
+
+
+/* ==============================================================
+   SHARED ROW GROUPS
+   ============================================================== */
+
+.baca-ui-primary-actions {
+    margin-left:
+        auto !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        8px !important;
+
+    min-width:
+        0 !important;
+}
+
+
+.baca-ui-primary-actions
+.baca-ui-reset-action {
+    margin-left:
+        0 !important;
+}
+
+
+.baca-ui-secondary-group {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        8px !important;
+
+    min-width:
+        0 !important;
+}
+
+
+/* ==============================================================
+   RESET / STANDARD SMALL GREEN ACTION
+   ============================================================== */
+
+.baca-ui-reset-action {
+    box-sizing:
+        border-box !important;
+
+    width:
+        var(--baca-ui-reset-width) !important;
+
+    min-width:
+        var(--baca-ui-reset-width) !important;
+
+    height:
+        var(--baca-ui-action-height) !important;
+
+    min-height:
+        var(--baca-ui-action-height) !important;
+
+    padding:
+        0 var(--baca-ui-action-padding-x) !important;
+
+    margin-left:
+        auto !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    background:
+        var(--baca-ui-action-bg) !important;
+
+    color:
+        var(--baca-ui-action-color) !important;
+
+    border:
+        1px solid var(--baca-ui-action-border) !important;
+
+    border-radius:
+        var(--baca-ui-action-radius) !important;
+
+    font-family:
+        var(--baca-ui-font-control) !important;
+
+    font-size:
+        var(--baca-ui-action-font-size) !important;
+
+    font-weight:
+        var(--baca-ui-action-font-weight) !important;
+
+    line-height:
+        var(--baca-ui-action-line-height) !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==================================================================
+   BACALBASA SHARED RIGHT RAIL V1.2
+
+   Live and SLAM use the same visual constants.
+   Live keeps its mature flex/drag implementation.
+   SLAM keeps its existing V2210 drag/resize implementation.
+   This layer owns the shared appearance and starting geometry.
+   ================================================================== */
+
+:root {
+    --baca-ui-right-rail-width:
+        274px;
+
+    --baca-ui-right-rail-bg:
+        rgb(22, 22, 22);
+
+    --baca-ui-right-rail-border:
+        rgb(51, 51, 51);
+
+    --baca-ui-right-rail-radius:
+        6px;
+
+    --baca-ui-right-rail-top:
+        30px;
+
+    --baca-ui-right-rail-pad-x:
+        10px;
+
+    --baca-ui-right-rail-pad-bottom:
+        10px;
+
+    --baca-ui-right-rail-gap:
+        8px;
+
+    --baca-ui-rail-card-bg:
+        rgb(22, 22, 22);
+
+    --baca-ui-rail-card-border:
+        rgb(46, 46, 46);
+
+    --baca-ui-rail-card-radius:
+        6px;
+
+    --baca-ui-rail-card-padding:
+        12px;
+
+    --baca-ui-rail-title:
+        rgb(201, 205, 211);
+}
+
+
+/* --------------------------------------------------------------
+   SAME OUTER RAIL VISUAL OWNER
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.combined-rail,
+
+body.stitch-live-v12
+#view-slam
+.baca-ui-right-rail {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        0 !important;
+
+    padding:
+        var(--baca-ui-right-rail-top)
+        var(--baca-ui-right-rail-pad-x)
+        var(--baca-ui-right-rail-pad-bottom)
+        var(--baca-ui-right-rail-pad-x)
+        !important;
+
+    gap:
+        var(--baca-ui-right-rail-gap) !important;
+
+    background:
+        var(--baca-ui-right-rail-bg) !important;
+
+    border:
+        1px solid
+        var(--baca-ui-right-rail-border) !important;
+
+    border-radius:
+        var(--baca-ui-right-rail-radius) !important;
+
+    box-shadow:
+        none !important;
+
+    color:
+        rgb(226, 226, 226) !important;
+
+    font-family:
+        var(--baca-ui-font-control) !important;
+
+    font-size:
+        8px !important;
+}
+
+
+/* --------------------------------------------------------------
+   SLAM STARTING WIDTH
+   Existing resize state can still replace it after user resize.
+   -------------------------------------------------------------- */
+
+#view-slam {
+    --slam-live-rail-width-v2207:
+        var(--baca-ui-right-rail-width);
+
+    --slam-live-mode-left-pad-v2207:
+        var(--baca-ui-right-rail-pad-x);
+
+    --slam-live-mode-right-pad-v2207:
+        var(--baca-ui-right-rail-pad-x);
+}
+
+
+body.stitch-live-v12
+#view-slam
+.baca-ui-right-rail {
+
+    width:
+        100% !important;
+
+    min-height:
+        0 !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) !important;
+
+    grid-template-rows:
+        auto auto auto !important;
+
+    grid-auto-rows:
+        max-content !important;
+
+    align-content:
+        start !important;
+}
+
+
+/* --------------------------------------------------------------
+   SAME SECTION/CARD VISUAL LANGUAGE
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.stitch-sidebar-section,
+
+body.stitch-live-v12
+#view-slam
+.baca-ui-rail-card {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    height:
+        auto !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        var(--baca-ui-rail-card-padding) !important;
+
+    border:
+        1px solid
+        var(--baca-ui-rail-card-border) !important;
+
+    border-radius:
+        var(--baca-ui-rail-card-radius) !important;
+
+    background:
+        var(--baca-ui-rail-card-bg) !important;
+
+    box-shadow:
+        none !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* --------------------------------------------------------------
+   SLAM SECTION TITLES = LIVE MODE TITLE LANGUAGE
+   -------------------------------------------------------------- */
+
+#view-slam
+.baca-ui-rail-card
+> .panel-head {
+
+    min-height:
+        20px !important;
+
+    margin:
+        0 0 8px 0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+}
+
+
+#view-slam
+.baca-ui-rail-card
+> .panel-head
+> strong {
+
+    color:
+        var(--baca-ui-rail-title) !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        14px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        20px !important;
+
+    text-transform:
+        uppercase !important;
+}
+
+
+/* --------------------------------------------------------------
+   LOCALIZATION = THREE ROWS / TWO COLUMNS
+   -------------------------------------------------------------- */
+
+#view-slam
+.slam-status-panel
+.kv-list {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+
+    column-gap:
+        16px !important;
+
+    row-gap:
+        6px !important;
+}
+
+
+#view-slam
+.slam-status-panel
+.kv-list
+> div {
+
+    min-width:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        8px !important;
+}
+
+
+/* --------------------------------------------------------------
+   LAYERS = LIVE HEALTH CHECKBOX LANGUAGE
+   -------------------------------------------------------------- */
+
+#view-slam
+.baca-ui-check {
+
+    min-height:
+        16px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        5px !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        6px !important;
+
+    color:
+        rgb(161, 161, 170) !important;
+
+    font-family:
+        var(--baca-ui-font-control) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+}
+
+
+#view-slam
+.baca-ui-check
+input[type="checkbox"] {
+
+    flex:
+        0 0 14px !important;
+
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    margin:
+        0 !important;
+
+    accent-color:
+        rgb(142, 203, 127) !important;
+}
+
+/* ==================================================================
+   BACALBASA EXACT CHECKBOX PARITY V1.3
+
+   Source of truth:
+       Live -> Joint markers
+
+   Measured:
+       label height     16px
+       gap              5px
+       text             12px / 650 / 16px
+       color            rgb(161,161,170)
+       checkbox         14 x 14
+       accent           rgb(152,217,130)
+   ================================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+label.toggle.baca-ui-check {
+
+    box-sizing:
+        border-box !important;
+
+    min-height:
+        16px !important;
+
+    height:
+        16px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        5px !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        6px !important;
+
+    color:
+        rgb(161, 161, 170) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-transform:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+label.toggle.baca-ui-check
+> span {
+
+    color:
+        rgb(161, 161, 170) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+label.toggle.baca-ui-check
+> input[type="checkbox"] {
+
+    appearance:
+        auto !important;
+
+    flex:
+        0 0 14px !important;
+
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    accent-color:
+        rgb(152, 217, 130) !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+}
+
+
+/* Exact current Live card surface. */
+
+body.stitch-live-v12
+#view-slam
+.baca-ui-rail-card {
+
+    background:
+        rgb(22, 22, 22) !important;
+
+    border:
+        1px solid
+        rgb(46, 46, 46) !important;
+
+    border-radius:
+        6px !important;
+
+    padding:
+        12px !important;
+
+    column-gap:
+        14px !important;
+
+    row-gap:
+        0 !important;
+}
+
+/* ==================================================================
+   BACALBASA SLAM TOP BAND — TRUE LIVE PARITY V1.6
+
+   Live structure:
+       30px major-panel grip/top zone
+       48px primary control row
+
+   SLAM keeps ONE visual top band, but reserves the same two internal
+   regions so its divider and controls line up with Live.
+   ================================================================== */
+
+
+/* Move the shared 30px top reservation INSIDE the single SLAM bar. */
+
+body.stitch-live-v12
+#view-slam
+.slam-world-panel.baca-ui-major-panel {
+
+    padding-top:
+        0 !important;
+}
+
+
+/*
+ * 78px internal band:
+ *
+ *     30px grip / empty top zone
+ *   + 48px control/content zone
+ *
+ * This replaces the incorrect standalone 48px / 54px experiments.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-head.baca-ui-primary-row {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        78px !important;
+
+    min-height:
+        78px !important;
+
+    max-height:
+        78px !important;
+
+    flex:
+        0 0 78px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        30px 14px 0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        14px !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* Remove the old title offset/alignment experiments. */
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+.panel-title-line {
+
+    min-height:
+        20px !important;
+
+    height:
+        auto !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+.panel-title-line
+strong {
+
+    position:
+        static !important;
+
+    left:
+        auto !important;
+
+    top:
+        auto !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    transform:
+        none !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        visible !important;
+
+    line-height:
+        20px !important;
+}
+
+
+/* ============================================================
+   SLAM ACTIONS — SAME LOCATION MODEL AS LIVE
+   ============================================================ */
+
+body.stitch-live-v12
+#view-slam
+.slam-head-actions {
+
+    margin:
+        0 0 0 auto !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-end !important;
+
+    gap:
+        8px !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ============================================================
+   RESET VIEW — EXACT LIVE CONTROL
+   ============================================================ */
+
+body.stitch-live-v12
+#view-slam
+#slamResetView {
+
+    box-sizing:
+        border-box !important;
+
+    flex:
+        0 0 106px !important;
+
+    width:
+        106px !important;
+
+    min-width:
+        106px !important;
+
+    max-width:
+        106px !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    max-height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 10px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    background:
+        rgba(142, 203, 127, .055) !important;
+
+    color:
+        rgb(142, 203, 127) !important;
+
+    border:
+        1px solid
+        rgba(142, 203, 127, .38) !important;
+
+    border-radius:
+        6px !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-transform:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamResetView:hover:not(:disabled) {
+
+    background:
+        rgba(142, 203, 127, .10) !important;
+
+    border-color:
+        rgba(142, 203, 127, .58) !important;
+
+    color:
+        rgb(161, 212, 148) !important;
+}
+
+
+/* ============================================================
+   LAYERS — MATCH LOCALIZATION ROW RHYTHM
+   ============================================================ */
+
+/*
+ * Checkbox itself/text remains the already-copied Live
+ * Joint-markers style.
+ *
+ * We only change the vertical spacing here.
+ *
+ * 16px label + 4px separation = 20px row rhythm,
+ * matching the visual spacing of State / Pose / Heading.
+ */
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+label.toggle.baca-ui-check {
+
+    margin:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-layer-panel
+label.toggle.baca-ui-check
++
+label.toggle.baca-ui-check {
+
+    margin-top:
+        4px !important;
+}
+
+
+
+/* ==================================================================
+   BACALBASA INITIAL POSE CONTROL PARITY V1.5
+   ================================================================== */
+
+#view-slam
+#slamInitialStartBtn.baca-ui-enter-action {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    padding:
+        0 10px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    border:
+        1px solid
+        rgba(142, 203, 127, .38) !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        rgba(142, 203, 127, .055) !important;
+
+    color:
+        rgb(142, 203, 127) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-transform:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#view-slam
+#slamInitialStartBtn.baca-ui-enter-action:hover:not(:disabled) {
+
+    background:
+        rgba(142, 203, 127, .10) !important;
+
+    border-color:
+        rgba(142, 203, 127, .58) !important;
+
+    color:
+        rgb(161, 212, 148) !important;
+}
+
+
+/* No-position field follows the SAME dimensions / typography
+   so the two controls no longer look like unrelated widgets. */
+
+#view-slam
+#slamInitialSelection.baca-ui-action-field {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 10px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    border:
+        1px solid
+        rgb(46, 46, 46) !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        rgb(18, 19, 19) !important;
+
+    color:
+        rgb(161, 161, 170) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+}
+
+
+/* ==================================================================
+   BACALBASA SLAM TOP LAYERS V1.7
+   ================================================================== */
+
+
+/* --------------------------------------------------------------
+   LAYER CONTROLS IN MAIN SLAM TOP BAR
+
+   Same layout language as:
+       Command ghost
+       Joint markers
+       Health
+   -------------------------------------------------------------- */
+
+#view-slam
+.baca-slam-top-layers-v17 {
+
+    flex:
+        0 0 auto !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        14px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+#view-slam
+.baca-slam-top-layers-v17
+label.toggle {
+
+    box-sizing:
+        border-box !important;
+
+    height:
+        16px !important;
+
+    min-height:
+        16px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        5px !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        transparent !important;
+
+    color:
+        rgb(161, 161, 170) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        16px !important;
+
+    letter-spacing:
+        normal !important;
+
+    text-transform:
+        none !important;
+}
+
+
+#view-slam
+.baca-slam-top-layers-v17
+label.toggle
+> span {
+
+    color:
+        inherit !important;
+
+    font:
+        inherit !important;
+
+    line-height:
+        inherit !important;
+
+    letter-spacing:
+        inherit !important;
+}
+
+
+#view-slam
+.baca-slam-top-layers-v17
+input[type="checkbox"] {
+
+    appearance:
+        auto !important;
+
+    flex:
+        0 0 14px !important;
+
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    accent-color:
+        rgb(152, 217, 130) !important;
+}
+
+
+/* Space between checkbox group and Laboratory Point Cloud. */
+
+#view-slam
+.baca-slam-top-layers-v17
++
+.panel-title-line {
+
+    margin-left:
+        10px !important;
+
+    flex:
+        0 1 auto !important;
+
+    min-width:
+        0 !important;
+}
+
+
+/* --------------------------------------------------------------
+   INITIAL POSE DIVIDER
+
+   Structure:
+       No position selected
+       ----------------------
+       Set robot position
+   -------------------------------------------------------------- */
+
+#view-slam
+.slam-initial-pose-panel
+.slam-initial-actions {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    margin:
+        8px 0 0 !important;
+
+    padding:
+        8px 0 0 !important;
+
+    border-top:
+        1px solid
+        rgb(46, 46, 46) !important;
+}
+
+
+#view-slam
+#slamInitialSelection {
+
+    margin-bottom:
+        0 !important;
+}
+
+
+/* Only Localization + Initial Pose remain in this rail. */
+
+#view-slam
+.baca-ui-right-rail {
+
+    grid-template-rows:
+        auto auto !important;
+}
+
+
+/* ==================================================================
+   END BACALBASA SLAM TOP LAYERS V1.7
+   ================================================================== */
+
+
+/* ==================================================================
+   BACALBASA SHARED TAB PARITY V1.9
+
+   Shared concerns:
+       - workspace/gap background
+       - explicit SLAM top-bar flow
+       - Localization uses Live MODE visual structure
+   ================================================================== */
+
+:root {
+
+    --baca-ui-workspace-gap-bg:
+        #0b0c0c;
+}
+
+
+/* ==============================================================
+   WORKSPACE / GAP BACKGROUND
+
+   This is the deeper black visible BETWEEN panels/major sections.
+   Live and SLAM now consume one shared value.
+   ============================================================== */
+
+body.stitch-live-v12
+.app-shell,
+
+body.stitch-live-v12
+#view-live,
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid,
+
+body.stitch-live-v12
+#view-slam,
+
+body.stitch-live-v12
+#view-slam
+.slam-layout {
+
+    background:
+        var(--baca-ui-workspace-gap-bg) !important;
+}
+
+
+/* ==============================================================
+   SLAM TOP BAR
+
+       Laboratory Point Cloud
+       layer toggles
+       flexible space
+       SLAM / Reset
+   ============================================================== */
+
+body.stitch-live-v12
+#view-slam
+.slam-head.baca-ui-primary-row {
+
+    display:
+        flex !important;
+
+    flex-direction:
+        row !important;
+
+    flex-wrap:
+        nowrap !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+}
+
+
+/* Group 1 — title. */
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+> .panel-title-line {
+
+    order:
+        1 !important;
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    transform:
+        none !important;
+
+    flex:
+        0 0 auto !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        visible !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+#slamLabTitleV2209 {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    transform:
+        none !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Group 2 — layer toggles. */
+
+body.stitch-live-v12
+#view-slam
+.baca-slam-top-layers-v17 {
+
+    order:
+        2 !important;
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    transform:
+        none !important;
+
+    flex:
+        0 0 auto !important;
+
+    margin:
+        0 0 0 22px !important;
+
+    padding:
+        0 !important;
+}
+
+
+/* Group 3 — state + Reset. */
+
+body.stitch-live-v12
+#view-slam
+.slam-head
+> .slam-head-actions {
+
+    order:
+        3 !important;
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    transform:
+        none !important;
+
+    flex:
+        0 0 auto !important;
+
+    margin:
+        0 0 0 auto !important;
+}
+
+
+/* --------------------------------------------------------------
+   LOCALIZATION — SAME 24PX ROW RHYTHM AS LIVE MODE
+
+   Live MODE:
+       Hands
+       Stop
+       Stop gate
+       etc.
+
+   uses 24px rows with zero row-gap.
+   -------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list {
+
+    row-gap:
+        0 !important;
+
+    column-gap:
+        16px !important;
+}
+
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div {
+
+    box-sizing:
+        border-box !important;
+
+    height:
+        24px !important;
+
+    min-height:
+        24px !important;
+
+    max-height:
+        24px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+}
+
+
+/* Keep label/value content vertically centered inside those 24px rows. */
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> span,
+
+body.stitch-live-v12
+#view-slam
+.slam-status-panel
+.kv-list
+> div
+> strong {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    line-height:
+        16px !important;
+}
+
+/* ==================================================================
+   END BACALBASA SHARED TAB PARITY V1.9
+   ================================================================== */
+

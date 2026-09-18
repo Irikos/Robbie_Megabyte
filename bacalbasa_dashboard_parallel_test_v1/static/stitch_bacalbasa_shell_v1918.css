@@ -1,0 +1,291 @@
+
+/* ==================================================================
+   STITCH BACALBASA SHELL V1.9.18
+
+   Final authoritative header presentation.
+
+   - real Bacalbasa flourishes visible
+   - larger center navigation
+   - no active-tab green dot
+   - moving Bacalbasa emblem
+   - YOLO host prepared for deterministic right placement
+   ================================================================== */
+
+
+/* ================================================================
+   BACALBASA FLOURISHES
+
+   Original Bacalbasa dimensions:
+       32 x 16
+   ================================================================ */
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+> .rv-flourish {
+
+    display:
+        block !important;
+
+    visibility:
+        visible !important;
+
+    opacity:
+        1 !important;
+
+    width:
+        32px !important;
+
+    min-width:
+        32px !important;
+
+    max-width:
+        32px !important;
+
+    height:
+        16px !important;
+
+    min-height:
+        16px !important;
+
+    max-height:
+        16px !important;
+
+    flex:
+        0 0 32px !important;
+
+    overflow:
+        visible !important;
+}
+
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+> .rv-flourish.flip {
+
+    transform:
+        scaleX(-1) !important;
+}
+
+
+/* ================================================================
+   CENTER NAVIGATION — LARGER IN THE 64PX BACALBASA BAR
+   ================================================================ */
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917 {
+
+    gap:
+        12px !important;
+}
+
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+.tabs {
+
+    box-sizing:
+        border-box !important;
+
+    height:
+        44px !important;
+
+    min-height:
+        44px !important;
+
+    padding:
+        4px !important;
+
+    gap:
+        3px !important;
+
+    border-radius:
+        10px !important;
+}
+
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+.tabs
+.tab {
+
+    box-sizing:
+        border-box !important;
+
+    min-width:
+        82px !important;
+
+    height:
+        34px !important;
+
+    min-height:
+        34px !important;
+
+    padding:
+        0 16px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        11px !important;
+
+    line-height:
+        15px !important;
+
+    font-weight:
+        600 !important;
+
+    letter-spacing:
+        0 !important;
+
+    text-transform:
+        none !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+.tabs
+.tab[data-view="bacalbasa"] {
+
+    min-width:
+        116px !important;
+}
+
+
+/* ================================================================
+   REMOVE GREEN DOT BESIDE ACTIVE LIVE / SLAM / ETC.
+   ================================================================ */
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+.tabs
+.tab::before,
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+.tabs
+.tab::after {
+
+    display:
+        none !important;
+
+    content:
+        none !important;
+}
+
+
+/* ================================================================
+   TOP-LEFT EMBLEM — VISIBLE CONTINUOUS BACALBASA-TIMED MOTION
+
+   Bacalbasa's reticle spin timing is 30 seconds.
+   ================================================================ */
+
+@keyframes stitch-baca-emblem-spin-v1918 {
+
+    from {
+        transform:
+            rotate(0deg);
+    }
+
+    to {
+        transform:
+            rotate(360deg);
+    }
+}
+
+
+body.stitch-live-v12
+.rv-brand-emblem
+> svg {
+
+    transform-origin:
+        50% 50% !important;
+
+    animation:
+        stitch-baca-emblem-spin-v1918
+        30s
+        linear
+        infinite
+        !important;
+}
+
+
+/*
+ * Don't let the old hover-only rule replace the continuous motion.
+ */
+
+body.stitch-live-v12
+.rv-brand-emblem:hover
+> svg {
+
+    animation-play-state:
+        running !important;
+
+    transform:
+        none !important;
+}
+
+
+/* ================================================================
+   YOLO ROW HOST
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-mode-strip {
+
+    position:
+        relative !important;
+}
+
+
+/*
+ * Hide the old textual state fields.
+ *
+ * They remain in the DOM for functionality.
+ */
+
+body.stitch-live-v12
+#view-live
+#cameraYoloState,
+
+body.stitch-live-v12
+#view-live
+#cameraModeState {
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   OWNERSHIP
+
+   JS below will position the REAL .ownership-box directly.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.hero-state
+.hero-top {
+
+    position:
+        relative !important;
+}
+

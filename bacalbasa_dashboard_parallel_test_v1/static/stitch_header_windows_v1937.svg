@@ -1,0 +1,240 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 200 32"
+    fill="none"
+>
+
+    <!--
+        V1.9.37
+
+        Inspired by the dashboard's RGB + DEPTH idle symbol:
+        overlapping windows + central target.
+
+        Intentionally much simpler than previous header attempts.
+    -->
+
+
+    <!-- short connection from navigation -->
+
+    <g
+        stroke-linecap="round"
+    >
+
+        <path
+            d="M198 16H162"
+            stroke="#08795d"
+            stroke-width="1"
+            opacity=".45"
+        />
+
+        <path
+            d="M189 12H171"
+            stroke="#0e9a72"
+            stroke-width=".8"
+            opacity=".32"
+        />
+
+        <path
+            d="M187 20H168"
+            stroke="#a9770d"
+            stroke-width=".8"
+            opacity=".28"
+        />
+
+    </g>
+
+
+    <!-- travelling nav pulse -->
+
+    <circle
+        cy="16"
+        r="1.45"
+        fill="#8ecb7f"
+    >
+
+        <animate
+            attributeName="cx"
+            values="194;164;143"
+            dur="3.4s"
+            repeatCount="indefinite"
+        />
+
+        <animate
+            attributeName="opacity"
+            values="0;.9;0"
+            dur="3.4s"
+            repeatCount="indefinite"
+        />
+
+    </circle>
+
+
+    <!-- ========================================================
+         OVERLAPPING WINDOW MOTIF
+         ======================================================== -->
+
+    <g
+        transform="translate(123 16)"
+    >
+
+        <!-- green window -->
+
+        <rect
+            x="-25"
+            y="-9"
+            width="36"
+            height="18"
+            rx="4"
+            stroke="#078763"
+            stroke-width="1"
+            opacity=".66"
+        >
+
+            <animate
+                attributeName="x"
+                values="-25;-27;-25"
+                dur="4.2s"
+                repeatCount="indefinite"
+            />
+
+        </rect>
+
+
+        <!-- amber window -->
+
+        <rect
+            x="-9"
+            y="-7"
+            width="28"
+            height="14"
+            rx="3"
+            stroke="#b37b0a"
+            stroke-width=".9"
+            opacity=".50"
+        >
+
+            <animate
+                attributeName="x"
+                values="-9;-7;-9"
+                dur="4.2s"
+                repeatCount="indefinite"
+            />
+
+        </rect>
+
+
+        <!-- central target -->
+
+        <circle
+            cx="-1"
+            cy="0"
+            r="5"
+            stroke="#0ca777"
+            stroke-width="1"
+            opacity=".72"
+        />
+
+
+        <circle
+            cx="-1"
+            cy="0"
+            r="1.7"
+            fill="#f59e0b"
+        >
+
+            <animate
+                attributeName="r"
+                values="1.2;2;1.2"
+                dur="2.6s"
+                repeatCount="indefinite"
+            />
+
+            <animate
+                attributeName="opacity"
+                values=".45;1;.45"
+                dur="2.6s"
+                repeatCount="indefinite"
+            />
+
+        </circle>
+
+
+        <!-- tiny opposing nodes -->
+
+        <circle
+            cx="-31"
+            cy="0"
+            r="1.2"
+            fill="#0e9a72"
+            opacity=".48"
+        />
+
+        <circle
+            cx="25"
+            cy="0"
+            r="1.2"
+            fill="#b37b0a"
+            opacity=".45"
+        />
+
+    </g>
+
+
+    <!-- ========================================================
+         QUIET OUTER SCAN MARKS
+         ======================================================== -->
+
+    <g
+        stroke-linecap="round"
+    >
+
+        <path
+            d="M20 16H64"
+            stroke="#086f56"
+            stroke-width=".9"
+            opacity=".32"
+        />
+
+        <path
+            d="M31 11H54"
+            stroke="#0b8967"
+            stroke-width=".8"
+            opacity=".26"
+        />
+
+        <path
+            d="M34 21H60"
+            stroke="#9e710e"
+            stroke-width=".8"
+            opacity=".24"
+        />
+
+
+        <rect
+            x="42"
+            y="14.8"
+            width="9"
+            height="2.4"
+            rx="1.2"
+            fill="#0da779"
+        >
+
+            <animate
+                attributeName="x"
+                values="23;55;23"
+                dur="4.6s"
+                repeatCount="indefinite"
+            />
+
+            <animate
+                attributeName="opacity"
+                values=".15;.65;.15"
+                dur="4.6s"
+                repeatCount="indefinite"
+            />
+
+        </rect>
+
+    </g>
+
+</svg>

@@ -1,0 +1,665 @@
+/* ==================================================================
+   STITCH V1.9.49
+   CAMERA MULTIVIEW MAXIMIZE / RESTORE
+   ================================================================== */
+
+
+/* ================================================================
+   LEGACY FLOURISH SAFETY RETIREMENT
+
+   The JS source has been removed too. This is only a defensive
+   cascade guard against stale cached markup.
+   ================================================================ */
+
+body.stitch-live-v12
+.stitch-baca-header-center-v1917
+> .rv-flourish {
+    display: none !important;
+}
+
+
+/* ================================================================
+   RETIRE OLD PER-TILE NEW-TAB / CERT ICON
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-tile-trust {
+    display: none !important;
+}
+
+
+/* ================================================================
+   CAMERA TILE RIGHT-SIDE CONTROLS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-tile-actions-v1949 {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 5px !important;
+
+    min-width: 0 !important;
+}
+
+
+/* ================================================================
+   BACALBASA MAXIMIZE / RESTORE CONTROL
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949 {
+
+    position: relative !important;
+
+    width: 24px !important;
+    height: 24px !important;
+
+    min-width: 24px !important;
+    min-height: 24px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: grid !important;
+    place-items: center !important;
+
+    border:
+        1px solid transparent
+        !important;
+
+    border-radius:
+        6px
+        !important;
+
+    background:
+        transparent
+        !important;
+
+    color:
+        #8b918b
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    cursor:
+        pointer
+        !important;
+
+    opacity:
+        .78
+        !important;
+
+    pointer-events:
+        auto
+        !important;
+
+    touch-action:
+        manipulation
+        !important;
+
+    overflow:
+        hidden
+        !important;
+
+    transition:
+        color 140ms ease,
+        background-color 140ms ease,
+        border-color 140ms ease,
+        opacity 140ms ease
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949:hover {
+
+    color:
+        #a1d494
+        !important;
+
+    background:
+        rgba(142,203,127,.08)
+        !important;
+
+    border-color:
+        rgba(142,203,127,.24)
+        !important;
+
+    opacity:
+        1
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+svg {
+
+    width:
+        13px
+        !important;
+
+    height:
+        13px
+        !important;
+
+    display:
+        block
+        !important;
+}
+
+
+/*
+ * Both icons occupy the same center point, as in the standalone
+ * Bacalbasa D15G implementation.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-expand-icon-v1949,
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-restore-icon-v1949 {
+
+    position:
+        absolute
+        !important;
+
+    left:
+        50%
+        !important;
+
+    top:
+        50%
+        !important;
+
+    width:
+        14px
+        !important;
+
+    height:
+        14px
+        !important;
+
+    display:
+        grid
+        !important;
+
+    place-items:
+        center
+        !important;
+
+    transition:
+        opacity 180ms ease,
+        transform 300ms
+            cubic-bezier(.22,1,.36,1)
+        !important;
+}
+
+
+/* outward / maximize */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    opacity:
+        1
+        !important;
+
+    transform:
+        translate(-50%,-50%)
+        scale(1)
+        rotate(0deg)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    opacity:
+        0
+        !important;
+
+    transform:
+        translate(-50%,-50%)
+        scale(.58)
+        rotate(-70deg)
+        !important;
+}
+
+
+/* inward / restore */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    pointer-events:
+        none
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    color:
+        #8ecb7f
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    color:
+        inherit
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    transform-origin:
+        50% 50%
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    transform-origin:
+        50% 50%
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    will-change:
+        opacity,
+        transform
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    will-change:
+        opacity,
+        transform
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    display:
+        grid
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    display:
+        grid
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    visibility:
+        visible
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    visibility:
+        visible
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    z-index:
+        1
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    z-index:
+        2
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    opacity:
+        0
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    opacity:
+        1
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    transform:
+        translate(-50%,-50%)
+        scale(.58)
+        rotate(-70deg)
+        !important;
+}
+
+
+/*
+ * Restored-state morph.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949.stitch-camera-is-restore-v1949
+.stitch-camera-expand-icon-v1949 {
+
+    opacity:
+        0
+        !important;
+
+    transform:
+        translate(-50%,-50%)
+        scale(.58)
+        rotate(70deg)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949.stitch-camera-is-restore-v1949
+.stitch-camera-restore-icon-v1949 {
+
+    opacity:
+        1
+        !important;
+
+    transform:
+        translate(-50%,-50%)
+        scale(1)
+        rotate(0deg)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1949.stitch-camera-is-restore-v1949 {
+
+    color:
+        #8ecb7f
+        !important;
+
+    opacity:
+        1
+        !important;
+}
+
+
+/* ================================================================
+   ONE CAMERA OCCUPIES ALL FOUR CAMERA SLOTS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-maximized-v1949 {
+
+    grid-template-columns:
+        minmax(0,1fr)
+        !important;
+
+    grid-template-rows:
+        minmax(0,1fr)
+        !important;
+
+    gap:
+        0
+        !important;
+}
+
+
+/*
+ * Anything displaced by this maximize operation disappears from
+ * the 2x2 workspace but retains its real runtime camera state.
+ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-maximized-v1949
+.camera-tile.stitch-camera-temp-parked-v1949 {
+
+    display:
+        none
+        !important;
+}
+
+
+/*
+ * Also protect against another render path attempting to expose
+ * any non-selected direct child while maximize is active.
+ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-maximized-v1949
+> .camera-tile:not(.stitch-camera-maximized-tile-v1949) {
+
+    display:
+        none
+        !important;
+}
+
+
+/* Selected tile consumes the complete former 2x2 region. */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-maximized-v1949
+> .camera-tile.stitch-camera-maximized-tile-v1949 {
+
+    display:
+        flex
+        !important;
+
+    grid-column:
+        1 / -1
+        !important;
+
+    grid-row:
+        1 / -1
+        !important;
+
+    width:
+        100%
+        !important;
+
+    height:
+        100%
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    min-height:
+        0
+        !important;
+
+    max-width:
+        none
+        !important;
+
+    max-height:
+        none
+        !important;
+
+    margin:
+        0
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-maximized-v1949
+.camera-tile.stitch-camera-maximized-tile-v1949
+.camera-tile-body {
+
+    width:
+        100%
+        !important;
+
+    height:
+        100%
+        !important;
+
+    min-width:
+        0
+        !important;
+
+    min-height:
+        0
+        !important;
+}
+
+
+/*
+ * The tile is not draggable while it owns the complete workspace.
+ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-maximized-v1949
+.camera-tile.stitch-camera-maximized-tile-v1949
+.camera-tile-head {
+
+    cursor:
+        default
+        !important;
+}
+
+
+/* ================================================================
+   ICON BAR WHILE MAXIMIZED
+   ================================================================ */
+
+/*
+ * Windows displaced from the workspace return visually to their
+ * camera icon state.
+ */
+
+body.stitch-live-v12
+#view-live
+.camera-mode-btn.stitch-camera-temp-parked-button-v1949 {
+
+    opacity:
+        .74
+        !important;
+}
+
+
+/*
+ * Like the standalone Bacalbasa maximize mode, don't let a user
+ * change the dock set until the large window has been restored.
+ */
+
+body.stitch-live-v12.stitch-camera-workspace-maximized-v1949
+#view-live
+.camera-mode-buttons
+.camera-mode-btn {
+
+    pointer-events:
+        none
+        !important;
+}

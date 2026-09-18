@@ -1,0 +1,689 @@
+/* ==================================================================
+   BACALBASA SLAM V2.2.15
+
+   Presentation only:
+     - Live workspace-gap background parity
+     - large cartographic idle animation
+     - idle caption presentation
+     - control style targets
+
+   SLAM / WebGL / localization functionality is untouched.
+   ================================================================== */
+
+
+/* ================================================================
+   EXACT LIVE GAP COLOUR
+
+   JS reads the actual Live workspace background and stores it here.
+   ================================================================ */
+
+#view-slam,
+#view-slam .slam-layout {
+    background:
+        var(
+            --baca-live-gap-bg-v2215,
+            #111111
+        )
+        !important;
+}
+
+
+/* Keep actual panels/cards unchanged. */
+
+#view-slam .slam-world-panel,
+#view-slam .slam-rail,
+#view-slam .slam-status-panel,
+#view-slam .slam-layers-panel,
+#view-slam .slam-initial-panel {
+    background-clip:
+        padding-box !important;
+}
+
+
+/* ================================================================
+   IDLE OVERLAY
+   ================================================================ */
+
+#view-slam
+#slamOverlay.baca-slam-idle-v2215 {
+
+    position:
+        absolute !important;
+
+    inset:
+        0 !important;
+
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        18px !important;
+
+    padding:
+        0 !important;
+
+    /*
+     * EXACT LIVE ROBOT-STAGE NEUTRAL GRAY.
+     *
+     * The SLAM WebGL canvas itself keeps its original rendering.
+     * This colour belongs only to the idle/unavailable overlay,
+     * therefore the real point cloud is not altered.
+     */
+    background:
+        #161616 !important;
+
+    border:
+        0 !important;
+
+    pointer-events:
+        none !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * The existing SLAM runtime is still allowed to hide/show the overlay.
+ * Only the HTTP/error sub-line is visually removed.
+ */
+
+#view-slam
+#slamOverlay.baca-slam-idle-v2215
+> span {
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   LARGE CARTOGRAPHIC ORBIT
+   ================================================================ */
+
+#view-slam
+.baca-slam-map-orbit-v2215 {
+
+    display:
+        block !important;
+
+    width:
+        clamp(
+            500px,
+            48vw,
+            760px
+        ) !important;
+
+    max-width:
+        72% !important;
+
+    height:
+        auto !important;
+
+    overflow:
+        visible !important;
+
+    filter:
+        none !important;
+
+    transform:
+        translateZ(0);
+
+    animation:
+        bacaSlamFloat2215
+        6.8s
+        ease-in-out
+        infinite;
+}
+
+
+/* broad field */
+
+.baca-slam-field-v2215 {
+
+    fill:
+        url(#bacaNodeGlow2215);
+
+    stroke:
+        rgba(80,160,111,.10);
+
+    stroke-width:
+        1;
+}
+
+
+/* orbit language */
+
+.baca-slam-orbit-v2215 {
+
+    fill:
+        none;
+
+    stroke:
+        rgba(95,135,105,.23);
+
+    stroke-width:
+        1.2;
+
+    stroke-dasharray:
+        5 12;
+}
+
+
+.baca-slam-orbit-bright-v2215 {
+
+    fill:
+        none;
+
+    stroke:
+        #83d786;
+
+    stroke-width:
+        2;
+
+    stroke-linecap:
+        round;
+
+    opacity:
+        .56;
+}
+
+
+.baca-slam-orbit-amber-v2215 {
+
+    fill:
+        none;
+
+    stroke:
+        #c58a18;
+
+    stroke-width:
+        1.8;
+
+    stroke-linecap:
+        round;
+
+    opacity:
+        .44;
+}
+
+
+.baca-slam-orbit-a-v2215 {
+
+    transform-origin:
+        450px 250px;
+
+    animation:
+        bacaSlamOrbitA2215
+        16s
+        linear
+        infinite;
+}
+
+
+.baca-slam-orbit-b-v2215 {
+
+    transform-origin:
+        450px 250px;
+
+    animation:
+        bacaSlamOrbitB2215
+        22s
+        linear
+        infinite;
+}
+
+
+/* top-down map */
+
+.baca-slam-cartography-v2215 {
+
+    transform-origin:
+        450px 250px;
+
+    animation:
+        bacaSlamMapBreath2215
+        5.4s
+        ease-in-out
+        infinite;
+}
+
+
+.baca-slam-contour-v2215 {
+
+    fill:
+        rgba(33,97,68,.025);
+
+    stroke:
+        url(#bacaMapLine2215);
+
+    stroke-linejoin:
+        round;
+
+    stroke-linecap:
+        round;
+}
+
+
+.baca-slam-contour-v2215.contour-a {
+
+    stroke-width:
+        2.2;
+}
+
+
+.baca-slam-contour-v2215.contour-b {
+
+    stroke-width:
+        1.45;
+
+    opacity:
+        .68;
+}
+
+
+.baca-slam-contour-v2215.contour-c {
+
+    stroke-width:
+        1;
+
+    opacity:
+        .42;
+}
+
+
+/* moving reconstruction route */
+
+.baca-slam-route-v2215 {
+
+    fill:
+        none;
+
+    stroke:
+        #75ca82;
+
+    stroke-width:
+        1.8;
+
+    stroke-linecap:
+        round;
+
+    stroke-dasharray:
+        6 12;
+
+    opacity:
+        .55;
+
+    animation:
+        bacaSlamRoute2215
+        4.6s
+        linear
+        infinite;
+}
+
+
+/* rotating scan arm */
+
+.baca-slam-scanner-v2215 {
+
+    transform-origin:
+        450px 250px;
+
+    animation:
+        bacaSlamScanner2215
+        8.5s
+        linear
+        infinite;
+}
+
+
+.baca-slam-scan-line-v2215 {
+
+    stroke:
+        rgba(123,213,133,.38);
+
+    stroke-width:
+        1.4;
+
+    stroke-linecap:
+        round;
+}
+
+
+.baca-slam-scan-tip-v2215 {
+
+    fill:
+        #86d78a;
+
+    opacity:
+        .72;
+}
+
+
+/* mapping nodes */
+
+.baca-slam-node-v2215 {
+
+    fill:
+        #75ce83;
+
+    transform-box:
+        fill-box;
+
+    transform-origin:
+        center;
+
+    animation:
+        bacaSlamNode2215
+        2.8s
+        ease-in-out
+        infinite;
+}
+
+
+.baca-slam-node-v2215.n2 {
+    animation-delay: -.55s;
+}
+
+.baca-slam-node-v2215.n3 {
+    animation-delay: -1.1s;
+}
+
+.baca-slam-node-v2215.n4 {
+    animation-delay: -1.65s;
+}
+
+.baca-slam-node-v2215.n5 {
+    animation-delay: -2.2s;
+}
+
+
+/* origin / robot */
+
+.baca-slam-origin-ring-v2215 {
+
+    fill:
+        rgba(197,138,24,.025);
+
+    stroke:
+        rgba(197,138,24,.38);
+
+    stroke-width:
+        1.2;
+
+    stroke-dasharray:
+        4 5;
+}
+
+
+.baca-slam-origin-dot-v2215 {
+
+    fill:
+        #c58a18;
+
+    stroke:
+        rgba(226,181,60,.82);
+
+    stroke-width:
+        1.5;
+}
+
+
+.baca-slam-heading-v2215 {
+
+    fill:
+        none;
+
+    stroke:
+        rgba(197,138,24,.68);
+
+    stroke-width:
+        2;
+
+    stroke-linecap:
+        round;
+}
+
+
+/* ================================================================
+   IDLE CAPTION
+
+   JS copies typography directly from Live's
+   "RGB + depth idle" label.
+   ================================================================ */
+
+#view-slam
+#slamOverlay.baca-slam-idle-v2215
+> strong {
+
+    display:
+        block !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    text-align:
+        center !important;
+
+    white-space:
+        nowrap !important;
+
+    /*
+     * Fallback only.
+     * The JS owner replaces these with the actual Live-computed values.
+     */
+    color:
+        #6f7178 !important;
+
+    font-family:
+        "Space Mono",
+        monospace !important;
+
+    font-size:
+        8px !important;
+
+    line-height:
+        12px !important;
+
+    font-weight:
+        400 !important;
+
+    letter-spacing:
+        .08em !important;
+}
+
+
+/* ================================================================
+   ANIMATION
+   ================================================================ */
+
+@keyframes bacaSlamOrbitA2215 {
+
+    from {
+        transform:
+            rotate(0deg);
+    }
+
+    to {
+        transform:
+            rotate(360deg);
+    }
+}
+
+
+@keyframes bacaSlamOrbitB2215 {
+
+    from {
+        transform:
+            rotate(360deg);
+    }
+
+    to {
+        transform:
+            rotate(0deg);
+    }
+}
+
+
+@keyframes bacaSlamScanner2215 {
+
+    from {
+        transform:
+            rotate(0deg);
+    }
+
+    to {
+        transform:
+            rotate(360deg);
+    }
+}
+
+
+@keyframes bacaSlamRoute2215 {
+
+    from {
+        stroke-dashoffset:
+            0;
+    }
+
+    to {
+        stroke-dashoffset:
+            -72;
+    }
+}
+
+
+@keyframes bacaSlamNode2215 {
+
+    0%,
+    100% {
+        opacity:
+            .28;
+
+        transform:
+            scale(.82);
+    }
+
+    48% {
+        opacity:
+            .95;
+
+        transform:
+            scale(1.18);
+    }
+}
+
+
+@keyframes bacaSlamMapBreath2215 {
+
+    0%,
+    100% {
+        opacity:
+            .68;
+
+        transform:
+            scale(.992);
+    }
+
+    50% {
+        opacity:
+            1;
+
+        transform:
+            scale(1.008);
+    }
+}
+
+
+@keyframes bacaSlamFloat2215 {
+
+    0%,
+    100% {
+        transform:
+            translate3d(
+                0,
+                2px,
+                0
+            );
+    }
+
+    50% {
+        transform:
+            translate3d(
+                0,
+                -5px,
+                0
+            );
+    }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    #view-slam
+    .baca-slam-map-orbit-v2215,
+
+    #view-slam
+    .baca-slam-map-orbit-v2215 * {
+
+        animation:
+            none !important;
+    }
+}
+
+/* ==================================================================
+   BACALBASA SLAM V2.2.16.1
+   SHARED UI CORE BRIDGE
+
+   Only SLAM-specific document flow remains here.
+   Shared dimensions / colors / rail / card / action presentation
+   live in bacalbasa_ui_core.css.
+   ================================================================== */
+
+#view-slam
+.slam-world-panel.baca-ui-major-panel {
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+}
+
+
+#view-slam
+.slam-head.baca-ui-primary-row {
+
+    flex:
+        0 0 auto !important;
+}
+
+
+#view-slam
+.slam-stage {
+
+    flex:
+        1 1 auto !important;
+
+    min-height:
+        0 !important;
+}
+

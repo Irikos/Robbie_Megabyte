@@ -1,0 +1,149 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 124 30"
+    fill="none"
+>
+    <defs>
+        <filter
+            id="softGlow"
+            x="-20%"
+            y="-50%"
+            width="140%"
+            height="200%"
+        >
+            <feGaussianBlur
+                stdDeviation="0.75"
+                result="blur"
+            />
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+    </defs>
+
+    <!-- restrained amber signal curve -->
+    <path
+        id="amberPath"
+        d="
+            M4 16
+            C17 16 19 8 31 8
+            C43 8 44 21 56 21
+            C68 21 69 9 81 9
+            C94 9 100 16 120 16
+        "
+        stroke="#f59e0b"
+        stroke-width="1.55"
+        stroke-linecap="round"
+        stroke-dasharray="13 8"
+        opacity=".78"
+        filter="url(#softGlow)"
+    >
+        <animate
+            attributeName="stroke-dashoffset"
+            from="0"
+            to="-42"
+            dur="5.5s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+    <!-- green counter-signal -->
+    <path
+        id="greenPath"
+        d="
+            M14 19
+            C28 19 33 13 45 13
+            C57 13 60 17 71 17
+            C84 17 91 11 111 11
+        "
+        stroke="#8ecb7f"
+        stroke-width="1.35"
+        stroke-linecap="round"
+        stroke-dasharray="9 10"
+        opacity=".82"
+        filter="url(#softGlow)"
+    >
+        <animate
+            attributeName="stroke-dashoffset"
+            from="-30"
+            to="12"
+            dur="4.8s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+    <!-- central reticle -->
+    <circle
+        cx="60"
+        cy="15"
+        r="4.4"
+        stroke="#8ecb7f"
+        stroke-width="1"
+        stroke-dasharray="2 2"
+        opacity=".58"
+    >
+        <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 60 15"
+            to="360 60 15"
+            dur="7s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+    <path
+        d="M60 10.5L64.5 15L60 19.5L55.5 15Z"
+        stroke="#f59e0b"
+        stroke-width=".9"
+        opacity=".62"
+    >
+        <animate
+            attributeName="opacity"
+            values=".35;.78;.35"
+            dur="2.8s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+    <!-- travelling green packet -->
+    <circle
+        r="1.65"
+        fill="#8ecb7f"
+        filter="url(#softGlow)"
+    >
+        <animateMotion
+            dur="4.2s"
+            repeatCount="indefinite"
+            path="
+                M14 19
+                C28 19 33 13 45 13
+                C57 13 60 17 71 17
+                C84 17 91 11 111 11
+            "
+        />
+        <animate
+            attributeName="opacity"
+            values=".35;1;.35"
+            dur="2.1s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+    <!-- fixed amber marker -->
+    <circle
+        cx="31"
+        cy="8"
+        r="1.7"
+        fill="#f59e0b"
+        opacity=".86"
+    >
+        <animate
+            attributeName="opacity"
+            values=".42;.95;.42"
+            dur="2.4s"
+            repeatCount="indefinite"
+        />
+    </circle>
+</svg>

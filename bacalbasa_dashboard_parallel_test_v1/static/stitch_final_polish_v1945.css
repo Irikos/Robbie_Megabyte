@@ -1,0 +1,191 @@
+
+/* ================================================================
+   STITCH V1.9.45
+   ================================================================ */
+
+
+/* ---------------------------------------------------------------
+   CAMERA MULTIVIEW
+
+   Its actual position is now pinned by the V1.9.45 JS.
+   Prevent older layout rules from adding their own offset afterward.
+   --------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+[data-stitch-camera-title-v1945="aligned"] {
+
+    line-height:
+        18px !important;
+
+    vertical-align:
+        middle !important;
+}
+
+
+/* ---------------------------------------------------------------
+   MODE LIVE VALUE
+
+   MODE  —
+
+   Slightly closer than V1.9.44.
+   The actual #modeValue remains untouched functionally.
+   --------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-cluster-v1924 {
+
+    gap:
+        8px !important;
+
+    column-gap:
+        8px !important;
+}
+
+
+/* ---------------------------------------------------------------
+   COMPACT MIDDLE TELEMETRY
+   --------------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.stitch-compact-metrics-v1945
+.stitch-performance-group {
+
+    gap:
+        7px !important;
+
+    column-gap:
+        7px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-compact-metrics-v1945
+.stitch-performance-group
+> span {
+
+    gap:
+        2px !important;
+
+    column-gap:
+        2px !important;
+}
+
+
+/* ---------------------------------------------------------------
+   COMPLETELY NEW TOP ORNAMENT
+   --------------------------------------------------------------- */
+
+body.stitch-live-v12
+header.topbar
+.tabs {
+
+    position:
+        relative !important;
+
+    overflow:
+        visible !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    display:
+        block !important;
+
+    width:
+        176px !important;
+
+    height:
+        40px !important;
+
+    top:
+        50% !important;
+
+    background:
+        transparent
+        url("/static/stitch_header_depthframes_v1945.svg?v=1945")
+        center / contain
+        no-repeat
+        !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+
+    filter:
+        drop-shadow(
+            0 0 3px
+            rgba(17,118,90,.10)
+        ) !important;
+
+    opacity:
+        .95 !important;
+
+    animation:
+        none !important;
+
+    pointer-events:
+        none !important;
+
+    z-index:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -176px !important;
+
+    transform:
+        translateY(-50%) !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -176px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab {
+
+    position:
+        relative !important;
+
+    z-index:
+        2 !important;
+}
+

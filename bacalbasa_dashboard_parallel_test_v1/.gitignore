@@ -1,0 +1,14 @@
+run/
+backup_*/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.pid
+*.sock
+*.tmp
+*.bak
+*.broken_*
+.env
+.env.*
+*action_token*

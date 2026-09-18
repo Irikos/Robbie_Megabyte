@@ -1,0 +1,126 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 170 38"
+    fill="none"
+>
+
+  <!--
+       Navigation is immediately to the RIGHT.
+
+       Same visual idea as the DEPTH idle graphic:
+       repeated perspective frames.
+
+       Largest nearest the navigation.
+       Frames shrink as they travel outward.
+
+       NO internal branch / twig / waveform.
+  -->
+
+
+  <!-- far / smallest -->
+  <path
+      d="M15 16 L24 17 L24 21 L15 22 Z"
+      stroke="#0d624f"
+      stroke-width=".75"
+      opacity=".25"
+  >
+    <animate
+        attributeName="opacity"
+        values=".18;.34;.18"
+        dur="4.8s"
+        begin=".9s"
+        repeatCount="indefinite"
+    />
+  </path>
+
+
+  <!-- depth frame 4 -->
+  <path
+      d="M33 14 L46 16 L46 22 L33 24 Z"
+      stroke="#0d7459"
+      stroke-width=".8"
+      opacity=".34"
+  >
+    <animate
+        attributeName="opacity"
+        values=".25;.48;.25"
+        dur="4.8s"
+        begin=".65s"
+        repeatCount="indefinite"
+    />
+  </path>
+
+
+  <!-- depth frame 3 -->
+  <path
+      d="M57 12 L75 14 L75 24 L57 26 Z"
+      stroke="#108567"
+      stroke-width=".9"
+      opacity=".45"
+  >
+    <animate
+        attributeName="opacity"
+        values=".32;.61;.32"
+        dur="4.8s"
+        begin=".4s"
+        repeatCount="indefinite"
+    />
+  </path>
+
+
+  <!-- depth frame 2 -->
+  <path
+      d="M87 9 L111 12 L111 26 L87 29 Z"
+      stroke="#128e6d"
+      stroke-width="1"
+      opacity=".58"
+  >
+    <animate
+        attributeName="opacity"
+        values=".40;.73;.40"
+        dur="4.8s"
+        begin=".2s"
+        repeatCount="indefinite"
+    />
+  </path>
+
+
+  <!-- largest frame nearest navigation -->
+  <path
+      d="M125 6 L160 10 L160 28 L125 32 Z"
+      stroke="#159873"
+      stroke-width="1.1"
+      opacity=".72"
+  >
+    <animate
+        attributeName="opacity"
+        values=".52;.88;.52"
+        dur="4.8s"
+        repeatCount="indefinite"
+    />
+  </path>
+
+
+  <!-- restrained amber depth edges ONLY -->
+  <path
+      d="M125 32 L160 28"
+      stroke="#b47b0a"
+      stroke-width=".95"
+      opacity=".55"
+  />
+
+  <path
+      d="M87 9 L111 12"
+      stroke="#a6720b"
+      stroke-width=".8"
+      opacity=".40"
+  />
+
+  <path
+      d="M57 26 L75 24"
+      stroke="#93680d"
+      stroke-width=".7"
+      opacity=".28"
+  />
+
+</svg>

@@ -1,0 +1,333 @@
+/* ==================================================================
+   STITCH V1.9.54
+   UNIFIED CORNER GEOMETRY + SMOOTH CAMERA RESIZE
+   ================================================================== */
+
+
+body.stitch-live-v12 {
+
+    /*
+     * Single corner standard for this dashboard.
+     *
+     * Matches the current left/right major section geometry.
+     */
+
+    --st-radius-v1954:
+        6px;
+}
+
+
+/* ================================================================
+   THREE MAJOR LIVE SECTIONS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .camera-panel,
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .twin-panel,
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> [data-stitch-major-key="twin"],
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .combined-rail {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+
+    background:
+        var(
+            --st-card,
+            #161616
+        )
+        !important;
+
+    border:
+        1px solid
+        var(
+            --st-border,
+            #333333
+        )
+        !important;
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* ================================================================
+   TOP BAR
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   RIGHT-SIDE MINI SECTIONS
+   MODE / CONTROLLER PROCESS / HANDS / SELECTED JOINT / ETC.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+> .panel,
+
+body.stitch-live-v12
+#view-live
+.combined-rail
+section.panel,
+
+body.stitch-live-v12
+#view-live
+.hero-state,
+
+body.stitch-live-v12
+#view-live
+.health-panel,
+
+body.stitch-live-v12
+#view-live
+.quick-panel,
+
+body.stitch-live-v12
+#view-live
+.hand-panel,
+
+body.stitch-live-v12
+#view-live
+.joint-inspector {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   CAMERA WINDOWS / OTHER CARDS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-tile,
+
+body.stitch-live-v12
+#view-live
+.status-card,
+
+body.stitch-live-v12
+#view-live
+.kv-list,
+
+body.stitch-live-v12
+#view-live
+.event,
+
+body.stitch-live-v12
+#view-live
+.ownership-box {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/*
+ * Camera window header/body are clipped by the common parent radius.
+ */
+
+body.stitch-live-v12
+#view-live
+.camera-tile {
+
+    overflow:
+        hidden
+        !important;
+}
+
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+
+body.stitch-live-v12
+.tabs,
+
+body.stitch-live-v12
+.tabs
+.tab {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   ALL FUNCTIONAL BUTTONS
+   ================================================================ */
+
+body.stitch-live-v12
+button,
+
+body.stitch-live-v12
+#view-live
+.ghost-btn,
+
+body.stitch-live-v12
+#view-live
+.camera-mode-btn,
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-dock-btn,
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1951 {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   SELECTS / TEXT CONTROLS
+   ================================================================ */
+
+body.stitch-live-v12
+select,
+
+body.stitch-live-v12
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+
+body.stitch-live-v12
+textarea {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   CHIPS / STATUS ELEMENTS THAT PREVIOUSLY USED PILL RADII
+   ================================================================ */
+
+body.stitch-live-v12
+.chip,
+
+body.stitch-live-v12
+#view-live
+.camera-process-state {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   DRAG / RESTORE TARGETS
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-slot-v151,
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-large-target-v1953,
+
+body.stitch-live-v12
+.stitch-camera-d15-ghost-v151 {
+
+    border-radius:
+        var(
+            --st-radius-v1954
+        )
+        !important;
+}
+
+
+/* ================================================================
+   NEW MAXIMIZE / MINIMIZE MOTION
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-tile.stitch-camera-resizing-v1954 {
+
+    will-change:
+        transform,
+        opacity
+        !important;
+
+    backface-visibility:
+        hidden
+        !important;
+
+    transform-style:
+        flat
+        !important;
+}
+
+
+/*
+ * Make the outward <-> inward control morph match the new card
+ * movement instead of snapping faster than the window.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1951
+.stitch-camera-expand-icon-v1951,
+
+body.stitch-live-v12
+#view-live
+.stitch-camera-maximize-button-v1951
+.stitch-camera-restore-icon-v1951 {
+
+    transition:
+        opacity
+            210ms ease,
+        transform
+            410ms
+            cubic-bezier(.16,1,.3,1)
+        !important;
+}

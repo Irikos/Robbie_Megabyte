@@ -1,0 +1,202 @@
+/* ==================================================================
+   BACALBASA SHELL FINAL V1.0
+
+   Authoritative late owner for:
+       - dashboard top-bar surface
+       - current accepted V1.9.48 flow-field header animation
+
+   Resize / panel / SLAM geometry is intentionally untouched.
+   ================================================================== */
+
+
+/* ================================================================
+   TOP BAR SURFACE
+
+   Use the exact same neutral base surface as the shared major panels.
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar {
+
+    background:
+        var(
+            --baca-ui-panel-bg,
+            rgb(22, 22, 22)
+        )
+        !important;
+}
+
+
+/* ================================================================
+   CURRENT HEADER ANIMATION — V1.9.48 FLOW FIELD
+
+   This deliberately wins over all historical:
+       scanner
+       depth gate
+       corridor
+       echo
+       square/orbital
+       ornament
+
+   rules loaded earlier.
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar
+.tabs {
+
+    position:
+        relative
+        !important;
+
+    overflow:
+        visible
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    content:
+        ""
+        !important;
+
+    display:
+        block
+        !important;
+
+    position:
+        absolute
+        !important;
+
+    top:
+        50%
+        !important;
+
+    width:
+        330px
+        !important;
+
+    height:
+        44px
+        !important;
+
+    border:
+        0
+        !important;
+
+    border-radius:
+        0
+        !important;
+
+    outline:
+        0
+        !important;
+
+    box-shadow:
+        none
+        !important;
+
+    background:
+        transparent
+        url("/static/stitch_header_flow_v1948.svg?v=1948")
+        center / 100% 100%
+        no-repeat
+        !important;
+
+    opacity:
+        .94
+        !important;
+
+    filter:
+        drop-shadow(
+            0 0 4px
+            rgba(64, 145, 100, .08)
+        )
+        !important;
+
+    /*
+     * Animation is contained inside the SVG itself.
+     *
+     * This also kills any animation property inherited from an old
+     * pseudo-element ornament owner.
+     */
+    animation:
+        none
+        !important;
+
+    pointer-events:
+        none
+        !important;
+
+    z-index:
+        0
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -327px
+        !important;
+
+    right:
+        auto
+        !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -327px
+        !important;
+
+    left:
+        auto
+        !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+}
+
+
+/*
+ * Keep the actual navigation capsule/buttons above the ornament.
+ */
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab {
+
+    position:
+        relative
+        !important;
+
+    z-index:
+        2
+        !important;
+}
+
+
+/* ==================================================================
+   END BACALBASA SHELL FINAL V1.0
+   ================================================================== */

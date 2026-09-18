@@ -1,0 +1,158 @@
+/* ==================================================================
+   STITCH V1.9.52
+   REAL V151 INTERACTION INSIDE EXPANDED CAMERA WORKSPACE
+   ================================================================== */
+
+
+/* ================================================================
+   REAL PARKED ICON MUST ALWAYS WIN VISUALLY
+
+   A camera displaced by the 2x2 window is now actually present in
+   stitchCameraParkedV151, not merely hidden by maximize CSS.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-mode-btn.stitch-camera-dock-btn.stitch-camera-is-parked-v151 {
+
+    color:
+        #a1d494
+        !important;
+
+    border-color:
+        rgba(
+            142,
+            203,
+            127,
+            .42
+        )
+        !important;
+
+    background:
+        #1b221b
+        !important;
+
+    opacity:
+        1
+        !important;
+
+    cursor:
+        grab
+        !important;
+}
+
+
+/* ================================================================
+   EXPANDED MODE USES REAL V151 DRAG TARGETS
+
+   Legal outer-row cells retain the exact V151 dotted treatment.
+   Middle-row cells remain deliberately subdued because a 2x2 card
+   cannot independently occupy only the middle row.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-expanded-v1951
+.stitch-camera-slot-v151.stitch-camera-expanded-legal-v1952 {
+
+    opacity:
+        1
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-expanded-v1951
+.stitch-camera-slot-v151.stitch-camera-slot-unavailable-v151 {
+
+    opacity:
+        .34
+        !important;
+}
+
+
+/* ================================================================
+   WHILE A 2x2/1x1 WINDOW IS BEING DRAGGED, USE THE ORIGINAL V151
+   lifted-card treatment instead of the simplified V1951 drag skin.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-expanded-v1951
+.camera-tile.stitch-camera-dragging-v151 {
+
+    z-index:
+        100
+        !important;
+
+    pointer-events:
+        none
+        !important;
+
+    opacity:
+        1
+        !important;
+
+    box-shadow:
+        0
+        22px
+        45px
+        rgba(
+            0,
+            0,
+            0,
+            .36
+        )
+        !important;
+
+    transform:
+        translate3d(
+            var(
+                --stitch-camera-drag-x,
+                0px
+            ),
+            var(
+                --stitch-camera-drag-y,
+                0px
+            ),
+            0
+        )
+        scale(1.018)
+        rotate(.18deg)
+        !important;
+
+    transition:
+        none
+        !important;
+
+    will-change:
+        transform
+        !important;
+}
+
+
+/*
+ * The obsolete simplified V1951 drag state is no longer used.
+ */
+
+body.stitch-live-v12
+#view-live
+.camera-tile.stitch-camera-expanded-dragging-v1951 {
+
+    box-shadow:
+        none;
+}
+
+
+/* ================================================================
+   DOCK STAYS INTERACTIVE WHILE 2x2 MODE IS ACTIVE
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+#cameraStage.stitch-camera-expanded-v1951
+~ * {
+    --stitch-expanded-camera-dock-enabled-v1952:
+        1;
+}

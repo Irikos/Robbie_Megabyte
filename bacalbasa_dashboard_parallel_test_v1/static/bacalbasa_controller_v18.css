@@ -1,0 +1,2679 @@
+/* ==========================================================
+   BACALBASA CONTROLLER UI V18
+   ISOLATED OVERRIDE — DOES NOT OWN CAMERA/TWIN LAYOUT
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   CONTROLLER CARD
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-actions {
+    display: grid !important;
+
+    grid-template-columns:
+        72px
+        minmax(0,1fr)
+        !important;
+
+    column-gap: 8px !important;
+
+    align-items: center !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn {
+    position: static !important;
+
+    width: 72px !important;
+    min-width: 72px !important;
+
+    height: 32px !important;
+    min-height: 32px !important;
+
+    margin: 0 !important;
+    padding: 0 7px !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius: 6px !important;
+
+    background:
+        #171817
+        !important;
+
+    color:
+        #8c96a7
+        !important;
+
+    box-shadow:
+        none !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size: 10px !important;
+    font-weight: 500 !important;
+
+    line-height: 1 !important;
+}
+
+
+/*
+ * EXACT SAME OUTER GEOMETRY AS THE WORKING
+ * CAMERA CONNECT / DISCONNECT CONTROL.
+ */
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16,
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16 {
+    position: static !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 2px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 32px !important;
+    min-height: 32px !important;
+
+    margin: 0 !important;
+    padding: 2px !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius: 6px !important;
+
+    background:
+        #171817
+        !important;
+
+    overflow:
+        hidden !important;
+
+    clip-path:
+        inset(0 round 6px)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16 {
+    margin-top: 8px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn {
+    position: static !important;
+
+    inset: auto !important;
+
+    transform: none !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    flex:
+        1 1 0 !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    height: 26px !important;
+    min-height: 26px !important;
+
+    margin: 0 !important;
+    padding: 0 8px !important;
+
+    border: 0 !important;
+    border-radius: 5px !important;
+
+    box-shadow:
+        none !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size: 10px !important;
+    font-weight: 600 !important;
+
+    line-height: 1 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn::before,
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn::after,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn::before,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn::after,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn::before,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn::after,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn::before,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn::after {
+    content: none !important;
+    display: none !important;
+}
+
+
+/* Configure / Enter = Connect language. */
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn:not(:disabled),
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn:not(:disabled) {
+    background:
+        #8ecb7f
+        !important;
+
+    color:
+        #10200f
+        !important;
+}
+
+
+/* Stop / Exit = Disconnect language. */
+body.stitch-live-v12
+#view-live
+#controllerStopBtn:not(:disabled),
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn:not(:disabled) {
+    background:
+        transparent
+        !important;
+
+    color:
+        #f59e0b
+        !important;
+}
+
+
+/*
+ * Disabled means DEAD visually and functionally.
+ */
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn:disabled,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn:disabled,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn:disabled,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn:disabled,
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn:disabled {
+    background:
+        transparent
+        !important;
+
+    color:
+        #454b47
+        !important;
+
+    border-color:
+        #292c2a
+        !important;
+
+    opacity:
+        1 !important;
+
+    cursor:
+        default !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* Old Dragos action-readiness presentation is retired. */
+body.stitch-live-v12
+#view-live
+.action-readiness-panel,
+
+body.stitch-live-v12
+#view-live
+#xrActionBtn {
+    display:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   SETTINGS MODAL — ALWAYS ABOVE YOLO/CAMERA LAYERS
+   ---------------------------------------------------------- */
+
+#controllerModal.modal-backdrop {
+    z-index:
+        1000000 !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        rgba(5,6,5,.90)
+        !important;
+
+    backdrop-filter:
+        blur(7px)
+        !important;
+}
+
+
+body.modal-open
+#cameraYoloControl,
+
+body.modal-open
+#stitchYoloProxyV1923,
+
+body.modal-open
+.camera-yolo-toggle {
+    visibility:
+        hidden !important;
+}
+
+
+/* ----------------------------------------------------------
+   REMOVE ALL REQUESTED SETTINGS CONTENT
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-modal-head
+.panel-kicker,
+
+#controllerModal
+.controller-modal-head
+p,
+
+#controllerModal
+#controllerModalNotice,
+
+#controllerModal
+.controller-safety-ack,
+
+#controllerModal
+.controller-auth-row
+> label,
+
+#controllerModal
+.controller-locked-block,
+
+#controllerModal
+.controller-command-details,
+
+#controllerModal
+#controllerModalRuntime {
+    display:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   POPUP FRAME
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-modal {
+    width:
+        min(
+            850px,
+            calc(100vw - 80px)
+        )
+        !important;
+
+    max-width:
+        850px !important;
+
+    height:
+        auto !important;
+
+    min-height:
+        0 !important;
+
+    max-height:
+        calc(100vh - 60px)
+        !important;
+
+    overflow:
+        hidden !important;
+
+    box-sizing:
+        border-box !important;
+
+    padding:
+        12px !important;
+
+    background:
+        #151715 !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        1px solid #343734
+        !important;
+
+    border-radius:
+        6px !important;
+
+    box-shadow:
+        0 24px 80px
+        rgba(0,0,0,.62)
+        !important;
+
+    color-scheme:
+        dark !important;
+}
+
+
+/* ----------------------------------------------------------
+   HEADER
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-modal-head {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    min-height:
+        30px !important;
+
+    margin:
+        0 0 8px 0 !important;
+
+    padding:
+        0 0 8px 0 !important;
+
+    border-bottom:
+        1px solid #2c302d
+        !important;
+}
+
+
+#controllerModal
+#controllerModalTitle {
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        #edf3ee !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        16px !important;
+
+    font-weight:
+        600 !important;
+
+    line-height:
+        1.1 !important;
+
+    letter-spacing:
+        0 !important;
+}
+
+
+/*
+ * Everything else uses the same compact gray language
+ * as Xr / values in MODE.
+ */
+#controllerModal
+.controller-param-section,
+
+#controllerModal
+.controller-param-section
+header,
+
+#controllerModal
+.controller-param-row,
+
+#controllerModal
+.controller-param-row
+label,
+
+#controllerModal
+.controller-param-number,
+
+#controllerModal
+.controller-param-number
+input,
+
+#controllerModal
+.controller-param-number
+span,
+
+#controllerModal
+.controller-bool-row,
+
+#controllerModal
+.controller-bool-row
+span {
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1.15 !important;
+
+    letter-spacing:
+        0 !important;
+
+    color:
+        #8c96a7 !important;
+}
+
+
+/* ----------------------------------------------------------
+   RESET
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-auth-row {
+    display:
+        flex !important;
+
+    justify-content:
+        flex-end !important;
+
+    align-items:
+        center !important;
+
+    min-height:
+        27px !important;
+
+    margin:
+        0 0 7px 0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+#controllerModal
+#controllerResetDefaultsBtn {
+    height:
+        26px !important;
+
+    min-height:
+        26px !important;
+
+    padding:
+        0 10px !important;
+
+    background:
+        #171917 !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        1px solid #343834
+        !important;
+
+    border-radius:
+        5px !important;
+
+    box-shadow:
+        none !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+}
+
+
+/* ----------------------------------------------------------
+   PARAMETER SECTIONS
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-parameter-sections {
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0,1fr)
+        minmax(0,1fr)
+        !important;
+
+    gap:
+        8px !important;
+
+    width:
+        100% !important;
+
+    height:
+        auto !important;
+
+    max-height:
+        none !important;
+
+    overflow:
+        visible !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+#controllerModal
+.controller-param-section {
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        #141614 !important;
+
+    border:
+        1px solid #2b2f2c
+        !important;
+
+    border-radius:
+        5px !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* Behavior section can use the whole last row. */
+#controllerModal
+.controller-param-section:last-child {
+    grid-column:
+        1 / -1 !important;
+}
+
+
+#controllerModal
+.controller-param-section
+> header {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    min-height:
+        24px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 8px !important;
+
+    background:
+        #181a18 !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        0 !important;
+
+    border-bottom:
+        1px solid #292d2a
+        !important;
+
+    text-transform:
+        none !important;
+}
+
+
+#controllerModal
+.controller-param-list {
+    margin:
+        0 !important;
+
+    padding:
+        3px 7px !important;
+}
+
+
+#controllerModal
+.controller-param-row {
+    min-height:
+        30px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        3px 0 !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-bottom:
+        1px solid
+        rgba(43,47,44,.72)
+        !important;
+}
+
+
+#controllerModal
+.controller-param-row:last-child {
+    border-bottom:
+        0 !important;
+}
+
+
+/* ----------------------------------------------------------
+   RANGE — REMOVE BLUE
+   ---------------------------------------------------------- */
+
+#controllerModal
+input[type="range"] {
+    appearance:
+        none !important;
+
+    -webkit-appearance:
+        none !important;
+
+    height:
+        16px !important;
+
+    background:
+        transparent !important;
+
+    accent-color:
+        #8ecb7f !important;
+}
+
+
+#controllerModal
+input[type="range"]::-moz-range-track {
+    height:
+        4px !important;
+
+    background:
+        #d3d7d4 !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        4px !important;
+}
+
+
+#controllerModal
+input[type="range"]::-moz-range-progress {
+    height:
+        4px !important;
+
+    background:
+        #8ecb7f !important;
+
+    border-radius:
+        4px !important;
+}
+
+
+#controllerModal
+input[type="range"]::-moz-range-thumb {
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    border:
+        2px solid #ecefed
+        !important;
+
+    border-radius:
+        50% !important;
+
+    background:
+        #666c68 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   NUMBER INPUTS — NO LITTLE +/- ARROWS
+   ---------------------------------------------------------- */
+
+#controllerModal
+input[type="number"] {
+    appearance:
+        textfield !important;
+
+    -moz-appearance:
+        textfield !important;
+
+    background:
+        #0e100f !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        1px solid #343a36
+        !important;
+
+    border-radius:
+        5px !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#controllerModal
+input[type="number"]::-webkit-inner-spin-button,
+
+#controllerModal
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance:
+        none !important;
+
+    appearance:
+        none !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* ----------------------------------------------------------
+   BOOLEAN ROWS
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-bool-row
+.toggle {
+    background:
+        #171917 !important;
+
+    border:
+        1px solid #323733
+        !important;
+
+    border-radius:
+        5px !important;
+}
+
+
+#controllerModal
+.controller-bool-row
+input[type="checkbox"] {
+    accent-color:
+        #8ecb7f !important;
+}
+
+
+/* ----------------------------------------------------------
+   FOOTER
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-modal-footer {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-end !important;
+
+    min-height:
+        34px !important;
+
+    margin:
+        8px 0 0 0 !important;
+
+    padding:
+        8px 0 0 0 !important;
+
+    border-top:
+        1px solid #2c302d
+        !important;
+}
+
+
+#controllerModal
+.controller-modal-footer
+> div {
+    display:
+        flex !important;
+
+    gap:
+        7px !important;
+
+    margin-left:
+        auto !important;
+}
+
+
+#controllerModal
+#controllerModalCancelBtn {
+    height:
+        27px !important;
+
+    background:
+        #171917 !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        1px solid #343834
+        !important;
+
+    border-radius:
+        5px !important;
+}
+
+
+#controllerModal
+#controllerStartBtn {
+    height:
+        27px !important;
+
+    background:
+        #8ecb7f !important;
+
+    color:
+        #10200f !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        5px !important;
+}
+
+
+#controllerModal
+#controllerStartBtn:disabled {
+    background:
+        #202320 !important;
+
+    color:
+        #505752 !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* FULL_DASH_CONTROLLER_V18_1_BEGIN */
+
+
+/* ==========================================================
+   SETTINGS VALUES
+
+   Requested row language:
+
+       label       value unit       slider
+
+   Value/unit remain the real form field but look like the
+   small plain Xr/value typography instead of boxed controls.
+   ========================================================== */
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row) {
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(126px,1fr)
+        70px
+        minmax(120px,1.1fr)
+        !important;
+
+    column-gap:
+        8px !important;
+
+    align-items:
+        center !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> label {
+    grid-column:
+        1 !important;
+
+    grid-row:
+        1 !important;
+
+    min-width:
+        0 !important;
+
+    color:
+        #8c96a7 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1 !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> .controller-param-number {
+    grid-column:
+        2 !important;
+
+    grid-row:
+        1 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-end !important;
+
+    gap:
+        3px !important;
+
+    width:
+        70px !important;
+
+    min-width:
+        70px !important;
+
+    max-width:
+        70px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> input[type="range"] {
+    grid-column:
+        3 !important;
+
+    grid-row:
+        1 !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+}
+
+
+/*
+ * Real editable numeric input, but visually plain text.
+ */
+#controllerModal
+.controller-param-number
+input[type="number"] {
+    appearance:
+        textfield !important;
+
+    -moz-appearance:
+        textfield !important;
+
+    width:
+        42px !important;
+
+    min-width:
+        42px !important;
+
+    max-width:
+        42px !important;
+
+    height:
+        auto !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    outline:
+        0 !important;
+
+    box-shadow:
+        none !important;
+
+    text-align:
+        right !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1 !important;
+}
+
+
+#controllerModal
+.controller-param-number
+span {
+    display:
+        inline !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    color:
+        #8c96a7 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1 !important;
+}
+
+
+/* Firefox / Chromium spinner suppression stays absolute. */
+
+#controllerModal
+.controller-param-number
+input[type="number"]::-webkit-inner-spin-button,
+
+#controllerModal
+.controller-param-number
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance:
+        none !important;
+
+    appearance:
+        none !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* ==========================================================
+   CONTROLLER SWITCHES
+
+   Match the established camera Connect / Disconnect geometry:
+       outer height = 32px
+       padding      = 3px
+       radius       = 6px
+       inner height = 26px
+       inner gap    = 6px
+
+   Do NOT reuse the camera class names because camera JS owns
+   those classes.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16,
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16 {
+    position:
+        relative !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        stretch !important;
+
+    gap:
+        2px !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    max-height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        3px !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        #171817 !important;
+
+    overflow:
+        hidden !important;
+
+    clip-path:
+        inset(
+            0
+            round
+            6px
+        )
+        !important;
+}
+
+
+/* ----------------------------------------------------------
+   Four real segments
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn {
+    appearance:
+        none !important;
+
+    -webkit-appearance:
+        none !important;
+
+    box-sizing:
+        border-box !important;
+
+    position:
+        relative !important;
+
+    inset:
+        auto !important;
+
+    transform:
+        none !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    flex:
+        1 1 0 !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    height:
+        26px !important;
+
+    min-height:
+        26px !important;
+
+    max-height:
+        26px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 8px !important;
+
+    gap:
+        6px !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        3px !important;
+
+    background:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+
+    outline:
+        none !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        1 !important;
+
+    letter-spacing:
+        normal !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ==========================================================
+   SAME LEFT ICON LANGUAGE AS CAMERA POWER CONTROL
+   ========================================================== */
+
+/*
+ * Configure + Enter:
+ * compact tilted connector mark.
+ */
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn::before,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn::before {
+    content:
+        "" !important;
+
+    display:
+        inline-block !important;
+
+    position:
+        static !important;
+
+    width:
+        7px !important;
+
+    height:
+        7px !important;
+
+    flex:
+        0 0 7px !important;
+
+    margin:
+        0 !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1.4px solid
+        currentColor !important;
+
+    border-radius:
+        2px !important;
+
+    background:
+        transparent !important;
+
+    transform:
+        rotate(-40deg)
+        !important;
+
+    opacity:
+        .9 !important;
+}
+
+
+/*
+ * Stop + Exit:
+ * same Disconnect X language.
+ */
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn::before,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn::before {
+    content:
+        "×" !important;
+
+    display:
+        inline-block !important;
+
+    position:
+        static !important;
+
+    width:
+        auto !important;
+
+    height:
+        auto !important;
+
+    flex:
+        0 0 auto !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        none !important;
+
+    border:
+        0 !important;
+
+    transform:
+        none !important;
+
+    color:
+        currentColor !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        15px !important;
+
+    font-weight:
+        500 !important;
+
+    line-height:
+        1 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn::after,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn::after,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn::after,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn::after {
+    content:
+        none !important;
+
+    display:
+        none !important;
+}
+
+
+/* ==========================================================
+   STATE PAINTING
+
+   IMPORTANT:
+   We no longer derive the visual state from :disabled,
+   because the legacy app also writes that property.
+
+   ONLY the V18 state-owner class determines what looks alive.
+   ========================================================== */
+
+
+/* Dead operational segment. */
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn.baca-v18-disabled,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn.baca-v18-disabled,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn.baca-v18-disabled,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn.baca-v18-disabled {
+    background:
+        transparent !important;
+
+    color:
+        #454b47 !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        none !important;
+
+    cursor:
+        default !important;
+}
+
+
+/*
+ * Configure / Enter enabled =
+ * Connect side.
+ */
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn.baca-v18-active,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn.baca-v18-active {
+    color:
+        #10200f !important;
+
+    background:
+        #8ecb7f !important;
+
+    box-shadow:
+        none !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        auto !important;
+
+    cursor:
+        pointer !important;
+}
+
+
+/*
+ * Stop / Exit enabled =
+ * Disconnect side.
+ */
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn.baca-v18-active,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn.baca-v18-active {
+    color:
+        #f5be34 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        auto !important;
+
+    cursor:
+        pointer !important;
+}
+
+
+/*
+ * Neutral Settings button remains separate from the operational
+ * segmented state. It is clickable only while STOPPED.
+ */
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn.baca-v18-active {
+    background:
+        #171817 !important;
+
+    color:
+        #8c96a7 !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        auto !important;
+
+    cursor:
+        pointer !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn.baca-v18-disabled {
+    background:
+        #151615 !important;
+
+    color:
+        #454b47 !important;
+
+    border:
+        1px solid #292c2a
+        !important;
+
+    opacity:
+        1 !important;
+
+    pointer-events:
+        none !important;
+
+    cursor:
+        default !important;
+}
+
+
+/* FULL_DASH_CONTROLLER_V18_1_END */
+
+/* ==========================================================
+   FULL DASH CONTROLLER V18.2
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   SETTINGS ROW
+
+       label | slider | value unit
+   ---------------------------------------------------------- */
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row) {
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(132px,1fr)
+        minmax(120px,1.15fr)
+        92px
+        !important;
+
+    column-gap:
+        8px !important;
+
+    align-items:
+        center !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> label {
+    grid-column:
+        1 !important;
+
+    grid-row:
+        1 !important;
+
+    min-width:
+        0 !important;
+
+    overflow:
+        visible !important;
+
+    white-space:
+        nowrap !important;
+
+    text-overflow:
+        clip !important;
+
+    color:
+        #8c96a7 !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> input[type="range"] {
+    grid-column:
+        2 !important;
+
+    grid-row:
+        1 !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+}
+
+
+#controllerModal
+.controller-param-row:not(.controller-bool-row)
+> .controller-param-number {
+    grid-column:
+        3 !important;
+
+    grid-row:
+        1 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        3px !important;
+
+    width:
+        92px !important;
+
+    min-width:
+        92px !important;
+
+    max-width:
+        92px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        visible !important;
+
+    white-space:
+        nowrap !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#controllerModal
+.controller-param-number
+input[type="number"] {
+    width:
+        45px !important;
+
+    min-width:
+        45px !important;
+
+    max-width:
+        45px !important;
+
+    height:
+        auto !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    box-shadow:
+        none !important;
+
+    outline:
+        0 !important;
+
+    color:
+        #8c96a7 !important;
+
+    text-align:
+        right !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1 !important;
+}
+
+
+#controllerModal
+.controller-param-number
+span {
+    display:
+        inline-block !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        visible !important;
+
+    white-space:
+        nowrap !important;
+
+    color:
+        #8c96a7 !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        400 !important;
+
+    line-height:
+        1 !important;
+}
+
+
+/* ----------------------------------------------------------
+   SAVE — CENTER THE WORD
+   ---------------------------------------------------------- */
+
+#controllerModal
+#controllerStartBtn {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    min-width:
+        44px !important;
+
+    height:
+        27px !important;
+
+    padding:
+        0 11px !important;
+
+    line-height:
+        1 !important;
+
+    text-align:
+        center !important;
+}
+
+
+/* ----------------------------------------------------------
+   SETTINGS GEAR — SQUARE ICON BUTTON
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-actions {
+    grid-template-columns:
+        32px
+        minmax(0,1fr)
+        !important;
+
+    column-gap:
+        8px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn {
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    width:
+        32px !important;
+
+    min-width:
+        32px !important;
+
+    max-width:
+        32px !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    max-height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius:
+        5px !important;
+
+    background:
+        #171817 !important;
+
+    color:
+        #8c96a7 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-controller-gear-v182 {
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    fill:
+        none !important;
+
+    stroke:
+        currentColor !important;
+
+    stroke-width:
+        1.5 !important;
+
+    stroke-linecap:
+        round !important;
+
+    stroke-linejoin:
+        round !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn[
+    data-baca-state="enabled"
+] {
+    color:
+        #8c96a7 !important;
+
+    opacity:
+        1 !important;
+
+    cursor:
+        pointer !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn[
+    data-baca-state="enabled"
+]:hover {
+    color:
+        #8ecb7f !important;
+
+    border-color:
+        rgba(142,203,127,.45)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerSettingsBtn[
+    data-baca-state="disabled"
+] {
+    color:
+        #454b47 !important;
+
+    border-color:
+        #292c2a !important;
+
+    pointer-events:
+        none !important;
+
+    cursor:
+        default !important;
+}
+
+
+/* ----------------------------------------------------------
+   CONNECT/DISCONNECT-STYLE MOVING ACTIVE SURFACE
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16,
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16 {
+    position:
+        relative !important;
+
+    isolation:
+        isolate !important;
+
+    padding:
+        3px !important;
+
+    gap:
+        2px !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        #171817 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * Single active surface.
+ * This is what prevents both sides looking ON.
+ */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16::before,
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16::before {
+    content:
+        "" !important;
+
+    position:
+        absolute !important;
+
+    z-index:
+        0 !important;
+
+    left:
+        3px !important;
+
+    top:
+        3px !important;
+
+    width:
+        calc(
+            (100% - 8px) / 2
+        )
+        !important;
+
+    height:
+        24px !important;
+
+    border-radius:
+        3px !important;
+
+    pointer-events:
+        none !important;
+
+    opacity:
+        0 !important;
+
+    background:
+        #8ecb7f !important;
+
+    transform:
+        translateX(0)
+        !important;
+
+    transition:
+        transform 220ms ease,
+        opacity 150ms ease,
+        background-color 180ms ease
+        !important;
+}
+
+
+/* Configure selected */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="configure"
+]::before {
+    opacity:
+        1 !important;
+
+    background:
+        #8ecb7f !important;
+
+    transform:
+        translateX(0)
+        !important;
+}
+
+
+/* Stop selected */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="stop"
+]::before {
+    opacity:
+        1 !important;
+
+    background:
+        rgba(245,164,0,.16)
+        !important;
+
+    transform:
+        translateX(
+            calc(100% + 2px)
+        )
+        !important;
+}
+
+
+/* Enter selected */
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="enter"
+]::before {
+    opacity:
+        1 !important;
+
+    background:
+        #8ecb7f !important;
+
+    transform:
+        translateX(0)
+        !important;
+}
+
+
+/* Exit selected */
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="exit"
+]::before {
+    opacity:
+        1 !important;
+
+    background:
+        rgba(245,164,0,.16)
+        !important;
+
+    transform:
+        translateX(
+            calc(100% + 2px)
+        )
+        !important;
+}
+
+
+/* Real buttons always sit above the single indicator. */
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn,
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn {
+    position:
+        relative !important;
+
+    z-index:
+        1 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        3px !important;
+
+    height:
+        24px !important;
+
+    min-height:
+        24px !important;
+
+    color:
+        #454b47 !important;
+}
+
+
+/* ----------------------------------------------------------
+   ONLY THE CORRECT SIDE GETS LIVE TEXT/ICON COLOR
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="configure"
+]
+#controllerConfigureBtn {
+    color:
+        #10200f !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="configure"
+]
+#controllerStopBtn {
+    color:
+        #454b47 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="stop"
+]
+#controllerConfigureBtn {
+    color:
+        #454b47 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="stop"
+]
+#controllerStopBtn {
+    color:
+        #fbbf24 !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="enter"
+]
+#bacaEnterTeleopBtn {
+    color:
+        #10200f !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="enter"
+]
+#bacaExitTeleopBtn {
+    color:
+        #454b47 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="exit"
+]
+#bacaEnterTeleopBtn {
+    color:
+        #454b47 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="exit"
+]
+#bacaExitTeleopBtn {
+    color:
+        #fbbf24 !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+/* NONE = neither side live */
+
+body.stitch-live-v12
+#view-live
+#controllerProcessSwitchV16[
+    data-baca-state="none"
+]
+button,
+
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16[
+    data-baca-state="none"
+]
+button {
+    color:
+        #454b47 !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   CONNECT-LIKE ICON
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+#controllerConfigureBtn::before,
+
+body.stitch-live-v12
+#view-live
+#bacaEnterTeleopBtn::before {
+    content:
+        "" !important;
+
+    display:
+        inline-block !important;
+
+    width:
+        7px !important;
+
+    height:
+        7px !important;
+
+    flex:
+        0 0 7px !important;
+
+    margin-right:
+        6px !important;
+
+    border:
+        1.4px solid
+        currentColor !important;
+
+    border-radius:
+        2px !important;
+
+    transform:
+        rotate(-45deg)
+        !important;
+
+    background:
+        transparent !important;
+}
+
+
+/* ----------------------------------------------------------
+   DISCONNECT X
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+#controllerStopBtn::before,
+
+body.stitch-live-v12
+#view-live
+#bacaExitTeleopBtn::before {
+    content:
+        "×" !important;
+
+    display:
+        inline-block !important;
+
+    width:
+        auto !important;
+
+    margin-right:
+        6px !important;
+
+    color:
+        currentColor !important;
+
+    font-size:
+        14px !important;
+
+    font-weight:
+        500 !important;
+
+    line-height:
+        1 !important;
+}
+

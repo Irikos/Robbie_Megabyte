@@ -1,0 +1,781 @@
+/* ==========================================================
+   FULL DASH — CLEAN CONTROLLER V20
+   ========================================================== */
+
+
+/* ==========================================================
+   HIDE EVERY PREVIOUS CONTROLLER CONTROL GENERATION
+   ========================================================== */
+
+/*
+ * Original/V16 row.
+ */
+body.stitch-live-v12
+#view-live
+.controller-process-actions {
+    display:
+        none !important;
+}
+
+
+/*
+ * Original/V16 XR switch.
+ */
+body.stitch-live-v12
+#view-live
+#controllerXrSwitchV16 {
+    display:
+        none !important;
+}
+
+
+/*
+ * V19 replacement.
+ */
+body.stitch-live-v12
+#view-live
+#bacaControllerV19 {
+    display:
+        none !important;
+}
+
+
+/*
+ * Any remaining old action-readiness UI.
+ */
+body.stitch-live-v12
+#view-live
+.action-readiness-panel,
+
+body.stitch-live-v12
+#view-live
+#xrActionBtn {
+    display:
+        none !important;
+}
+
+
+/* ==========================================================
+   NEW ROOT
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+#bacaControllerV20 {
+    display:
+        flex !important;
+
+    flex-direction:
+        column !important;
+
+    gap:
+        7px !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        6px 0 0 0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+/* ==========================================================
+   TOP ROW
+   [gear]     [ Configure | Stop ]
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-controller-process-v20 {
+    position:
+        relative !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    width:
+        100% !important;
+
+    height:
+        32px !important;
+}
+
+
+/* ==========================================================
+   SETTINGS GEAR
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v20 {
+    position:
+        absolute !important;
+
+    left:
+        0 !important;
+
+    top:
+        0 !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    width:
+        32px !important;
+
+    min-width:
+        32px !important;
+
+    max-width:
+        32px !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    max-height:
+        32px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    background:
+        #171817 !important;
+
+    border:
+        1px solid #343734
+        !important;
+
+    border-radius:
+        5px !important;
+
+    color:
+        #8c96a7 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v20
+svg {
+    width:
+        14px !important;
+
+    height:
+        14px !important;
+
+    fill:
+        none !important;
+
+    stroke:
+        currentColor !important;
+
+    stroke-width:
+        1.5 !important;
+
+    stroke-linecap:
+        round !important;
+
+    stroke-linejoin:
+        round !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v20[
+    data-state="on"
+] {
+    cursor:
+        pointer !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v20[
+    data-state="on"
+]:hover {
+    color:
+        #98d982 !important;
+
+    border-color:
+        rgba(152,217,130,.5)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.baca-settings-v20[
+    data-state="off"
+] {
+    color:
+        #454b47 !important;
+
+    border-color:
+        #292c2a !important;
+
+    cursor:
+        default !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* ==========================================================
+   SWITCH SHELL
+
+   Same visual language as Camera Connect / Disconnect.
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-switch-v20 {
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        2px !important;
+
+    height:
+        32px !important;
+
+    min-height:
+        32px !important;
+
+    box-sizing:
+        border-box !important;
+
+    padding:
+        3px !important;
+
+    border:
+        1px solid #333333
+        !important;
+
+    border-radius:
+        6px !important;
+
+    background:
+        #171817 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * Configure / Stop compact control,
+ * centered on the Controller Process card.
+ */
+body.stitch-live-v12
+#view-live
+.baca-process-switch-v20 {
+    width:
+        min(
+            230px,
+            calc(100% - 82px)
+        )
+        !important;
+
+    margin:
+        0 auto !important;
+}
+
+
+/*
+ * Enter / Exit intentionally larger.
+ */
+body.stitch-live-v12
+#view-live
+.baca-xr-switch-v20 {
+    width:
+        calc(100% - 8px)
+        !important;
+
+    max-width:
+        360px !important;
+
+    margin:
+        0 auto !important;
+}
+
+
+/* ==========================================================
+   SEGMENTS
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-segment-v20 {
+    appearance:
+        none !important;
+
+    -webkit-appearance:
+        none !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    flex:
+        1 1 0 !important;
+
+    gap:
+        6px !important;
+
+    min-width:
+        0 !important;
+
+    height:
+        24px !important;
+
+    min-height:
+        24px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 9px !important;
+
+    border:
+        1px solid transparent
+        !important;
+
+    border-radius:
+        3px !important;
+
+    background:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+
+    outline:
+        none !important;
+
+    color:
+        #454b47 !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif
+        !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        650 !important;
+
+    line-height:
+        1 !important;
+
+    white-space:
+        nowrap !important;
+
+    cursor:
+        default !important;
+
+    opacity:
+        1 !important;
+}
+
+
+/* ==========================================================
+   OFF
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-segment-v20[
+    data-state="off"
+] {
+    color:
+        #454b47 !important;
+
+    background:
+        transparent !important;
+
+    border-color:
+        transparent !important;
+
+    pointer-events:
+        none !important;
+}
+
+
+/* ==========================================================
+   CONNECT / CONFIGURE / ENTER ACTIVE
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-segment-v20[
+    data-state="connect"
+] {
+    color:
+        #98d982 !important;
+
+    background:
+        rgba(152,217,130,.075)
+        !important;
+
+    border-color:
+        rgba(152,217,130,.46)
+        !important;
+
+    cursor:
+        pointer !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+/* ==========================================================
+   DISCONNECT / STOP / EXIT ACTIVE
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-segment-v20[
+    data-state="disconnect"
+] {
+    color:
+        #f5b51b !important;
+
+    background:
+        rgba(245,181,27,.055)
+        !important;
+
+    border-color:
+        rgba(245,181,27,.48)
+        !important;
+
+    cursor:
+        pointer !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+/* ==========================================================
+   CONNECT-STYLE ICON
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-connect-v20::before {
+    content:
+        "" !important;
+
+    display:
+        inline-block !important;
+
+    width:
+        7px !important;
+
+    height:
+        7px !important;
+
+    flex:
+        0 0 7px !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1.4px solid currentColor
+        !important;
+
+    border-radius:
+        2px !important;
+
+    transform:
+        rotate(-45deg)
+        !important;
+
+    background:
+        transparent !important;
+}
+
+
+/* ==========================================================
+   DISCONNECT-STYLE X ICON
+   ========================================================== */
+
+body.stitch-live-v12
+#view-live
+.baca-disconnect-v20::before {
+    content:
+        "×" !important;
+
+    display:
+        inline-block !important;
+
+    color:
+        currentColor !important;
+
+    font-size:
+        14px !important;
+
+    font-weight:
+        500 !important;
+
+    line-height:
+        1 !important;
+}
+
+/* ==========================================================
+   FULL DASH CONTROLLER V20.1
+   REMOVE EVERY LEGACY CONTROLLER PRESENTATION
+   KEEP ONLY #bacaControllerV20
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   REMOVE THE LITTLE OFFLINE BADGE INSIDE CONTROLLER PROCESS.
+
+   This does NOT touch the central CTRL OFFLINE diagnostic.
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#controllerProcessChip {
+    display:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   REMOVE ORIGINAL / V15 / V16 CONTROLS
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#controllerSettingsBtn,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#controllerConfigureBtn,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#controllerStopBtn,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaEnterTeleopBtn,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaExitTeleopBtn,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#controllerProcessSwitchV16,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#controllerXrSwitchV16,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.controller-process-actions,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-controller-actions-v15b,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-controller-actions-v16,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-controller-switch-v15b,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-xr-switch-v15b,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-xr-switch-v16 {
+    display:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   REMOVE BOTH POSSIBLE V19 GENERATIONS
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaControllerCleanV19,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaControllerV19,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-controller-clean-v19,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+.baca-controller-v19 {
+    display:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   ALSO HIDE ANY LEGACY DIRECT-CHILD WRAPPER THAT CONTAINS
+   THE OLD BUTTON IDS.
+
+   The controls stay in the DOM so V20 can call their proven
+   handlers programmatically, but they have ZERO presentation.
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+> *:not(#bacaControllerV20):has(#controllerSettingsBtn),
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+> *:not(#bacaControllerV20):has(#controllerConfigureBtn),
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+> *:not(#bacaControllerV20):has(#controllerStopBtn),
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+> *:not(#bacaControllerV20):has(#bacaEnterTeleopBtn),
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+> *:not(#bacaControllerV20):has(#bacaExitTeleopBtn) {
+    display:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   V20 MUST BE THE ONLY VISIBLE CONTROLLER CONTROL
+   ---------------------------------------------------------- */
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaControllerV20 {
+    display:
+        flex !important;
+
+    visibility:
+        visible !important;
+
+    opacity:
+        1 !important;
+}
+
+
+/*
+ * Keep the V20 gear ONLY.
+ */
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaSettingsV20 {
+    display:
+        inline-flex !important;
+}
+
+
+/*
+ * Explicitly protect V20's two desired switches.
+ */
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaProcessSwitchV20,
+
+body.stitch-live-v12
+#view-live
+.controller-process-panel
+#bacaXrSwitchV20 {
+    display:
+        flex !important;
+}
+

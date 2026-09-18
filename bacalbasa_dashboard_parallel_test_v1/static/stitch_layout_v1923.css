@@ -1,0 +1,448 @@
+
+/* ==================================================================
+   STITCH V1.9.23
+   ================================================================== */
+
+
+/* ================================================================
+   HANDLE LANE
+
+       section top
+           ↓ 11 px
+       ─── handle, 4 px
+           ↓ 11 px
+       normal section content
+
+   Total reserved lane = 26 px.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.combined-live-grid
+> .stitch-slot-v1923 {
+
+    position:
+        relative !important;
+
+    box-sizing:
+        border-box !important;
+
+    padding-top:
+        26px !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-section-handle-v1923 {
+
+    position:
+        absolute !important;
+
+    left:
+        50% !important;
+
+    top:
+        11px !important;
+
+    width:
+        42px !important;
+
+    height:
+        4px !important;
+
+    min-height:
+        4px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    transform:
+        translateX(-50%) !important;
+
+    translate:
+        none !important;
+
+    z-index:
+        500 !important;
+
+    cursor:
+        grab !important;
+
+    pointer-events:
+        auto !important;
+
+    touch-action:
+        none !important;
+
+    user-select:
+        none !important;
+
+    background:
+        transparent !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-section-handle-v1923:active {
+
+    cursor:
+        grabbing !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-section-grip-v1923 {
+
+    display:
+        block !important;
+
+    width:
+        30px !important;
+
+    height:
+        4px !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            #3d3c38 0 30%,
+            #8ecb7f 30% 70%,
+            #3d3c38 70% 100%
+        ) !important;
+
+    opacity:
+        .82 !important;
+}
+
+
+/* ================================================================
+   DRAG
+
+   Actual section follows pointer using transform ONLY.
+   Its grid slot remains occupied.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-dragging-v1923 {
+
+    z-index:
+        1000 !important;
+
+    transform:
+        translate3d(
+            var(--stitch-drag-x-v1923, 0px),
+            var(--stitch-drag-y-v1923, 0px),
+            0
+        )
+        scale(1.012)
+        !important;
+
+    transition:
+        none !important;
+
+    will-change:
+        transform;
+
+    box-shadow:
+        0 22px 48px rgba(0,0,0,.38),
+        0 0 0 1px rgba(142,203,127,.22)
+        !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-drop-target-v1923 {
+
+    box-shadow:
+        0 0 0 1px rgba(142,203,127,.58),
+        0 0 0 3px rgba(142,203,127,.06) inset
+        !important;
+}
+
+
+/* ================================================================
+   YOLO — NEW PROXY CONTROL
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-panel {
+
+    position:
+        relative !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#stitchYoloProxyV1923 {
+
+    position:
+        absolute !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        4px !important;
+
+    width:
+        max-content !important;
+
+    height:
+        max-content !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+
+    z-index:
+        300 !important;
+
+    white-space:
+        nowrap !important;
+
+    cursor:
+        pointer !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#stitchYoloProxyV1923
+input {
+
+    margin:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+#cameraYoloControl.stitch-original-yolo-hidden-v1923 {
+
+    position:
+        absolute !important;
+
+    width:
+        1px !important;
+
+    height:
+        1px !important;
+
+    opacity:
+        0 !important;
+
+    overflow:
+        hidden !important;
+
+    pointer-events:
+        none !important;
+
+    clip-path:
+        inset(50%) !important;
+}
+
+
+/* ================================================================
+   MODE + ARM OWNERSHIP
+
+   No coordinates.
+
+   Both real functional elements live in ONE flex row and both label
+   glyph boxes are forced into the same 18px line box.
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1923 {
+
+    display:
+        flex !important;
+
+    align-items:
+        flex-start !important;
+
+    justify-content:
+        space-between !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    height:
+        18px !important;
+
+    min-height:
+        18px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1923
+> .panel-kicker {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    height:
+        18px !important;
+
+    min-height:
+        18px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        flex-start !important;
+
+    line-height:
+        18px !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1923
+> .ownership-box {
+
+    position:
+        static !important;
+
+    inset:
+        auto !important;
+
+    height:
+        18px !important;
+
+    min-height:
+        18px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        flex-start !important;
+
+    justify-content:
+        flex-end !important;
+
+    gap:
+        8px !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+
+    line-height:
+        18px !important;
+}
+
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-heading-v1923
+> .ownership-box
+> * {
+
+    margin-top:
+        0 !important;
+
+    margin-bottom:
+        0 !important;
+
+    padding-top:
+        0 !important;
+
+    padding-bottom:
+        0 !important;
+
+    line-height:
+        18px !important;
+
+    transform:
+        none !important;
+
+    translate:
+        none !important;
+}
+

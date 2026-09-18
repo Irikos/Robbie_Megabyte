@@ -1,0 +1,90 @@
+/* ================================================================
+   CAMERA TELEOP OUTER HOST V16.7
+
+   The normal dashboard app-shell has its own outside padding.
+
+   Camera Teleop also has an embedded page with its own visual shell.
+   Instead of trying to modify that shell's geometry again, expand
+   the iframe outward by exactly one 8px dashboard rhythm.
+
+   Internal Camera Teleop gaps are NOT changed.
+   ================================================================ */
+
+
+/* The active Camera Teleop view may use the complete app-shell area. */
+
+#view-bacalbasa.bacalbasa-integration-view {
+    position: relative !important;
+
+    width:
+        calc(100% + 16px) !important;
+
+    height:
+        calc(100% + 16px) !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        -8px !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * This is the important correction to the old:
+ *
+ *     height: calc(100vh - 96px)
+ *
+ * The iframe now fills the Camera Teleop view itself.
+ */
+
+#view-bacalbasa
+#bacalbasaFrame,
+
+#view-bacalbasa
+.bacalbasa-integration-frame {
+    display:
+        block !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    max-width:
+        none !important;
+
+    max-height:
+        none !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    background:
+        #0b0c0c !important;
+}

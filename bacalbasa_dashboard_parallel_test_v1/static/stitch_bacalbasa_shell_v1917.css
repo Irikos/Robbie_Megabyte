@@ -1,0 +1,617 @@
+
+/* ==================================================================
+   STITCH BACALBASA SHELL V1.9.17
+
+   Authoritative final shell layer.
+
+   Bacalbasa topbar declarations, emblem styling and decorative
+   flourish styling are sourced from the REAL standalone Bacalbasa
+   reference_video_skin.css on this machine.
+
+   Loaded AFTER the historical Stitch CSS.
+   ================================================================== */
+
+
+body.stitch-live-v12 {
+
+    --st-shell:
+        #1c1c1c;
+
+    --st-card:
+        #161616;
+
+    --st-panel-head:
+        #212121;
+
+    --st-border:
+        #333333;
+
+    --st-border-3:
+        #44423c;
+
+    --st-green:
+        #8ecb7f;
+
+    --st-green-bright:
+        #a1d494;
+
+    --st-amber:
+        #f59e0b;
+
+    --st-emerald:
+        #10b981;
+
+    --st-emerald-bright:
+        #34d399;
+}
+
+
+/* ================================================================
+   EXACT BACALBASA TOPBAR SURFACE
+   ================================================================ */
+
+body.stitch-live-v12 > header.topbar {
+
+grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    position: relative !important;
+    z-index: 20 !important;
+    width: 100% !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    overflow: visible !important;
+    border: 1px solid var(--st-border) !important;
+    border-radius: 12px !important;
+    background: var(--st-shell) !important;
+    box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.50),
+        0 0 15px rgba(255, 255, 255, 0.02) !important;
+
+    /*
+     * The reference dashboard receives its side clearance from its
+     * outer application grid. Our dashboard does not, so reproduce
+     * the same bounded appearance explicitly.
+     */
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        calc(100% - 16px) !important;
+
+    max-width:
+        calc(100% - 16px) !important;
+
+    margin:
+        8px 8px 0 !important;
+
+    flex:
+        0 0 64px !important;
+}
+
+
+/*
+ * Remove the old Dragos/Stitch decorative waves.
+ * V1.9.17 injects the ACTUAL Bacalbasa flourishes instead.
+ */
+
+body.stitch-live-v12 > header.topbar::before,
+
+body.stitch-live-v12 > header.topbar::after,
+
+body.stitch-live-v12 > header.topbar
+.tabs::before,
+
+body.stitch-live-v12 > header.topbar
+.tabs::after {
+
+    display:
+        none !important;
+
+    content:
+        none !important;
+}
+
+
+/* ================================================================
+   LEFT BRAND
+   ================================================================ */
+
+body.stitch-live-v12 > header.topbar
+.brand {
+
+    position:
+        relative !important;
+
+    z-index:
+        10 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        14px !important;
+
+    min-width:
+        220px !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+}
+
+
+body.stitch-live-v12 > header.topbar
+.brand > .eyebrow,
+
+body.stitch-live-v12 > header.topbar
+.process-control-label {
+
+    display:
+        none !important;
+}
+
+
+body.stitch-live-v12 > header.topbar
+.title-row {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body.stitch-live-v12 > header.topbar
+.title-row h1 {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    color:
+        var(--st-green-bright) !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif
+        !important;
+
+    font-size:
+        16px !important;
+
+    line-height:
+        20px !important;
+
+    font-weight:
+        700 !important;
+
+    letter-spacing:
+        -.01em !important;
+
+    text-transform:
+        none !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ================================================================
+   CENTER — BACALBASA FLOURISHES + EXISTING REAL NAVIGATION
+   ================================================================ */
+
+.stitch-baca-header-center-v1917 {
+
+    position:
+        absolute !important;
+
+    left:
+        50% !important;
+
+    top:
+        50% !important;
+
+    transform:
+        translate(-50%, -50%) !important;
+
+    z-index:
+        12 !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        12px !important;
+
+    pointer-events:
+        none !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+.stitch-baca-header-center-v1917
+.tabs {
+
+    position:
+        relative !important;
+
+    left:
+        auto !important;
+
+    right:
+        auto !important;
+
+    top:
+        auto !important;
+
+    bottom:
+        auto !important;
+
+    transform:
+        none !important;
+
+    width:
+        auto !important;
+
+    height:
+        36px !important;
+
+    min-height:
+        36px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        3px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        2px !important;
+
+    border:
+        1px solid var(--st-border) !important;
+
+    border-radius:
+        8px !important;
+
+    background:
+        #161616 !important;
+
+    box-shadow:
+        none !important;
+
+    pointer-events:
+        auto !important;
+}
+
+
+.stitch-baca-header-center-v1917
+.tabs .tab {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        68px !important;
+
+    height:
+        28px !important;
+
+    min-height:
+        28px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 14px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    border-radius:
+        6px !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif
+        !important;
+
+    font-size:
+        10px !important;
+
+    line-height:
+        14px !important;
+
+    font-weight:
+        600 !important;
+
+    letter-spacing:
+        0 !important;
+
+    text-transform:
+        none !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+.stitch-baca-header-center-v1917
+.tabs .tab[data-view="bacalbasa"] {
+
+    min-width:
+        104px !important;
+}
+
+
+/* ================================================================
+   UNUSED OLD RIGHT HEADER TELEMETRY
+   ================================================================ */
+
+body.stitch-live-v12 > header.topbar
+.header-status {
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   MAIN HEIGHT AFTER 64PX BACALBASA HEADER
+   ================================================================ */
+
+body.stitch-live-v12
+> main.app-shell {
+
+    box-sizing:
+        border-box !important;
+
+    height:
+        calc(100vh - 80px) !important;
+
+    min-height:
+        0 !important;
+
+    margin-top:
+        8px !important;
+}
+
+
+/* ================================================================
+   OWNERSHIP — STATIC ELEMENT, NO MORE TEXT SEARCHING
+   ================================================================ */
+
+/*
+ * The final Y value is applied inline by V1.9.17 after measuring
+ * MODE and ARM OWNERSHIP directly from their static HTML nodes.
+ */
+
+body.stitch-live-v12
+#view-live
+.ownership-box {
+
+    will-change:
+        transform;
+}
+
+
+/* ================================================================
+   YOLO — RETIRE THE OLD WRAPPER GEOMETRY
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.camera-mode-options {
+
+    width:
+        max-content !important;
+
+    min-width:
+        max-content !important;
+
+    max-width:
+        max-content !important;
+
+    margin:
+        0 !important;
+
+    flex:
+        0 0 auto !important;
+
+    transform:
+        none;
+}
+
+
+body.stitch-live-v12
+#view-live
+#cameraYoloState,
+
+body.stitch-live-v12
+#view-live
+#cameraModeState {
+
+    display:
+        none !important;
+}
+
+
+/* ================================================================
+   REAL BACALBASA EMBLEM / FLOURISH RULES COPIED BELOW
+   ================================================================ */
+
+.rv-brand-emblem {
+position: relative;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--st-border-3);
+    border-radius: 12px;
+    background: #31302b;
+    box-shadow: inset 0 1px 8px rgba(0,0,0,.28);
+}
+
+.rv-brand-emblem > svg {
+width: 24px;
+    height: 24px;
+    color: var(--st-amber);
+    transition: transform 700ms ease;
+}
+
+.rv-brand-emblem:hover > svg {
+transform: rotate(45deg);
+}
+
+body.reference-stitch
+.rv-brand-emblem
+> svg {
+transform-origin:
+        50% 50%
+        !important;
+
+    transition:
+        none
+        !important;
+
+    animation:
+        d14qBrandSpin
+        18s
+        linear
+        infinite
+        !important;
+}
+
+/*
+ * Hover no longer changes the movement.
+ */
+body.reference-stitch
+.rv-brand-emblem:hover
+> svg {
+animation-play-state:
+        running
+        !important;
+}
+
+.rv-brand-online-dot {
+position: absolute;
+    right: -2px;
+    top: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--st-emerald);
+}
+
+.rv-brand-online-dot::before {
+content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--st-emerald-bright);
+    animation: st-ping 1.7s cubic-bezier(0,0,.2,1) infinite;
+}
+
+.reticle-spin,
+    .reticle-spin-rev,
+    .reticle-pulse,
+    .rv-brand-online-dot::before,
+    .rv-title-dot {
+animation: none !important;
+}
+
+/* ------------------------------------------------------------
+   REMOVE GREEN ONLINE DOT FROM TOP-LEFT EMBLEM
+   ------------------------------------------------------------ */
+
+body.reference-stitch
+.rv-brand-online-dot {
+display:
+        none
+        !important;
+}
+
+.rv-center-title .rv-flourish {
+width: 32px;
+    height: 16px;
+    flex: 0 0 32px;
+}
+
+.rv-center-title .rv-flourish.flip {
+transform: scaleX(-1);
+}
+
+@keyframes st-ping {
+    75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}

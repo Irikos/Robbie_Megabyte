@@ -1,0 +1,170 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 176 40"
+    fill="none"
+>
+
+    <!--
+        V1.9.45
+
+        DEPTH-window inspired.
+
+        Navigation is immediately to the RIGHT.
+
+        Large perspective gate nearest navigation.
+        Gates become smaller as they move outward.
+
+        No twig.
+        No waveform.
+        No branch.
+        No internal doodle.
+    -->
+
+
+    <!-- smallest / furthest -->
+    <path
+        d="M12 18 L20 17 L20 23 L12 22 Z"
+        stroke="#116650"
+        stroke-width=".75"
+        opacity=".30"
+    >
+        <animate
+            attributeName="opacity"
+            values=".18;.42;.18"
+            dur="4.6s"
+            begin="1.0s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- gate 4 -->
+    <path
+        d="M29 16 L41 14.5 L41 25.5 L29 24 Z"
+        stroke="#11765a"
+        stroke-width=".85"
+        opacity=".40"
+    >
+        <animate
+            attributeName="opacity"
+            values=".24;.52;.24"
+            dur="4.6s"
+            begin=".75s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- gate 3 -->
+    <path
+        d="M51 14 L68 11.5 L68 28.5 L51 26 Z"
+        stroke="#138463"
+        stroke-width=".9"
+        opacity=".50"
+    >
+        <animate
+            attributeName="opacity"
+            values=".30;.64;.30"
+            dur="4.6s"
+            begin=".50s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- gate 2 -->
+    <path
+        d="M80 11 L104 7.5 L104 32.5 L80 29 Z"
+        stroke="#168f6c"
+        stroke-width="1"
+        opacity=".62"
+    >
+        <animate
+            attributeName="opacity"
+            values=".38;.76;.38"
+            dur="4.6s"
+            begin=".25s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- largest gate, nearest navigation -->
+    <path
+        d="M119 7 L162 2.5 L162 37.5 L119 33 Z"
+        stroke="#189a74"
+        stroke-width="1.1"
+        opacity=".76"
+    >
+        <animate
+            attributeName="opacity"
+            values=".48;.94;.48"
+            dur="4.6s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+
+    <!-- restrained amber faces, same depth language -->
+    <path
+        d="M119 7 L162 2.5"
+        stroke="#d4920d"
+        stroke-width=".9"
+        opacity=".55"
+    >
+        <animate
+            attributeName="opacity"
+            values=".32;.70;.32"
+            dur="4.6s"
+            repeatCount="indefinite"
+        />
+    </path>
+
+    <path
+        d="M80 29 L104 32.5"
+        stroke="#b57c0c"
+        stroke-width=".8"
+        opacity=".38"
+    />
+
+    <path
+        d="M51 14 L68 11.5"
+        stroke="#956c13"
+        stroke-width=".7"
+        opacity=".27"
+    />
+
+
+    <!-- tiny depth focal points; no connecting line -->
+    <circle
+        cx="145"
+        cy="20"
+        r="1.25"
+        fill="#f59e0b"
+        opacity=".74"
+    >
+        <animate
+            attributeName="opacity"
+            values=".35;.9;.35"
+            dur="4.6s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+    <circle
+        cx="92"
+        cy="20"
+        r=".85"
+        fill="#8ecb7f"
+        opacity=".48"
+    >
+        <animate
+            attributeName="opacity"
+            values=".25;.65;.25"
+            dur="4.6s"
+            begin=".25s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+</svg>

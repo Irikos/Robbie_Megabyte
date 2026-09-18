@@ -1,0 +1,137 @@
+
+/* ==================================================================
+   STITCH V1.9.47
+   ================================================================== */
+
+
+/* ================================================================
+   TRUE SEQ-COLLISION COMPACT STATE
+   ================================================================ */
+
+body.stitch-live-v12
+#view-live
+.stitch-performance-group.stitch-seq-tight-v1947 {
+
+    gap:
+        6px !important;
+
+    column-gap:
+        6px !important;
+}
+
+
+/* ================================================================
+   COMPLETELY NEW SIGNAL-ECHO HEADER
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar
+.tabs {
+
+    position:
+        relative !important;
+
+    overflow:
+        visible !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    content:
+        "" !important;
+
+    display:
+        block !important;
+
+    position:
+        absolute !important;
+
+    top:
+        50% !important;
+
+    width:
+        205px !important;
+
+    height:
+        42px !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+
+    background:
+        transparent
+        url("/static/stitch_header_echo_v1947.svg?v=1947")
+        center / contain
+        no-repeat
+        !important;
+
+    opacity:
+        .92 !important;
+
+    filter:
+        drop-shadow(
+            0 0 4px
+            rgba(17, 118, 90, .09)
+        )
+        !important;
+
+    animation:
+        none !important;
+
+    pointer-events:
+        none !important;
+
+    z-index:
+        0 !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left:
+        -202px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right:
+        -202px !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs
+> .tab {
+
+    position:
+        relative !important;
+
+    z-index:
+        2 !important;
+}
+

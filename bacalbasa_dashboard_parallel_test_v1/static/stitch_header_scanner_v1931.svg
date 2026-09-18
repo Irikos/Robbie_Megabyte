@@ -1,0 +1,305 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 140 36"
+    fill="none"
+>
+
+    <defs>
+
+        <filter
+            id="glowGreen"
+            x="-40%"
+            y="-80%"
+            width="180%"
+            height="260%"
+        >
+            <feGaussianBlur
+                stdDeviation=".7"
+                result="blur"
+            />
+
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+
+
+        <filter
+            id="glowAmber"
+            x="-40%"
+            y="-80%"
+            width="180%"
+            height="260%"
+        >
+            <feGaussianBlur
+                stdDeviation=".65"
+                result="blur"
+            />
+
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+
+    </defs>
+
+
+    <!-- ========================================================
+         SIDE INSTRUMENT RAILS
+         ======================================================== -->
+
+    <g
+        stroke="#0f9a70"
+        stroke-width="1"
+        stroke-linecap="round"
+        opacity=".48"
+    >
+
+        <path d="M4 18H32"/>
+        <path d="M108 18H136"/>
+
+        <path d="M13 13H30"/>
+        <path d="M110 13H127"/>
+
+        <path d="M13 23H30"/>
+        <path d="M110 23H127"/>
+
+    </g>
+
+
+    <!-- animated side packets -->
+
+    <g
+        fill="#11a879"
+        filter="url(#glowGreen)"
+    >
+
+        <rect
+            x="5"
+            y="16.8"
+            width="8"
+            height="2.4"
+            rx="1.2"
+        >
+            <animate
+                attributeName="x"
+                values="5;23;5"
+                dur="3.6s"
+                repeatCount="indefinite"
+            />
+
+            <animate
+                attributeName="opacity"
+                values=".2;.95;.2"
+                dur="3.6s"
+                repeatCount="indefinite"
+            />
+        </rect>
+
+
+        <rect
+            x="127"
+            y="16.8"
+            width="8"
+            height="2.4"
+            rx="1.2"
+        >
+            <animate
+                attributeName="x"
+                values="127;109;127"
+                dur="3.6s"
+                repeatCount="indefinite"
+            />
+
+            <animate
+                attributeName="opacity"
+                values=".2;.95;.2"
+                dur="3.6s"
+                repeatCount="indefinite"
+            />
+        </rect>
+
+    </g>
+
+
+    <!-- ========================================================
+         OUTER RETICLE
+         ======================================================== -->
+
+    <circle
+        cx="70"
+        cy="18"
+        r="15"
+        stroke="#0b765b"
+        stroke-width="1"
+        stroke-dasharray="3 4"
+        opacity=".58"
+    >
+        <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 70 18"
+            to="360 70 18"
+            dur="9s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+
+    <circle
+        cx="70"
+        cy="18"
+        r="11"
+        stroke="#10a078"
+        stroke-width="1"
+        stroke-dasharray="8 3 2 3"
+        opacity=".72"
+        filter="url(#glowGreen)"
+    >
+        <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="360 70 18"
+            to="0 70 18"
+            dur="7s"
+            repeatCount="indefinite"
+        />
+    </circle>
+
+
+    <!-- ========================================================
+         DEPTH-LAYER / CAMERA WINDOW LANGUAGE
+         ======================================================== -->
+
+    <g
+        stroke="#0e8c69"
+        stroke-width=".9"
+        stroke-linejoin="round"
+        opacity=".5"
+    >
+
+        <path d="M54 18L59 12H81L86 18"/>
+        <path d="M57 22L61 17H79L83 22"/>
+        <path d="M60 26L63 22H77L80 26"/>
+
+    </g>
+
+
+    <!-- ========================================================
+         CENTRAL TRACKING DIAMOND
+         ======================================================== -->
+
+    <g
+        filter="url(#glowGreen)"
+    >
+
+        <path
+            d="M70 10L78 18L70 26L62 18Z"
+            stroke="#19aa7d"
+            stroke-width="1.25"
+            opacity=".88"
+        >
+            <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 70 18"
+                to="360 70 18"
+                dur="11s"
+                repeatCount="indefinite"
+            />
+        </path>
+
+
+        <circle
+            cx="70"
+            cy="18"
+            r="2.2"
+            stroke="#20b889"
+            stroke-width="1"
+            opacity=".85"
+        >
+            <animate
+                attributeName="r"
+                values="1.7;2.8;1.7"
+                dur="2.6s"
+                repeatCount="indefinite"
+            />
+
+            <animate
+                attributeName="opacity"
+                values=".45;1;.45"
+                dur="2.6s"
+                repeatCount="indefinite"
+            />
+        </circle>
+
+    </g>
+
+
+    <!-- ========================================================
+         AMBER TRACKING NODES
+         ======================================================== -->
+
+    <circle
+        cx="70"
+        cy="3"
+        r="1.7"
+        fill="#f59e0b"
+        filter="url(#glowAmber)"
+    >
+
+        <animateMotion
+            dur="5.2s"
+            repeatCount="indefinite"
+            path="
+                M0 15
+                A15 15 0 1 1 0 -30
+                A15 15 0 1 1 0 30
+            "
+        />
+
+    </circle>
+
+
+    <g
+        fill="#f59e0b"
+        filter="url(#glowAmber)"
+    >
+
+        <circle cx="52" cy="18" r="1.35">
+            <animate
+                attributeName="opacity"
+                values=".25;.95;.25"
+                dur="2.2s"
+                repeatCount="indefinite"
+            />
+        </circle>
+
+        <circle cx="88" cy="18" r="1.35">
+            <animate
+                attributeName="opacity"
+                values=".95;.25;.95"
+                dur="2.2s"
+                repeatCount="indefinite"
+            />
+        </circle>
+
+    </g>
+
+
+    <!-- tiny crosshair -->
+
+    <g
+        stroke="#16a77c"
+        stroke-width=".8"
+        opacity=".62"
+    >
+        <path d="M70 6V9"/>
+        <path d="M70 27V30"/>
+        <path d="M58 18H61"/>
+        <path d="M79 18H82"/>
+    </g>
+
+</svg>

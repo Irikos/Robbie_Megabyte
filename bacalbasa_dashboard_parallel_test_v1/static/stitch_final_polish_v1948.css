@@ -1,0 +1,144 @@
+/* ==================================================================
+   STITCH V1.9.48
+   ================================================================== */
+
+
+/* SEQ gets a little breathing room only after true collision. */
+
+body.stitch-live-v12
+#view-live
+.stitch-performance-group.stitch-seq-tight-v1948 {
+    gap: 6px !important;
+    column-gap: 6px !important;
+}
+
+
+/* ================================================================
+   LARGE FLOWING HEADER FIELD
+   ================================================================ */
+
+body.stitch-live-v12
+header.topbar
+.tabs {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before,
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    content: "" !important;
+
+    display: block !important;
+    position: absolute !important;
+
+    top: 50% !important;
+
+    /*
+     * Old V1.9.47 ornament: 205px.
+     * New ornament: 340px.
+     *
+     * Much larger specifically along the X axis.
+     */
+
+    width: 340px !important;
+    height: 48px !important;
+
+    border: 0 !important;
+    box-shadow: none !important;
+
+    background:
+        transparent
+        url("/static/stitch_header_flow_v1948.svg?v=1948b")
+        center / 100% 100%
+        no-repeat
+        !important;
+
+    opacity: .96 !important;
+
+    filter:
+        drop-shadow(
+            0 0 4px
+            rgba(75, 155, 104, .08)
+        )
+        !important;
+
+    animation: none !important;
+
+    pointer-events: none !important;
+
+    z-index: 0 !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::before {
+
+    left: -337px !important;
+
+    transform:
+        translateY(-50%)
+        scaleX(-1)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs::after {
+
+    right: -337px !important;
+
+    transform:
+        translateY(-50%)
+        !important;
+}
+
+
+body.stitch-live-v12
+header.topbar
+.tabs > .tab {
+
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+
+/* ================================================================
+   MODE VALUE Y ALIGNMENT
+   ================================================================ */
+
+/*
+ * #modeValue is the REAL telemetry node.
+ * Therefore both today's dash and a future actual mode value move.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+#modeValue {
+
+    position: relative !important;
+
+    top: -2px !important;
+}
+
+
+/*
+ * MODE and its value remain centered as one horizontal cluster.
+ */
+
+body.stitch-live-v12
+#view-live
+.stitch-mode-section
+.stitch-mode-cluster-v1924 {
+
+    align-items: center !important;
+}

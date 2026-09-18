@@ -1,0 +1,948 @@
+/* ==================================================================
+   CAMERA TELEOP — BACALBASA / DRAGOS SHARED VISUAL SYSTEM V1.6
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16 {
+
+    --baca-v16-gap:
+        8px;
+
+    --baca-v16-radius:
+        6px;
+
+    --baca-v16-surface:
+        #161616;
+
+    --baca-v16-stage:
+        #101111;
+
+    --baca-v16-gap-bg:
+        #0d0f0f;
+
+    --baca-v16-head:
+        #181918;
+
+    --baca-v16-border:
+        #333333;
+
+    --baca-v16-inner-border:
+        #2e2e2e;
+
+    --baca-v16-green:
+        #8ecb7f;
+
+    --baca-v16-green-text:
+        #98d982;
+
+    --baca-v16-amber:
+        #fbbf24;
+
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        8px !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        var(
+            --baca-v16-gap-bg
+        ) !important;
+}
+
+
+body.reference-stitch.baca-camera-v16 *,
+body.reference-stitch.baca-camera-v16 *::before,
+body.reference-stitch.baca-camera-v16 *::after {
+
+    box-sizing:
+        border-box;
+}
+
+
+/* ==================================================================
+   INNER HEADER IS PERMANENTLY GONE
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16
+.topbar {
+
+    display:
+        none !important;
+
+    width:
+        0 !important;
+
+    height:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* ==================================================================
+   MAJOR THREE-SURFACE LAYOUT
+
+   IMPORTANT:
+   no grid-column, width or transform ownership here.
+   D15K / D15L remain authoritative for horizontal reorder.
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16
+.app-shell {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    grid-template-rows:
+        minmax(0, 1fr) !important;
+
+    column-gap:
+        var(
+            --baca-v16-gap
+        ) !important;
+
+    row-gap:
+        0 !important;
+
+    background:
+        transparent !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+.sidebar,
+
+body.reference-stitch.baca-camera-v16
+.main,
+
+body.reference-stitch.baca-camera-v16
+.d15-window-dock {
+
+    grid-row:
+        1 !important;
+
+    height:
+        100% !important;
+
+    min-height:
+        0 !important;
+
+    margin-top:
+        0 !important;
+
+    align-self:
+        stretch !important;
+}
+
+
+/* ==================================================================
+   LEFT RAIL
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16
+.sidebar {
+
+    padding:
+        30px
+        10px
+        10px !important;
+
+    overflow:
+        hidden !important;
+
+    border:
+        1px solid
+        var(
+            --baca-v16-border
+        ) !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        var(
+            --baca-v16-surface
+        ) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Nav rhythm */
+
+body.reference-stitch.baca-camera-v16
+.sidebar
+nav {
+
+    display:
+        grid !important;
+
+    gap:
+        4px !important;
+
+    margin:
+        0 0 8px !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+.sidebar
+.nav-item {
+
+    min-height:
+        30px !important;
+
+    padding:
+        0 10px !important;
+
+    border:
+        1px solid
+        transparent !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    font-family:
+        "Plus Jakarta Sans",
+        system-ui,
+        sans-serif !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+.sidebar
+.nav-item.active {
+
+    border-color:
+        rgba(
+            142,
+            203,
+            127,
+            .42
+        ) !important;
+
+    background:
+        rgba(
+            142,
+            203,
+            127,
+            .075
+        ) !important;
+
+    color:
+        var(
+            --baca-v16-green-text
+        ) !important;
+}
+
+
+/* No legacy symbols beside Live / Logs */
+
+body.reference-stitch.baca-camera-v16
+.sidebar
+.nav-item::before,
+
+body.reference-stitch.baca-camera-v16
+.sidebar
+.nav-item::after,
+
+body.reference-stitch.baca-camera-v16
+.sidebar
+.rv-nav-icon {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+}
+
+
+/* Sidebar sections */
+
+body.reference-stitch.baca-camera-v16
+.design-side-card,
+
+body.reference-stitch.baca-camera-v16
+.robot-modes-card {
+
+    border:
+        1px solid
+        var(
+            --baca-v16-inner-border
+        ) !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        var(
+            --baca-v16-surface
+        ) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Controls in sidebar follow the same corners */
+
+body.reference-stitch.baca-camera-v16
+.design-side-card
+button,
+
+body.reference-stitch.baca-camera-v16
+.design-side-card
+select,
+
+body.reference-stitch.baca-camera-v16
+.system-target-button,
+
+body.reference-stitch.baca-camera-v16
+.robot-modes-card
+button {
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ================================================================
+   START / STOP PRESENTATION
+
+   Owned exclusively by camera_final_v167.css.
+   ================================================================ */
+
+/* ==================================================================
+   CENTER 2 × 2 WORKSPACE
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16
+.main,
+
+body.reference-stitch.baca-camera-v16
+#view-live,
+
+body.reference-stitch.baca-camera-v16
+#view-live.active,
+
+body.reference-stitch.baca-camera-v16
+.live-grid,
+
+body.reference-stitch.baca-camera-v16
+.live-media-grid {
+
+    min-height:
+        0 !important;
+
+    height:
+        100% !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+.main {
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+#mediaWorkspace:not(
+    .d15f-maximized-workspace
+) {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        ) !important;
+
+    grid-template-rows:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        ) !important;
+
+    gap:
+        var(
+            --baca-v16-gap
+        ) !important;
+}
+
+
+/*
+ * Slots remain D7H drop geometry only.
+ */
+
+body.reference-stitch.baca-camera-v16
+#mediaWorkspace
+> .workspace-slot {
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Actual camera cards */
+
+body.reference-stitch.baca-camera-v16
+#mediaWorkspace
+.workspace-tile {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    overflow:
+        hidden !important;
+
+    border:
+        1px solid
+        var(
+            --baca-v16-border
+        ) !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        var(
+            --baca-v16-surface
+        ) !important;
+
+    box-shadow:
+        none !important;
+
+    /*
+     * NO transform/transition declaration.
+     * D7H keeps complete movement ownership.
+     */
+}
+
+
+/* Equal header visual language */
+
+body.reference-stitch.baca-camera-v16
+#view-live
+.workspace-tile-header,
+
+body.reference-stitch.baca-camera-v16
+#view-live
+.panel-header,
+
+body.reference-stitch.baca-camera-v16
+#view-live
+.camera-feed-label {
+
+    width:
+        100% !important;
+
+    height:
+        44px !important;
+
+    min-height:
+        44px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 14px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    gap:
+        10px !important;
+
+    border:
+        0 !important;
+
+    border-bottom:
+        1px solid
+        var(
+            --baca-v16-inner-border
+        ) !important;
+
+    border-radius:
+        0 !important;
+
+    background:
+        var(
+            --baca-v16-head
+        ) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Media bodies retain their correct black viewing surface */
+
+body.reference-stitch.baca-camera-v16
+#view-live
+.camera-stage,
+
+body.reference-stitch.baca-camera-v16
+#view-live
+.mujoco-stage,
+
+body.reference-stitch.baca-camera-v16
+#view-live
+.robot-camera-stage {
+
+    min-height:
+        0 !important;
+
+    background:
+        #050706 !important;
+
+    border-radius:
+        0 !important;
+}
+
+
+/* ==================================================================
+   RIGHT WINDOW DOCK
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16
+.d15-window-dock {
+
+    padding:
+        30px
+        6px
+        10px !important;
+
+    gap:
+        var(
+            --baca-v16-gap
+        ) !important;
+
+    overflow:
+        hidden !important;
+
+    border:
+        1px solid
+        var(
+            --baca-v16-border
+        ) !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        var(
+            --baca-v16-surface
+        ) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+.d15-window-dock
+.d15-dock-item {
+
+    border:
+        1px solid
+        var(
+            --baca-v16-inner-border
+        ) !important;
+
+    border-radius:
+        var(
+            --baca-v16-radius
+        ) !important;
+
+    background:
+        var(
+            --baca-v16-surface
+        ) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==================================================================
+   SHARED DRAG GRIP VISUAL
+   ================================================================== */
+
+
+body.reference-stitch.baca-camera-v16
+.d15k-left-rail-grip,
+
+body.reference-stitch.baca-camera-v16
+.d15-window-dock
+.d15-dock-grip {
+
+    border-radius:
+        999px !important;
+
+    background:
+        linear-gradient(
+            90deg,
+
+            rgba(
+                121,
+                127,
+                121,
+                .34
+            )
+            0%,
+
+            rgba(
+                121,
+                127,
+                121,
+                .34
+            )
+            32%,
+
+            #8ecb7f
+            32%,
+
+            #8ecb7f
+            68%,
+
+            rgba(
+                121,
+                127,
+                121,
+                .34
+            )
+            68%,
+
+            rgba(
+                121,
+                127,
+                121,
+                .34
+            )
+            100%
+        ) !important;
+}
+
+
+body.reference-stitch.baca-camera-v16
+.d15k-left-rail-grip {
+
+    width:
+        48px !important;
+
+    height:
+        4px !important;
+}
+
+
+/*
+ * No native browser image/text dragging from custom drag handles.
+ */
+
+body.reference-stitch.baca-camera-v16
+.d15k-left-rail-handle,
+
+body.reference-stitch.baca-camera-v16
+.d15-dock-grip,
+
+body.reference-stitch.baca-camera-v16
+.workspace-tile-header,
+
+body.reference-stitch.baca-camera-v16
+.panel-header,
+
+body.reference-stitch.baca-camera-v16
+.camera-feed-label {
+
+    -webkit-user-drag:
+        none !important;
+
+    user-select:
+        none !important;
+}
+
+/* =========================================================
+   CAMERA TELEOP TOP SPACING V16.1
+   ========================================================= */
+
+/*
+ * The outer Dragos+Bacalbasa dashboard already creates the normal
+ * space between the shared navigation bar and the active view.
+ *
+ * Therefore Camera Teleop must NOT add another top 8px internally.
+ *
+ * Left / right / bottom spacing remains exactly as it was.
+ */
+
+body.reference-stitch.baca-camera-v15-final {
+
+    padding-top:
+        0 !important;
+}
+
+
+/*
+ * Explicitly ensure none of the three major Camera Teleop surfaces
+ * adds an additional top offset.
+ */
+
+body.reference-stitch.baca-camera-v15-final
+.sidebar,
+
+body.reference-stitch.baca-camera-v15-final
+.main,
+
+body.reference-stitch.baca-camera-v15-final
+.d15-window-dock {
+
+    margin-top:
+        0 !important;
+}
+
+
+/* =========================================================
+   END CAMERA TELEOP TOP SPACING V16.1
+   ========================================================= */
+
+
+/* ============================================================
+   CAMERA TELEOP EMBEDDED GUTTER FIX V16.2
+   ============================================================ */
+
+/*
+ * IMPORTANT:
+ *
+ * The OUTER Dragos+Bacalbasa dashboard already provides the
+ * standard spacing from:
+ *
+ *   - shared top bar
+ *   - left screen edge
+ *   - right screen edge
+ *   - bottom screen edge
+ *
+ * The embedded Camera Teleop document must therefore contribute
+ * ZERO additional page padding.
+ *
+ * This is why Camera Teleop was visibly ~8-10px farther inward
+ * than Live.
+ */
+
+html {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+body,
+
+body.reference-stitch,
+
+body.reference-stitch.baca-camera-v15-final {
+
+    box-sizing:
+        border-box !important;
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/*
+ * The existing app-shell remains the geometry owner.
+ * We only make it consume the complete iframe rectangle.
+ */
+
+body.reference-stitch
+.app-shell {
+
+    width:
+        100% !important;
+
+    height:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        0 !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* ============================================================
+   END CAMERA TELEOP EMBEDDED GUTTER FIX V16.2
+   ============================================================ */
