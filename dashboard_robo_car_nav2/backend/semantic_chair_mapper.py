@@ -127,11 +127,12 @@ def extract_livox_points(
     detection: dict,
     calibration: LidarCameraCalibration,
     sample_step: int = 3,
+    detection_is_flipped: bool = True,
 ) -> list[dict]:
     """Extract foreground points in a YOLO box and return them in livox_frame.
 
-    YOLO runs on the horizontally flipped display image. Depth and calibration
-    use the raw, unmirrored color frame, so the box is unflipped here.
+    By default YOLO coordinates come from the horizontally flipped legacy display.
+    Set ``detection_is_flipped=False`` when inference used the raw camera image.
     """
     if depth_img is None or color_img is None or depth_img.ndim != 2:
         return []
@@ -139,12 +140,16 @@ def extract_livox_points(
     if color_img.shape[:2] != (height, width):
         return []
 
-    flipped_x1 = int(detection.get("x1", 0))
-    flipped_x2 = int(detection.get("x2", 0))
+    detected_x1 = int(detection.get("x1", 0))
+    detected_x2 = int(detection.get("x2", 0))
     y1 = max(0, min(height - 1, int(detection.get("y1", 0))))
     y2 = max(0, min(height, int(detection.get("y2", 0))))
-    raw_x1 = max(0, min(width - 1, width - flipped_x2))
-    raw_x2 = max(0, min(width, width - flipped_x1))
+    if detection_is_flipped:
+        raw_x1 = max(0, min(width - 1, width - detected_x2))
+        raw_x2 = max(0, min(width, width - detected_x1))
+    else:
+        raw_x1 = max(0, min(width - 1, detected_x1))
+        raw_x2 = max(0, min(width, detected_x2))
     if raw_x2 - raw_x1 < 8 or y2 - y1 < 8:
         return []
 

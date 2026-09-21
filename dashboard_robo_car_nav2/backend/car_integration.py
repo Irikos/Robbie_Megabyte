@@ -1175,7 +1175,7 @@ async def dashboard_events(ws: WebSocket):
     try:
         await ws.send_json(_car_public_state())
         while True:
-            # Numai evenimente de afișare; comenzile G1 trec prin API-ul v3.
+            # Numai evenimente de afișare; comenzile G1 trec prin API-ul v4.
             await ws.receive_text()
     except WebSocketDisconnect:
         pass

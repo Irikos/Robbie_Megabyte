@@ -3,15 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>G1 Nav2 v3 — Mapping &amp; Navigation Studio</title>
-  <link rel="stylesheet" href="/static/style.css?v=6.0-nav2-v3">
+  <title>G1 Nav2 v4 — Mapping &amp; Navigation Studio</title>
+  <link rel="stylesheet" href="/static/style.css?v=7.2-nav2-v4-all-routes">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/OBJLoader.js"></script>
 </head>
 <body>
   <div class="app-shell">
     <aside class="control-panel">
       <div class="brand">
         <div class="brand-mark">G1</div>
-        <div><h1>G1 Navigation Studio Nav2 v3</h1><p>ROS 2 · Nav2 · CycloneDDS</p></div>
+        <div><h1>G1 Navigation Studio Nav2 v4</h1><p>ROS 2 · Nav2 · CycloneDDS</p></div>
       </div>
 
       <div class="connection-strip">
@@ -92,6 +95,7 @@
             </div>
             <label class="range-label"><span>Viteză Nav2 <b id="speed-value">0.60 m/s</b></span><input id="speed" type="range" min="0.30" max="0.80" step="0.01" value="0.60"></label>
             <div id="route-summary" class="route-summary">Ruta nu a fost calculată</div>
+            <div id="live-route-status" class="live-route-status idle">Plan live Nav2: în așteptare</div>
             <div class="button-row">
               <button id="preview-route" class="btn btn-muted">⌁ Previzualizează</button>
               <button id="navigate" class="btn btn-warning" disabled>➤ Confirmă și pornește</button>
@@ -139,9 +143,17 @@
         <section class="control-card">
           <div class="card-title"><span class="step">5</span><div><h2>RealSense</h2><p>Color + depth · monitorizare</p></div></div>
           <div class="card-body"><div id="camera-state" class="readiness neutral">Aștept camera</div>
-            <img id="camera-color" alt="RealSense color" style="width:100%">
-            <img id="camera-depth" alt="RealSense depth" style="width:100%">
-            <p class="help">Navigația G1 păstrează protecția LiDAR / Collision Monitor din v3. Camera este afișată separat.</p>
+            <div class="camera-grid">
+              <img id="camera-color" alt="RealSense color cu detecții YOLO">
+              <img id="camera-depth" alt="RealSense depth">
+            </div>
+            <div class="button-row perception-actions">
+              <button id="yolo-toggle" class="btn btn-success">Pornește YOLO</button>
+              <button id="semantic-clear" class="btn btn-muted">Șterge obiectele</button>
+            </div>
+            <div id="yolo-detections" class="perception-list">YOLO este oprit</div>
+            <div id="semantic-chair-status" class="readiness neutral">0 obiecte semantice</div>
+            <p class="help">YOLO clasifică chair/toilet; depth + calibrarea RealSense–Mid360 fixează obiectul în harta localizată.</p>
           </div>
         </section>
         <section class="event-card">
@@ -160,6 +172,11 @@
         <div class="top-actions">
           <span class="rmw-badge" id="rmw">CycloneDDS</span>
           <span class="scan-badge">SLAM map → XY</span>
+          <div class="view-mode-group" role="group" aria-label="Panouri hartă">
+            <button id="view-mode-3d" class="tool-btn" data-view-mode="3d">3D</button>
+            <button id="view-mode-both" class="tool-btn active" data-view-mode="both" aria-pressed="true">Ambele</button>
+            <button id="view-mode-2d" class="tool-btn" data-view-mode="2d">2D</button>
+          </div>
           <button id="follow-robot" class="tool-btn" aria-pressed="false">Urmărește robotul</button>
           <button id="zoom-out" class="tool-btn square" title="Micșorează">−</button>
           <button id="zoom-in" class="tool-btn square" title="Mărește">+</button>
@@ -168,17 +185,26 @@
       </header>
 
       <section class="viewer-wrap">
-        <canvas id="map"></canvas>
-        <div class="viewer-hint">Click = destinație · drag = deplasare · rotiță = zoom · Shift+drag = orientare</div>
-        <div class="axis"><i></i><span>X</span><b></b><em>Y</em></div>
-        <div class="legend">
-          <span><i class="swatch scan"></i>hartă SLAM 2D</span>
-          <span><i class="swatch robot"></i>robot</span>
-          <span><i class="swatch target"></i>destinație</span>
-          <span><i class="swatch route"></i>rută Nav2</span>
+        <div class="viewer-pane viewer-pane-3d">
+          <canvas id="map3d"></canvas>
+          <div class="pane-label">3D · vizualizare</div>
         </div>
-        <div id="render-count" class="render-count">0 puncte vizibile</div>
-        <div id="empty-map" class="empty-state"><div class="empty-icon">⌁</div><h3>Aștept harta SLAM</h3><p>Pornește cartografierea. Norul global va fi proiectat în XY.</p></div>
+        <div class="viewer-pane viewer-pane-2d">
+          <canvas id="map"></canvas>
+          <div class="pane-label">2D · control (click = destinație)</div>
+          <div id="viewer-hint" class="viewer-hint">Click = destinație · drag = deplasare · rotiță = zoom · Shift+drag = orientare</div>
+          <div class="axis"><i></i><span>X</span><b></b><em>Y</em></div>
+          <div class="legend">
+            <span><i class="swatch scan"></i>hartă SLAM 2D</span>
+            <span><i class="swatch robot"></i>robot</span>
+            <span><i class="swatch target"></i>destinație</span>
+            <span><i class="swatch route"></i>rută preview (întreruptă)</span>
+            <span><i class="swatch live-route"></i>rută Nav2 live (continuă)</span>
+            <span><i class="swatch semantic"></i>obiect YOLO + depth</span>
+          </div>
+          <div id="render-count" class="render-count">0 puncte vizibile</div>
+          <div id="empty-map" class="empty-state"><div class="empty-icon">⌁</div><h3>Aștept harta SLAM</h3><p>Pornește cartografierea. Norul global va fi proiectat în XY.</p></div>
+        </div>
       </section>
 
       <footer class="telemetry">
@@ -203,7 +229,7 @@
             <div id="car-status" class="readiness neutral">Mașinuță neconectată</div>
             <label class="field-label">Click pe hartă pentru
               <select id="car-pick-mode">
-                <option value="g1">Destinația G1 (v3)</option>
+                <option value="g1">Destinația G1 (v4)</option>
                 <option value="car-goal">Destinația mașinuței</option>
                 <option value="car-pose">Poziția inițială mașinuță</option>
                 <option value="car-tf">Origine / Poziție mașinuță pe harta G1</option>
@@ -257,6 +283,7 @@
               <label>Yaw °<input id="car-goal-yaw" type="number" value="0"></label>
             </div>
             <div class="button-row"><button class="btn btn-muted" id="car-preview">Previzualizează mașinuță</button><button class="btn btn-warning" id="car-go" disabled>Confirmă mașinuță</button></div>
+            <div id="car-path-live" class="live-route-status idle">Plan mașinuță: în așteptare</div>
             <div class="readiness neutral" id="car-result">Comenzile mașinuței nu comandă G1.</div>
           </div>
         </section>
@@ -264,7 +291,8 @@
     </aside>
   </div>
   <div id="toast" class="toast"></div>
-  <script src="/static/app.js?v=robot-car-v3-1"></script>
-  <script src="/static/car.js?v=robot-car-v3-1"></script>
+  <script src="/static/app.js?v=robot-car-v4-live-route-3"></script>
+  <script src="/static/car.js?v=robot-car-v4-live-route-1"></script>
+  <script src="/static/view3d.js?v=robot-car-v4-car-model-1"></script>
 </body>
 </html>

@@ -7,6 +7,50 @@ if (suppliedToken) sessionStorage.setItem("robot_car_nav2_token", suppliedToken)
 const token = suppliedToken || sessionStorage.getItem("robot_car_nav2_token") || "";
 
 let state = null;
+
+let lastLiveRouteRevision = 0;
+let liveRoutePulseTimer = null;
+
+function updateLiveNavigationPath(navigation) {
+  const routeStatus = $("live-route-status");
+  const points = Array.isArray(navigation.path) ? navigation.path : [];
+  const revision = Number(navigation.path_revision || 0);
+  const active = Boolean(navigation.path_live) && points.length > 1;
+  if (revision < lastLiveRouteRevision) lastLiveRouteRevision = 0;
+  if (active && revision > lastLiveRouteRevision) {
+    const hadLiveRoute = lastLiveRouteRevision > 0 && routePreview?.live;
+    lastLiveRouteRevision = revision;
+    routePreview = {
+      id: null,
+      points,
+      target: navigation.goal || null,
+      live: true,
+      revision,
+    };
+    routeStatus.className = "live-route-status updated";
+    clearTimeout(liveRoutePulseTimer);
+    liveRoutePulseTimer = setTimeout(() => {
+      routeStatus.classList.remove("updated");
+    }, 420);
+    requestDraw();
+  }
+  if (active) {
+    const age = Number(navigation.path_updated_age);
+    const ageText = Number.isFinite(age) ? `${age.toFixed(1)} s` : "acum";
+    routeStatus.classList.remove("idle");
+    routeStatus.textContent = `Plan live #${revision} · ${points.length} puncte · ${Number(navigation.replan_count || 0)} actualizări · ${ageText}`;
+  } else if (navigation.state === "previewed") {
+    routeStatus.className = "live-route-status idle";
+    routeStatus.textContent = "Preview static · ruta live pornește după confirmare";
+  } else if (["completed", "failed", "cancelled", "paused"].includes(navigation.state) && routePreview?.live) {
+    routeStatus.className = "live-route-status idle";
+    routeStatus.textContent = `Ultimul plan Nav2 #${lastLiveRouteRevision} · navigația nu mai actualizează ruta`;
+  } else {
+    routeStatus.className = "live-route-status idle";
+    routeStatus.textContent = "Plan live Nav2: în așteptare";
+  }
+}
+
 let mapPoints = [];
 let goal = null;
 let routePreview = null;
@@ -23,6 +67,84 @@ let teleopPendingKey = null;
 let teleopKeySending = false;
 const heldTeleopKeys = new Map();
 let activeTeleopKey = null;
+
+let yoloEnabled = false;
+let perceptionRefreshRunning = false;
+let semanticObjects = [];
+let semanticRenderSignature = "";
+window.latestSemanticChairMessage = null;
+
+function updateYoloUI(cameraStatus) {
+  yoloEnabled = Boolean(cameraStatus.yolo_enabled);
+  const button = $("yolo-toggle");
+  button.disabled = !cameraStatus.yolo_available;
+  button.classList.toggle("btn-danger", yoloEnabled);
+  button.classList.toggle("btn-success", !yoloEnabled);
+  button.textContent = !cameraStatus.yolo_available
+    ? "YOLO indisponibil"
+    : yoloEnabled ? "Oprește YOLO" : "Pornește YOLO";
+  const detections = Array.isArray(cameraStatus.yolo_detections)
+    ? cameraStatus.yolo_detections : [];
+  setText("yolo-detections", detections.length
+    ? detections.map((item) => `${item.label} ${Math.round(Number(item.confidence || 0) * 100)}%`).join(" · ")
+    : yoloEnabled ? "Nicio detecție" : "YOLO este oprit");
+}
+
+function updateSemanticUI(message) {
+  window.latestSemanticChairMessage = message;
+  semanticObjects = Array.isArray(message.objects) ? message.objects : [];
+  const status = $("semantic-chair-status");
+  if (!message.calibration_available) {
+    status.className = "readiness warn";
+    status.textContent = `Calibrare indisponibilă: ${message.calibration_error || "necunoscut"}`;
+  } else {
+    status.className = semanticObjects.length ? "readiness good" : "readiness neutral";
+    status.textContent = `${semanticObjects.length} ${semanticObjects.length === 1 ? "scaun semantic" : "scaune semantice"}`;
+  }
+  const nextSignature = JSON.stringify({
+    calibration: message.calibration_available,
+    error: message.calibration_error || "",
+    objects: semanticObjects.map((object) => [
+      object.id, object.observations, object.aging_value,
+      Boolean(object.lidar_supported), Array.isArray(object.points) ? object.points.length : 0,
+    ]),
+  });
+  if (nextSignature !== semanticRenderSignature) {
+    semanticRenderSignature = nextSignature;
+    window.dispatchEvent(new CustomEvent("semantic-chairs", { detail: message }));
+  }
+  requestDraw();
+}
+
+async function refreshPerception() {
+  if (perceptionRefreshRunning) return;
+  perceptionRefreshRunning = true;
+  try {
+    const [cameraStatus, semantic] = await Promise.all([
+      api("/api/camera/status"),
+      api("/api/semantic/chairs"),
+    ]);
+    const cameraState = $("camera-state");
+    cameraState.className = cameraStatus.fresh ? "readiness good" : "readiness warn";
+    cameraState.textContent = cameraStatus.fresh
+      ? `Camera live · ${cameraStatus.size?.join("×") || "rezoluție necunoscută"}`
+      : cameraStatus.error || "Aștept cadre RealSense";
+    updateYoloUI(cameraStatus);
+    updateSemanticUI(semantic);
+    if (cameraStatus.fresh) {
+      const stamp = Date.now();
+      $("camera-color").src = `/api/camera/color?t=${stamp}`;
+      $("camera-depth").src = `/api/camera/depth?t=${stamp}`;
+    }
+  } catch (error) {
+    const cameraState = $("camera-state");
+    cameraState.className = "readiness warn";
+    cameraState.textContent = error.message;
+  } finally {
+    perceptionRefreshRunning = false;
+  }
+}
+
 
 const canvas = $("map");
 const ctx = canvas.getContext("2d", { alpha: true });
@@ -161,6 +283,7 @@ async function refreshState() {
     setText("rmw", next.rmw === "rmw_cyclonedds_cpp" ? "CycloneDDS" : (next.rmw || "RMW necunoscut"));
     const locomotion = next.locomotion_bridge || {};
     const navigation = next.navigation || {};
+    updateLiveNavigationPath(navigation);
     setText("diag-nav2", velocityLabel(navigation.nav2_velocity, navigation.nav2_cmd_age));
     setText("diag-raw", velocityLabel(navigation.raw_velocity, navigation.raw_cmd_age));
     setText("diag-smoothed", velocityLabel(navigation.smoothed_velocity, navigation.smoothed_cmd_age));
@@ -232,8 +355,11 @@ async function refreshState() {
       const smoothStop = navigation.smooth_stop_active
         ? " · decelerare controlată pentru replanificare"
         : "";
+      const livePlan = navigation.path_live
+        ? ` · plan live #${Number(navigation.path_revision || 0)}`
+        : "";
       $("route-summary").className = `route-summary${navigation.state === "failed" ? "" : " ready"}`;
-      setText("route-summary", `${navigation.message || navigation.state}${progress}${remaining}${smoothStop}`);
+      setText("route-summary", `${navigation.message || navigation.state}${progress}${remaining}${smoothStop}${livePlan}`);
       if (["starting", "navigating", "orienting", "paused", "completed"].includes(navigation.state)) {
         $("navigate").disabled = true;
       }
@@ -491,16 +617,54 @@ function draw() {
 
   if (routePreview && routePreview.points.length > 1) {
     ctx.save();
-    ctx.strokeStyle = "#a78bfa";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 5]);
-    ctx.beginPath();
-    routePreview.points.forEach((point, index) => {
-      const projected = view.point(Number(point[0]), Number(point[1]));
-      if (index === 0) ctx.moveTo(projected[0], projected[1]);
-      else ctx.lineTo(projected[0], projected[1]);
-    });
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const traceRoute = () => {
+      ctx.beginPath();
+      routePreview.points.forEach((point, index) => {
+        const projected = view.point(Number(point[0]), Number(point[1]));
+        if (index === 0) ctx.moveTo(projected[0], projected[1]);
+        else ctx.lineTo(projected[0], projected[1]);
+      });
+    };
+    ctx.setLineDash(routePreview.live ? [] : [20, 12]);
+    traceRoute();
+    ctx.strokeStyle = "rgba(0,0,0,.94)";
+    ctx.lineWidth = 20;
     ctx.stroke();
+
+    traceRoute();
+    ctx.strokeStyle = "#fff200";
+    ctx.lineWidth = 5;
+    ctx.shadowColor = "rgba(255,242,0,.98)";
+    ctx.shadowBlur = 18;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (semanticObjects.length) {
+    ctx.save();
+    ctx.font = "700 10px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    for (const object of semanticObjects) {
+      const minimum = object.bounds?.min;
+      const maximum = object.bounds?.max;
+      if (!minimum || !maximum) continue;
+      const [x1, y1] = view.point(Number(minimum.x), Number(minimum.y));
+      const [x2, y2] = view.point(Number(maximum.x), Number(maximum.y));
+      const left = Math.min(x1, x2), top = Math.min(y1, y2);
+      const width = Math.max(5, Math.abs(x2 - x1)), height = Math.max(5, Math.abs(y2 - y1));
+      const aging = Math.max(0, Number(object.aging_value || 0));
+      const cap = Math.max(1, Number(object.aging_cap || 100));
+      const ratio = Math.min(1, aging / cap);
+      ctx.strokeStyle = ratio > .5 ? "#c084fc" : ratio > .25 ? "#f59e0b" : "#ef4444";
+      ctx.fillStyle = "rgba(168,85,247,.12)";
+      ctx.lineWidth = 2;
+      ctx.fillRect(left, top, width, height);
+      ctx.strokeRect(left, top, width, height);
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillText(object.name || `chair ${object.id}`, left + width / 2, top - 5);
+    }
     ctx.restore();
   }
 
@@ -930,6 +1094,19 @@ document.querySelectorAll("[data-robot-mode]").forEach((button) => {
   });
 });
 
+$("yolo-toggle").addEventListener("click", async (event) => {
+  const result = await action(event.currentTarget, "Comut…", () => api("/api/yolo/toggle", {
+    method: "POST", body: JSON.stringify({ enabled: !yoloEnabled }),
+  }));
+  if (result) yoloEnabled = Boolean(result.enabled);
+  await refreshPerception();
+});
+
+$("semantic-clear").addEventListener("click", async (event) => {
+  await action(event.currentTarget, "Șterg…", () => api("/api/semantic/chairs", { method: "DELETE" }));
+  await refreshPerception();
+});
+
 $("fit-map").addEventListener("click", () => {
   followRobot = false;
   updateFollowButton();
@@ -1047,5 +1224,7 @@ if (!token) log("ATENȚIE: tokenul lipsește din URL; acțiunile protejate vor f
 refreshMaps();
 updateFollowButton();
 refreshState();
-setInterval(refreshState, 1000);
+refreshPerception();
+setInterval(refreshState, 500);
+setInterval(refreshPerception, 500);
 setInterval(refreshMaps, 5000);

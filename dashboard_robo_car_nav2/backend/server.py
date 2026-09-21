@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dashboard G1 Nav2 v3: SLAM Unitree, navigație Nav2 și adaptor ROS 2.
+"""Dashboard G1 Nav2 v4: SLAM Unitree, navigație Nav2 și adaptor ROS 2.
 
 Procesul nu importa unitree_sdk2py. Astfel rclpy poate folosi CycloneDDS din
 ROS Humble fara sa incarce in acelasi proces biblioteca DDS livrata de SDK.
@@ -45,6 +45,12 @@ from std_msgs.msg import String
 from unitree_api.msg import Request, Response
 import car_integration
 from camera_stream import camera
+from semantic_chair_mapper import (
+    LidarCameraCalibration,
+    SemanticChairTracker,
+    deduplicate_chair_detections,
+    extract_livox_points,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,6 +59,7 @@ MAPS = ROOT / "maps"
 MAPS_2D = MAPS / "maps_2d"
 PARTIAL_MAPS = MAPS / "partial_maps"
 NATIVE_MAP_REGISTRY = MAPS / ".native_paths.json"
+CALIBRATION_DIR = ROOT / "lidar_camera_calibration"
 TOKEN = os.environ.get("G1_DASHBOARD_TOKEN", "")
 VOXEL_SIZE = float(os.environ.get("G1_MAP_VOXEL_SIZE", "0.05"))
 MAX_POINTS = int(os.environ.get("G1_MAP_MAX_POINTS", "350000"))
@@ -85,6 +92,21 @@ TELEOP_ANGULAR_MAX = UNITREE_VELOCITY_LIMITS.angular
 TELEOP_ANGULAR_DEFAULT = 1.00
 TELEOP_KEYBOARD_LINEAR_BASE = 0.20
 TELEOP_KEYBOARD_ANGULAR_BASE = 0.30
+
+semantic_chair_tracker = SemanticChairTracker(
+    confirmations=3, merge_distance_m=0.45, voxel_size_m=0.025,
+    lifespan_s=10.0, max_voxels=10000, aging_cap=100.0,
+    growth_per_observation=6.0, visible_miss_decay=9.0,
+)
+semantic_chair_lock = threading.Lock()
+semantic_chair_map_path: Optional[str] = None
+semantic_chair_last_process = 0.0
+try:
+    lidar_camera_calibration = LidarCameraCalibration.load(CALIBRATION_DIR)
+    semantic_calibration_error = ""
+except Exception as exc:
+    lidar_camera_calibration = None
+    semantic_calibration_error = str(exc)
 
 def safe_name(value: str) -> str:
     original = str(value).strip()
@@ -244,6 +266,187 @@ def flatten_cloud_xy(
     return list(cells.values())
 
 
+def _livox_points_to_base(points: list[dict]) -> tuple[list[tuple[float, float, float]], float]:
+    """Transformarea rigidă livox_frame -> base_link folosită de adaptorul v3."""
+    if not points:
+        return [], -0.75
+    roll = 3.14
+    pitch = 0.04014257279586953
+    cr, sr = math.cos(roll), math.sin(roll)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+    base_points: list[tuple[float, float, float]] = []
+    ground_candidates: list[float] = []
+    for point in points:
+        x = float(point.get("x", 0.0))
+        y = float(point.get("y", 0.0))
+        z = float(point.get("z", 0.0))
+        if not all(math.isfinite(value) for value in (x, y, z)):
+            continue
+        base_x = 0.0002835 + cp * x + sp * sr * y + sp * cr * z
+        base_y = 0.00003 + cr * y - sr * z
+        base_z = 0.46018 - sp * x + cp * sr * y + cp * cr * z
+        base_points.append((base_x, base_y, base_z))
+        horizontal = math.hypot(base_x, base_y)
+        if 0.30 <= horizontal <= 3.0 and -1.8 <= base_z <= 0.30:
+            ground_candidates.append(base_z)
+    if not ground_candidates:
+        return base_points, -0.75
+    ground_candidates.sort()
+    index = min(len(ground_candidates) - 1, max(0, int(len(ground_candidates) * 0.12)))
+    return base_points, max(-1.45, min(-0.35, ground_candidates[index]))
+
+
+def _transform_semantic_livox_points_to_map(
+    points: list[dict], pose: dict
+) -> list[dict]:
+    """Transformă punctele RGB camera->Livox->base_link->map."""
+    base_points, estimated_ground = _livox_points_to_base(points)
+    current = bridge
+    with current.lock if current is not None else semantic_chair_lock:
+        ground_base_z = float(
+            current.last_raw_lidar_ground_base_z if current is not None else estimated_ground
+        )
+    yaw = float(pose.get("yaw", 0.0))
+    cosine, sine = math.cos(yaw), math.sin(yaw)
+    pose_x, pose_y = float(pose.get("x", 0.0)), float(pose.get("y", 0.0))
+    transformed = []
+    for source, (base_x, base_y, base_z) in zip(points, base_points):
+        relative_z = base_z - ground_base_z
+        if not 0.06 <= relative_z <= 2.20:
+            continue
+        transformed.append({
+            "x": pose_x + cosine * base_x - sine * base_y,
+            "y": pose_y + sine * base_x + cosine * base_y,
+            "z": relative_z,
+            "r": int(source.get("r", 180)),
+            "g": int(source.get("g", 180)),
+            "b": int(source.get("b", 180)),
+        })
+    return transformed
+
+
+def _transform_livox_points_to_map(points: list[dict], pose: dict) -> list[dict]:
+    base_points, ground_base_z = _livox_points_to_base(points)
+    yaw = float(pose.get("yaw", 0.0))
+    cosine, sine = math.cos(yaw), math.sin(yaw)
+    pose_x, pose_y = float(pose.get("x", 0.0)), float(pose.get("y", 0.0))
+    return [
+        {
+            "x": pose_x + cosine * x - sine * y,
+            "y": pose_y + sine * x + cosine * y,
+            "z": z - ground_base_z,
+        }
+        for x, y, z in base_points
+    ]
+
+
+def _semantic_chair_payload() -> dict:
+    with semantic_chair_lock:
+        objects = semantic_chair_tracker.snapshot()
+        map_path = semantic_chair_map_path
+    return {
+        "type": "semantic_chairs",
+        "objects": objects,
+        "count": len(objects),
+        "lifespan_s": semantic_chair_tracker.lifespan_s,
+        "aging_cap": semantic_chair_tracker.aging_cap,
+        "map_path": map_path,
+        "calibration_available": lidar_camera_calibration is not None,
+        "calibration_error": semantic_calibration_error,
+    }
+
+
+def _reset_semantic_chairs(map_path: Optional[str] = None) -> dict:
+    global semantic_chair_map_path
+    with semantic_chair_lock:
+        semantic_chair_tracker.reset()
+        semantic_chair_map_path = map_path
+    return _semantic_chair_payload()
+
+
+def _semantic_context() -> Optional[tuple[str, dict]]:
+    current = bridge
+    if current is None:
+        return None
+    with current.lock:
+        if current.mode != "localization" or not current.selected_map:
+            return None
+        if not current.pose_at or time.time() - current.pose_at > 3.0:
+            return None
+        pose = dict(current.pose)
+        map_path = str(MAPS / f"{current.selected_map}.pcd")
+    return map_path, pose
+
+
+def _semantic_lidar_map_snapshot(pose: dict) -> list[dict]:
+    current = bridge
+    if current is None:
+        return []
+    with current.lock:
+        observed_at = current.last_semantic_raw_lidar_time
+        raw_points = list(current.last_semantic_raw_lidar_points)
+    if observed_at <= 0.0 or time.monotonic() - observed_at > 0.8 or len(raw_points) < 50:
+        return []
+    return _transform_livox_points_to_map(raw_points, pose)
+
+
+def _process_semantic_chairs(depth_img, color_img, detections: list[dict]) -> Optional[dict]:
+    """Construiește și persistă obiectele chair/toilet în coordonatele hărții."""
+    global semantic_chair_last_process, semantic_chair_map_path
+    if lidar_camera_calibration is None:
+        return None
+    context = _semantic_context()
+    if context is None:
+        return None
+    current_map, pose = context
+    now = time.monotonic()
+    if now - semantic_chair_last_process < 0.25:
+        return None
+    semantic_chair_last_process = now
+    relevant = deduplicate_chair_detections(
+        detections, minimum_confidence=0.35, iou_threshold=0.35,
+    )
+    observations = []
+    for detection in relevant:
+        livox_points = extract_livox_points(
+            depth_img, color_img, detection, lidar_camera_calibration,
+            detection_is_flipped=False,
+        )
+        map_points = _transform_semantic_livox_points_to_map(livox_points, pose)
+        if map_points:
+            observations.append({
+                "points": map_points,
+                "confidence": float(detection.get("confidence", 0.0)),
+            })
+    lidar_map_points = _semantic_lidar_map_snapshot(pose)
+    with semantic_chair_lock:
+        if semantic_chair_map_path != current_map:
+            semantic_chair_tracker.reset()
+            semantic_chair_map_path = current_map
+        changed = semantic_chair_tracker.update_frame(
+            observations, lidar_map_points, pose, observed_at=now,
+        )
+    return _semantic_chair_payload() if changed else None
+
+
+async def semantic_chair_loop() -> None:
+    last_frame_at = 0.0
+    while True:
+        await asyncio.sleep(0.05)
+        if not camera.yolo_enabled():
+            continue
+        color_img, depth_img, detections, received_at = camera.semantic_frame()
+        if not received_at or received_at == last_frame_at or color_img is None or depth_img is None:
+            continue
+        last_frame_at = received_at
+        await asyncio.to_thread(_process_semantic_chairs, depth_img, color_img, detections)
+
+
+async def semantic_chair_aging_loop() -> None:
+    while True:
+        await asyncio.sleep(1.0)
+        with semantic_chair_lock:
+            semantic_chair_tracker.expire()
 
 
 async def enforce_run_profile() -> dict[str, Any]:
@@ -306,6 +509,9 @@ class RosBridge(Node):
         self.cloud_at = 0.0
         self.cloud_source = "none"
         self.raw_lidar_at = 0.0
+        self.last_semantic_raw_lidar_points: list[dict] = []
+        self.last_semantic_raw_lidar_time = 0.0
+        self.last_raw_lidar_ground_base_z = -0.75
         self.base_odom_at = 0.0
         self.base_odom_pose: Optional[dict[str, float]] = None
         self.native_mapping_cloud_at = 0.0
@@ -426,7 +632,7 @@ class RosBridge(Node):
         )
         self.nav2 = Nav2Runtime(self)
         self.get_logger().info(
-            "nav2_v3 pornit: Nav2 planifică/urmărește; API-urile native 1102/1201/1202 sunt interzise"
+            "nav2_v4 pornit: Nav2 planifică/urmărește; API-urile native 1102/1201/1202 sunt interzise"
         )
 
     def _on_sport_request(self, message: Request) -> None:
@@ -535,8 +741,38 @@ class RosBridge(Node):
         self.nav2.update_local_odometry(message)
 
     def _on_raw_lidar(self, message: PointCloud2) -> None:
+        now_wall = time.time()
+        now_mono = time.monotonic()
         with self.lock:
-            self.raw_lidar_at = time.time()
+            self.raw_lidar_at = now_wall
+            should_sample = (
+                camera.yolo_enabled()
+                and self.mode == "localization"
+                and now_mono - self.last_semantic_raw_lidar_time >= 0.20
+            )
+            if should_sample:
+                self.last_semantic_raw_lidar_time = now_mono
+        if not should_sample:
+            return
+        try:
+            declared = max(1, int(message.width) * max(1, int(message.height)))
+            step = max(1, declared // 2500)
+            points = []
+            for index, item in enumerate(point_cloud2.read_points(
+                message, field_names=("x", "y", "z"), skip_nans=True
+            )):
+                if index % step:
+                    continue
+                x, y, z = (float(value) for value in item)
+                if all(math.isfinite(value) for value in (x, y, z)):
+                    points.append({"x": x, "y": y, "z": z})
+            _, ground_base_z = _livox_points_to_base(points)
+        except Exception:
+            return
+        with self.lock:
+            self.last_semantic_raw_lidar_points = points
+            self.last_semantic_raw_lidar_time = now_mono
+            self.last_raw_lidar_ground_base_z = ground_base_z
 
 
     def _on_odom(self, message: Odometry, source: str, input_name: str = "") -> None:
@@ -683,7 +919,7 @@ class RosBridge(Node):
         publisher=None,
     ) -> int:
         if api_id in {1102, 1201, 1202}:
-            raise ValueError("Navigația nativă este dezactivată în nav2_v3")
+            raise ValueError("Navigația nativă este dezactivată în nav2_v4")
         with self.lock:
             self.request_id += 1
             request_id = self.request_id
@@ -975,6 +1211,8 @@ ros_thread: Optional[threading.Thread] = None
 odom_thread: Optional[threading.Thread] = None
 snapshot_task: Optional[asyncio.Task] = None
 velocity_task: Optional[asyncio.Task] = None
+semantic_task: Optional[asyncio.Task] = None
+semantic_aging_task: Optional[asyncio.Task] = None
 teleop_keyboard = TeleopKeyboardProcess()
 
 
@@ -1029,11 +1267,12 @@ async def snapshot_loop() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global bridge, odom_receiver, ros_thread, odom_thread, snapshot_task, velocity_task
+    global semantic_task, semantic_aging_task
     MAPS.mkdir(parents=True, exist_ok=True)
     MAPS_2D.mkdir(parents=True, exist_ok=True)
     PARTIAL_MAPS.mkdir(parents=True, exist_ok=True)
     if os.environ.get("RMW_IMPLEMENTATION") != "rmw_cyclonedds_cpp":
-        raise RuntimeError("nav2_v3 cere RMW_IMPLEMENTATION=rmw_cyclonedds_cpp")
+        raise RuntimeError("nav2_v4 cere RMW_IMPLEMENTATION=rmw_cyclonedds_cpp")
     rclpy.init(args=[], signal_handler_options=SignalHandlerOptions.NO)
     bridge = RosBridge()
     odom_receiver = OdomReceiver(bridge)
@@ -1048,9 +1287,20 @@ async def lifespan(_app: FastAPI):
         lambda: str(MAPS / f"{bridge.selected_map}.pcd") if bridge and bridge.selected_map else None,
     )
     camera.start()
+    semantic_task = asyncio.create_task(semantic_chair_loop())
+    semantic_aging_task = asyncio.create_task(semantic_chair_aging_loop())
     try:
         yield
     finally:
+        for task in (semantic_task, semantic_aging_task):
+            if task:
+                task.cancel()
+        for task in (semantic_task, semantic_aging_task):
+            if task:
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         camera.stop()
         await car_integration.shutdown()
         await stop_nav2_navigation(bridge, "Dashboard închis")
@@ -1078,7 +1328,7 @@ async def lifespan(_app: FastAPI):
             odom_receiver.destroy_node()
 
 
-app = FastAPI(title="Robot + Car · G1 Nav2 v3", version="3.0", lifespan=lifespan)
+app = FastAPI(title="Robot + Car · G1 Nav2 v4", version="4.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
 app.include_router(car_integration.router)
 
@@ -1100,6 +1350,38 @@ async def camera_image(kind: str):
     if not frame:
         raise HTTPException(503, "Camera nu a livrat încă un cadru")
     return HttpResponse(frame, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/yolo/status")
+async def yolo_status():
+    return camera.status()
+
+
+@app.get("/api/semantic/chairs")
+async def get_semantic_chairs():
+    return {"success": True, **_semantic_chair_payload()}
+
+
+@app.delete("/api/semantic/chairs")
+async def clear_semantic_chairs(x_dashboard_token: str = Header(default="")):
+    authorize(x_dashboard_token)
+    current = bridge
+    map_path = None
+    if current is not None:
+        with current.lock:
+            if current.selected_map:
+                map_path = str(MAPS / f"{current.selected_map}.pcd")
+    return {"success": True, **_reset_semantic_chairs(map_path)}
+
+
+@app.post("/api/yolo/toggle")
+async def toggle_yolo(body: dict = Body(default={}), x_dashboard_token: str = Header(default="")):
+    authorize(x_dashboard_token)
+    from camera_stream import YOLO_AVAILABLE
+    if not YOLO_AVAILABLE:
+        raise HTTPException(503, "ultralytics nu este instalat")
+    enabled = camera.set_yolo_enabled(body.get("enabled", not camera.yolo_enabled()))
+    return {"success": True, "enabled": enabled}
 
 
 @app.middleware("http")
@@ -1163,7 +1445,7 @@ async def command(
     service: str = "slam",
 ) -> dict[str, Any]:
     if api_id in {1102, 1201, 1202}:
-        return {"success": False, "error": "Navigația nativă este dezactivată în nav2_v3"}
+        return {"success": False, "error": "Navigația nativă este dezactivată în nav2_v4"}
     node = ros()
     if service == "sport":
         publisher = node.sport_request_publisher
@@ -1786,6 +2068,7 @@ async def start_mapping(
     if not stopped.get("success"):
         return stopped
     node.clear_map()
+    _reset_semantic_chairs()
     now = time.time()
     with node.lock:
         cloud_ready = bool(node.raw_lidar_at and now - node.raw_lidar_at < 2.0)
@@ -1871,7 +2154,7 @@ async def stop_mapping(x_dashboard_token: str = Header(default="")):
 
     native_result = None
     if backend == "native_slam":
-        native_target = f'/home/unitree/.g1_nav2_v3_stopped_{int(time.time() * 1000)}.pcd'
+        native_target = f'/home/unitree/.g1_nav2_v4_stopped_{int(time.time() * 1000)}.pcd'
         native_result = await command(
             1802, {"data": {"address": native_target}}, timeout=10.0
         )
@@ -1931,7 +2214,7 @@ async def save_map(body: dict = Body(...), x_dashboard_token: str = Header(defau
     await asyncio.to_thread(write_pcd_atomic, target_2d, scan2d)
     # Procesul SLAM poate rula pe alt controler/container. Calea nativa este
     # pastrata separat de copia locala folosita de dashboard.
-    native_target = f"/home/unitree/.g1_nav2_v3_{name}_{int(time.time() * 1000)}.pcd"
+    native_target = f"/home/unitree/.g1_nav2_v4_{name}_{int(time.time() * 1000)}.pcd"
     result = await command(1802, {"data": {"address": native_target}}, timeout=15.0)
     # Copia locala este exact norul afisat in UI si exista independent de
     # filesystemul serviciului nativ.
@@ -2199,6 +2482,7 @@ async def start_localization(body: dict = Body(...), x_dashboard_token: str = He
         node.session_dir = None
         node.pending_route = None
     car_integration.set_g1_map(name)
+    _reset_semantic_chairs(str(path))
     node.set_loaded_map(points)
     node.nav2.update_map_pose({"x": x, "y": y, "yaw": yaw})
     try:
@@ -2652,4 +2936,5 @@ async def clear_map(x_dashboard_token: str = Header(default="")):
     if not stopped.get("success"):
         return stopped
     ros().clear_map()
+    _reset_semantic_chairs()
     return {"success": True}

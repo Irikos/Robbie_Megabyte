@@ -89,6 +89,23 @@ def test_flipped_yolo_box_is_unflipped_before_depth_extraction():
     assert all(point["r"] == 255 for point in points)
 
 
+def test_unflipped_yolo_box_keeps_raw_camera_coordinates():
+    calibration = LidarCameraCalibration(
+        rotation_camera_livox=np.eye(3), translation_camera_livox=np.zeros(3),
+        fx=100.0, fy=100.0, cx=50.0, cy=30.0,
+        width=100, height=60, depth_scale_m=0.001,
+    )
+    depth = np.full((60, 100), 1000, dtype=np.uint16)
+    color = np.zeros((60, 100, 3), dtype=np.uint8)
+    points = extract_livox_points(
+        depth, color, {"x1": 20, "x2": 40, "y1": 10, "y2": 50},
+        calibration, sample_step=2, detection_is_flipped=False,
+    )
+
+    assert len(points) >= 20
+    assert np.median([point["x"] for point in points]) < -0.10
+
+
 def _chair_points(center_x, center_y):
     return [
         {
@@ -201,7 +218,10 @@ def test_unobservable_object_is_not_penalized_and_moved_chair_gets_new_id():
 
 def test_server_and_frontend_wire_semantic_chairs():
     server = (BACKEND / "server.py").read_text(encoding="utf-8")
-    frontend = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    frontend = "\n".join(
+        (ROOT / "frontend" / name).read_text(encoding="utf-8")
+        for name in ("index.html", "app.js", "view3d.js")
+    )
 
     assert "def _process_semantic_chairs(" in server
     assert "deduplicate_chair_detections" in server

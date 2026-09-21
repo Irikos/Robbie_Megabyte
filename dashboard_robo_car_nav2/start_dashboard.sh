@@ -1,5 +1,5 @@
 #!/bin/bash
-# Robot + Car: baza G1 v3, extensie mașinuță; procese locale acestui proiect.
+# Robot + Car: baza G1 v4, extensie mașinuță; procese locale acestui proiect.
 
 set -eo pipefail
 
@@ -13,7 +13,7 @@ if ! [[ "$DASHBOARD_PORT" =~ ^[0-9]+$ ]] || [ "$DASHBOARD_PORT" -lt 1024 ] || [ 
 fi
 
 if [ "$#" -ne 0 ]; then
-    echo "[EROARE] Pornire unică fără flaguri legacy. Teleop se activează din pagina v3."
+    echo "[EROARE] Pornire unică fără flaguri legacy. Teleop se activează din pagina v4."
     exit 2
 fi
 LOCK_FILE="$SCRIPT_DIR/.dashboard.lock"
@@ -137,7 +137,7 @@ export PYTHONPATH="$BACKEND_DIR${PYTHONPATH:+:$PYTHONPATH}"
 
 WIFI_IP="$(ip -4 -o addr show 2>/dev/null | awk '$4 ~ /^192\.168\.0\./ {split($4,a,"/"); print a[1]; exit}' || true)"
 echo "========================================================================="
-echo "Robot + Car — baza G1 Nav2 v3 + mașinuță prin /ws/car"
+echo "Robot + Car — baza G1 Nav2 v4 + mașinuță prin /ws/car"
 echo "  Rută:       ComputePathToPose + NavigateToPose"
 echo "  Obstacole:  costmap Nav2 + Collision Monitor"
 echo "  Teleop:     tastatură ROS 2 -> adaptor manual -> API Sport 7105"

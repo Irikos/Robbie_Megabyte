@@ -2,12 +2,12 @@
 """nav2_engine.py — motorul de navigație Nav2 pentru robot+car.
 
 Acest modul aduce în dashboardul yolo-car EXACT lanțul de navigație validat în
-``dashboard_g1_nav2_v3``: Nav2 planifică ruta (``ComputePathToPose`` pentru
+``dashboard_g1_nav2_v4``: Nav2 planifică ruta (``ComputePathToPose`` pentru
 preview, ``NavigateToPose`` pentru execuție + replanificare), iar comanda finală
 ajunge la robot numai prin adaptorul ROS 2 ``unitree_api`` (Sport API ``7105``).
 
 Nu există niciun planner A* și niciun apel la navigatorul nativ Unitree
-(``1102/1201/1202``): acele API-uri sunt refuzate explicit, la fel ca în v3.
+(``1102/1201/1202``): acele API-uri sunt refuzate explicit, la fel ca în v4.
 
 Motorul rulează izolat de restul serverului:
   * are propriul nod rclpy (``robot_car_nav2_engine``) și propriul executor;
@@ -61,7 +61,7 @@ SPORT_COMMAND_PERIOD = 0.10
 SPORT_COMMAND_DURATION = 0.65
 NAV_PROGRESS_TIMEOUT = 6.0
 
-# API-uri native de navigație interzise (ca în nav2_v3).
+# API-uri native de navigație interzise (ca în nav2_v4).
 FORBIDDEN_NATIVE_APIS = {1102, 1201, 1202}
 
 
@@ -84,7 +84,7 @@ def nav_safe_stream_state(
     now: float,
     source_velocity: tuple,
 ) -> str:
-    """Reproduce logica din v3: distinge fluxul sigur proaspăt / în așteptare /
+    """Reproduce logica din v4: distinge fluxul sigur proaspăt / în așteptare /
     întrerupt pe baza vârstei ieșirii ``/nav2/cmd_vel_safe`` și a ultimei comenzi
     a controllerului ``/nav2/cmd_vel_nav2``."""
     safe_fresh = safe_at > 0.0 and now - safe_at <= NAV_SAFE_CMD_MAX_AGE
@@ -130,7 +130,7 @@ class _EngineNode(Node):
         self._responses: dict[int, dict] = {}
         self._response_condition = threading.Condition()
 
-    # — Sport API request/response (ca send_request/wait_response din v3) —
+    # — Sport API request/response (ca send_request/wait_response din v4) —
     def send_request(self, api_id: int, parameters: dict, service: str = "sport") -> int:
         if int(api_id) in FORBIDDEN_NATIVE_APIS:
             raise ValueError("Navigația nativă 1102/1201/1202 este dezactivată")
@@ -202,7 +202,7 @@ class Nav2Engine:
         self._motion_lock = asyncio.Lock()
         self.lock = threading.RLock()
 
-        # Stare de control (echivalent cu starea RosBridge din v3, doar Nav2).
+        # Stare de control (echivalent cu starea RosBridge din v4, doar Nav2).
         self.control_mode = "disabled"      # "disabled" | "nav2"
         self.motion_active = False
         self.motion_armed_at = 0.0
@@ -303,7 +303,7 @@ class Nav2Engine:
             self.map_ready = True
         return grid
 
-    # ── Health (echivalent navigation_health din v3) ──────────────────────────
+    # ── Health (echivalent navigation_health din v4) ──────────────────────────
     def health(self) -> str:
         with self.lock:
             pose = dict(self._pose) if self._pose else None
@@ -333,7 +333,7 @@ class Nav2Engine:
         node = self._node
         if node is None:
             return {"success": False, "error": "Motorul Nav2 nu este pornit"}
-        # Descoperirea serviciului Sport (ca în v3).
+        # Descoperirea serviciului Sport (ca în v4).
         if node.sport_request_publisher.get_subscription_count() < 1:
             deadline = time.monotonic() + 2.0
             while node.sport_request_publisher.get_subscription_count() < 1:

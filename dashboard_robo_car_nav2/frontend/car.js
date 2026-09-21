@@ -1,13 +1,31 @@
 "use strict";
-// Extensie peste frontendul v3. Nu trimite niciodată comenzi locomotorii G1.
+// Extensie peste frontendul v4. Nu trimite niciodată comenzi locomotorii G1.
 (() => {
   let car = {}, previewId = null, polling = false, socket, reconnect;
+  let lastCarPathRevision = 0, carPathPulseTimer = null;
   const val = id => Number($(id).value);
   const pose = prefix => ({x: val(`${prefix}-x`), y: val(`${prefix}-y`), yaw_deg: val(`${prefix}-yaw`)});
   const post = (path, body = {}) => api(path, {method: 'POST', body: JSON.stringify(body)});
   const say = text => { $('car-result').textContent = text; log(text); };
   function update(data) {
     car = {...car, ...data};
+    const pathStatus = $('car-path-live');
+    const pathRevision = Number(car.path_revision || 0);
+    if (pathRevision < lastCarPathRevision) lastCarPathRevision = 0;
+    if (pathRevision > lastCarPathRevision) {
+      lastCarPathRevision = pathRevision;
+      pathStatus.className = 'live-route-status updated';
+      clearTimeout(carPathPulseTimer);
+      carPathPulseTimer = setTimeout(() => pathStatus.classList.remove('updated'), 420);
+    }
+    if (pathRevision && Array.isArray(car.path) && car.path.length) {
+      const age = Math.max(0, Date.now() / 1000 - Number(car.path_updated_at || Date.now() / 1000));
+      pathStatus.classList.remove('idle');
+      pathStatus.textContent = `Plan mașinuță #${pathRevision} · ${car.path.length} puncte · ${age.toFixed(1)} s`;
+    } else {
+      pathStatus.className = 'live-route-status idle';
+      pathStatus.textContent = 'Plan mașinuță: în așteptare';
+    }
     $('car-status').className = `readiness ${car.connected ? 'good' : 'warn'}`;
     $('car-status').textContent = `${car.connected ? 'Conectată' : 'Neconectată'} · ${car.current_mode || 'none'} / ${car.mode_status || 'stopped'}\n${car.pose ? `X ${car.pose.x.toFixed(2)} · Y ${car.pose.y.toFixed(2)} · yaw ${degrees(car.pose.yaw).toFixed(1)}°` : 'Poziție necunoscută'}\nAliniere: ${car.alignment?.message || 'neconfirmată'}`;
     if (car.preview?.ready && car.preview.request_id === previewId) $('car-go').disabled = false;

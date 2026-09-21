@@ -66,7 +66,7 @@ export G1_NAV2_CLOUD_TOPIC=/utlidar/cloud_livox_mid360   # implicit
 Preview-ul (`ComputePathToPose`) **nu produce mișcare**; folosește-l ca să
 confirmi că Nav2 chiar găsește o rută pe harta ta înainte de primul start.
 
-## 3. Primul test fizic (obligatoriu, ca în README v3)
+## 3. Primul test fizic (obligatoriu, ca în README v4)
 
 1. Oprește orice alt dashboard/Nav2/publisher locomotor.
 2. Asigură robotul, ține mâna pe **STOP**, eliberează ≥1.5 m în jur.
@@ -93,7 +93,7 @@ autoritatea locomotorie/FSM a robotului, **nu** în planificatorul Nav2
   de mai sus).
 - Că topicul Collision Monitor de ieșire configurat în `nav2v3/nav2.yaml` este
   `/nav2/cmd_vel_safe` (motorul se abonează exact acolo). Este configurația
-  originală din v3, dar merită confirmată pe robotul tău.
+  originală din v4, dar merită confirmată pe robotul tău.
 - Comportamentul teleop: pagina dashboardului pornește propriul
   `teleop_twist_keyboard` într-un pseudo-terminal (RUN → „Activează teleop" →
   tastează cu pagina focalizată); nu e „navigare" Nav2, dar testează-l separat

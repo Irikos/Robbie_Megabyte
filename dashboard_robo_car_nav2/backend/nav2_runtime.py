@@ -16,7 +16,7 @@ from typing import Any, Callable, Optional
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import PoseStamped, TransformStamped, Twist
-from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.msg import OccupancyGrid, Odometry, Path as NavPath
 from nav2_msgs.action import ComputePathToPose, NavigateToPose, Spin
 from nav2_msgs.msg import SpeedLimit
 from rclpy.action import ActionClient
@@ -145,6 +145,11 @@ class Nav2Runtime:
         self.scan_subscription = node.create_subscription(
             LaserScan, "/scan_raw", self._filter_scan, scan_qos
         )
+        # PlannerServer publică aici fiecare rezultat ComputePathToPose, inclusiv
+        # planul refăcut la 2 Hz de behavior tree când costmap-ul se schimbă.
+        self.plan_subscription = node.create_subscription(
+            NavPath, "/plan", self._live_plan, 10
+        )
         self.safe_cmd_subscription = node.create_subscription(
             Twist, "/nav2/cmd_vel_safe", self._safe_cmd, 10
         )
@@ -180,12 +185,18 @@ class Nav2Runtime:
         self._goal_handle = None
         self._paused_goal: Optional[dict[str, float]] = None
         self._forced_failure = ""
+        self._plan_at = 0.0
+        self._plan_revision = 0
+        self._replan_count = 0
         self._status = {
             "state": "idle",
             "message": "Nav2 este în așteptare",
             "driver": "nav2",
             "goal": None,
             "path": [],
+            "path_live": False,
+            "path_source": "none",
+            "path_distance": 0.0,
             "remaining": None,
             "recoveries": 0,
         }
@@ -253,6 +264,15 @@ class Nav2Runtime:
                 else round(time.monotonic() - self._source_cmd_at["nav2"], 3)
             )
             result["nav2_velocity"] = list(self._source_velocity["nav2"])
+            result["path_revision"] = self._plan_revision
+            result["replan_count"] = self._replan_count
+            result["path_updated_age"] = (
+                None if not self._plan_at
+                else round(time.monotonic() - self._plan_at, 3)
+            )
+            result["path_live"] = bool(result.get("path_live")) and (
+                result.get("state") in self.ACTIVE_STATES
+            )
             return result
 
     def safe_velocity(self) -> tuple[tuple[float, float, float], float]:
@@ -377,6 +397,44 @@ class Nav2Runtime:
         with self.lock:
             self._scan_at = time.monotonic()
             self._front_clearance = None if math.isinf(front_clearance) else front_clearance
+
+
+
+    def _live_plan(self, message: NavPath) -> None:
+        """Păstrează exact planul global publicat live de PlannerServer."""
+        if message.header.frame_id and message.header.frame_id != "map":
+            return
+        points = [
+            [float(item.pose.position.x), float(item.pose.position.y)]
+            for item in message.poses
+            if math.isfinite(float(item.pose.position.x))
+            and math.isfinite(float(item.pose.position.y))
+        ]
+        if len(points) < 2:
+            return
+        distance = sum(
+            math.hypot(second[0] - first[0], second[1] - first[1])
+            for first, second in zip(points, points[1:])
+        )
+        now = time.monotonic()
+        with self.lock:
+            state = str(self._status.get("state") or "idle")
+            active = state in self.ACTIVE_STATES
+            previous_live = bool(self._status.get("path_live"))
+            self._plan_revision += 1
+            if active and previous_live:
+                self._replan_count += 1
+            self._plan_at = now
+            self._status.update({
+                "path": points,
+                "path_live": active,
+                "path_source": "nav2_replan" if active and previous_live else "nav2_plan",
+                "path_distance": distance,
+            })
+            snapshot = dict(self._status)
+        if self.state_callback:
+            self.state_callback(snapshot)
+
 
     def publish_map(
         self,
@@ -509,8 +567,11 @@ class Nav2Runtime:
         distance = sum(
             math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(points, points[1:])
         )
-        self._set_status(state="previewed", message="Ruta Nav2 este pregătită", path=points,
-                         remaining=distance, goal={"x": x, "y": y, "yaw": yaw})
+        self._set_status(
+            state="previewed", message="Ruta Nav2 este pregătită", path=points,
+            path_live=False, path_source="preview", path_distance=distance,
+            remaining=distance, goal={"x": x, "y": y, "yaw": yaw},
+        )
         return {"points": points, "distance": distance}
 
     def set_speed_limit(self, speed: float) -> None:
@@ -528,8 +589,12 @@ class Nav2Runtime:
         goal = NavigateToPose.Goal()
         goal.pose = self._pose(x, y, yaw)
         self.set_speed_limit(speed)
-        self._set_status(state="starting", message="Nav2 acceptă destinația", goal=target,
-                         remaining=None, recoveries=0)
+        with self.lock:
+            self._replan_count = 0
+        self._set_status(
+            state="starting", message="Nav2 acceptă destinația", goal=target,
+            path_live=False, path_source="preview", remaining=None, recoveries=0,
+        )
         handle = self._wait_future(
             self.navigate_client.send_goal_async(goal, feedback_callback=self._feedback), 3.0
         )
@@ -689,6 +754,7 @@ class Nav2Runtime:
         self._set_status(
             state="paused" if pause and accepted else "cancelled",
             message="Ruta Nav2 este în pauză" if pause and accepted else "Ruta Nav2 a fost oprită",
+            path_live=False,
         )
         return accepted
 

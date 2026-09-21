@@ -5,7 +5,7 @@ import threading
 
 import pytest
 
-from nav2_runtime import occupancy_from_points
+from nav2_runtime import Nav2Runtime, occupancy_from_points
 from motion_adapter import BodyFrameTransform, VelocityLimits, ros_twist_to_unitree
 from server import (
     NAV_ANGULAR_LIMIT,
@@ -231,6 +231,64 @@ def test_dynamic_obstacle_replanning_does_not_erase_live_obstacles():
     assert "ComputePathToPose" in tree
     assert "FollowPath" in tree
     assert "ClearEntireCostmap" not in tree
+
+
+def _nav_path(points):
+    return SimpleNamespace(
+        header=SimpleNamespace(frame_id="map"),
+        poses=[
+            SimpleNamespace(pose=SimpleNamespace(position=SimpleNamespace(x=x, y=y)))
+            for x, y in points
+        ],
+    )
+
+
+def test_live_nav2_plan_replaces_displayed_route_and_counts_replans():
+    runtime = Nav2Runtime.__new__(Nav2Runtime)
+    runtime.lock = threading.RLock()
+    runtime.state_callback = None
+    runtime._plan_at = 0.0
+    runtime._plan_revision = 0
+    runtime._replan_count = 0
+    runtime._status = {"state": "navigating", "path": [], "path_live": False}
+
+    runtime._live_plan(_nav_path([(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)]))
+    assert runtime._status["path"] == [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0]]
+    assert runtime._status["path_live"] is True
+    assert runtime._plan_revision == 1
+    assert runtime._replan_count == 0
+
+    runtime._live_plan(_nav_path([(0.1, 0.0), (0.8, 0.6), (2.0, 0.0)]))
+    assert runtime._status["path"] == [[0.1, 0.0], [0.8, 0.6], [2.0, 0.0]]
+    assert runtime._status["path_source"] == "nav2_replan"
+    assert runtime._plan_revision == 2
+    assert runtime._replan_count == 1
+
+
+def test_v4_frontend_consumes_live_nav2_path():
+    runtime = (ROOT / "backend" / "nav2_runtime.py").read_text(encoding="utf-8")
+    frontend = (ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+    assert 'NavPath, "/plan", self._live_plan' in runtime
+    assert "navigation.path_revision" in frontend
+    assert "navigation.path_live" in frontend
+    assert "updateLiveNavigationPath(navigation)" in frontend
+    assert 'ctx.strokeStyle = "#fff200"' in frontend
+    assert "ctx.lineWidth = 20" in frontend
+    assert "ctx.lineWidth = 5" in frontend
+    assert 'routePreview.live ? [] : [20, 12]' in frontend
+    car_frontend = (ROOT / "frontend" / "car.js").read_text(encoding="utf-8")
+    assert "car.path_revision" in car_frontend
+    assert "car-path-live" in car_frontend
+
+
+def test_v4_loads_textured_car_model_with_fallback():
+    page = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    view3d = (ROOT / "frontend" / "view3d.js").read_text(encoding="utf-8")
+    assert "OBJLoader.js" in page
+    assert 'const assetRoot = "/static/assets/car/model_masina"' in view3d
+    assert "`${assetRoot}/3DModel.obj`" in view3d
+    assert "`${assetRoot}/3DModel.jpg`" in view3d
+    assert "carFallbackMesh.visible = false" in view3d
 
 
 def test_nav2_watchdog_distinguishes_replanning_from_broken_safety_pipeline():
