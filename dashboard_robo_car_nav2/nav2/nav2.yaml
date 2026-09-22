@@ -1,3 +1,17 @@
+smoother_server:
+  ros__parameters:
+    use_sim_time: false
+    smoother_plugins: [SimpleSmoother]
+    SimpleSmoother:
+      plugin: nav2_smoother::SimpleSmoother
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+      refinement_num: 2
+      w_data: 0.3
+      w_smooth: 0.2
+
+
 bt_navigator:
   ros__parameters:
     use_sim_time: false
@@ -83,15 +97,15 @@ controller_server:
       yaw_goal_tolerance: 3.20
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
-      desired_linear_vel: 0.80 # 0.80
-      lookahead_dist: 0.40
+      desired_linear_vel: 0.5 # 0.80
+      lookahead_dist: 0.6
       # Humble RPP decide rotația finală după distanța la lookahead point.
       # Trebuie să rămână STRICT peste xy_goal_tolerance (0.25), inclusiv
       # când robotul stă pe loc, altfel rotește spre yaw final departe de goal.
-      min_lookahead_dist: 0.35
-      max_lookahead_dist: 0.65
+      min_lookahead_dist: 0.5
+      max_lookahead_dist: 0.7
       lookahead_time: 0.9
-      use_velocity_scaled_lookahead_dist: true
+      use_velocity_scaled_lookahead_dist: false
       min_approach_linear_velocity: 0.28
       approach_velocity_scaling_dist: 0.70
       use_regulated_linear_velocity_scaling: true
@@ -106,16 +120,17 @@ controller_server:
       # loc cu vx=0. Rotația inițială rămâne numai peste 45°, iar orientarea
       # finală continuă să fie executată separat de goal checker.
       rotate_to_heading_min_angle: 0.785
-      rotate_to_heading_angular_vel: 1.60
+      rotate_to_heading_angular_vel: 0.8
       # RPP limitează rotația și după viteza măsurată din odometrie. Cât timp
       # G1 nu se mișcă, accelerația împărțită la 20 Hz devine plafonul comenzii:
       # 4 dădea 0.20 rad/s, iar 12 doar 0.60 rad/s. Valoarea 32 permite cererea
       # nominală de 1.60 rad/s din primul calcul. Nu este accelerația fizică:
       # velocity_smoother păstrează separat rampa trimisă robotului la 4 rad/s².
-      max_angular_accel: 32.00
+      max_angular_accel: 16.00
       allow_reversing: false
       use_interpolation: true
       transform_tolerance: 0.20
+      curvature_lookahead_dist: 0.6
 
 local_costmap:
   local_costmap:
@@ -129,7 +144,7 @@ local_costmap:
       width: 5
       height: 5
       resolution: 0.05
-      footprint: "[[0.34, 0.30], [0.34, -0.30], [-0.25, -0.30], [-0.25, 0.30]]"
+      footprint: "[[0.15, 0.33], [0.15, -0.33], [-0.15, -0.33], [-0.15, 0.33]]"
       footprint_padding: 0.01
       plugins: [obstacle_layer, inflation_layer]
       obstacle_layer:
@@ -150,7 +165,7 @@ local_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         enabled: true
-        inflation_radius: 0.28
+        inflation_radius: 0.5
         cost_scaling_factor: 8.0
       always_send_full_costmap: true
 
@@ -164,7 +179,7 @@ global_costmap:
       robot_base_frame: base_link
       resolution: 0.05
       track_unknown_space: false
-      footprint: "[[0.34, 0.30], [0.34, -0.30], [-0.25, -0.30], [-0.25, 0.30]]" # "[[0.34, 0.25], [0.34, -0.25], [-0.25, -0.25], [-0.25, 0.25]]"
+      footprint: "[[0.15, 0.33], [0.15, -0.33], [-0.15, -0.33], [-0.15, 0.33]]" # "[[0.34, 0.25], [0.34, -0.25], [-0.25, -0.25], [-0.25, 0.25]]"
       footprint_padding: 0.01
       plugins: [static_layer, obstacle_layer, inflation_layer]
       static_layer:
@@ -189,7 +204,7 @@ global_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         enabled: true
-        inflation_radius: 0.28
+        inflation_radius: 0.5
         cost_scaling_factor: 8.0
       always_send_full_costmap: true
 
@@ -221,11 +236,11 @@ behavior_server:
     robot_base_frame: base_link
     transform_tolerance: 0.30
     simulate_ahead_time: 1.5
-    max_rotational_vel: 1.60
-    min_rotational_vel: 0.35
+    max_rotational_vel: 0.75
+    min_rotational_vel: 0.6
     # Evită același plafon dependent de odometrie în behavior-ul Spin;
     # smoother-ul de după selector păstrează accelerația efectivă la 4 rad/s².
-    rotational_acc_lim: 32.0
+    rotational_acc_lim: 16.0
 
 velocity_smoother:
   ros__parameters:
@@ -264,7 +279,7 @@ collision_monitor:
     polygons: [DirectionalApproach]
     DirectionalApproach:
       type: polygon
-      points: [0.35, 0.31, 0.35, -0.31, -0.26, -0.31, -0.26, 0.31]
+      points: [0.15, 0.33, 0.15, -0.33, -0.15, -0.33, -0.15, 0.33]
       action_type: approach
       time_before_collision: 1.00
       simulation_time_step: 0.05

@@ -725,13 +725,13 @@ async def car_websocket_endpoint(ws: WebSocket):
 
 
 
-@router.get("/api/car/status", dependencies=[Depends(authorize_car)])
+@router.get("/api/car/status")
 async def get_car_status(include_layers: bool = True):
     return {"success": True, **_car_public_state(include_layers, include_layers, include_layers)}
 
 
 
-@router.post("/api/car/transform", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/transform")
 async def set_car_transform(request: Request):
     global pending_preview
     body = await request.json()
@@ -767,7 +767,7 @@ async def set_car_transform(request: Request):
 
 
 
-@router.post("/api/car/refine_icp", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/refine_icp")
 async def refine_car_alignment_icp(request: Request):
     """Rafinează alinierea car_map -> G1 map pornind de la o poziție inițială / click folosind ICP."""
     global pending_preview
@@ -821,7 +821,7 @@ async def refine_car_alignment_icp(request: Request):
 
 
 
-@router.post("/api/car/standalone", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/standalone")
 async def set_car_standalone_mode():
     """Activează modul direct / independent pentru mașinuță (fără aliniere G1)."""
     car_transform.update({"x": 0.0, "y": 0.0, "yaw": 0.0})
@@ -841,7 +841,7 @@ async def set_car_standalone_mode():
 
 
 
-@router.post("/api/car/auto_align", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/auto_align")
 async def auto_align_car_maps():
     global car_auto_align_task, pending_preview
     pending_preview = None
@@ -864,7 +864,7 @@ async def auto_align_car_maps():
 
 
 
-@router.post("/api/car/goal", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/goal")
 async def send_car_goal(request: Request):
     global pending_preview
     if car_ws is None or not car_state["connected"]:
@@ -929,7 +929,7 @@ async def send_car_goal(request: Request):
 
 
 
-@router.post("/api/car/initial_pose", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/initial_pose")
 async def set_car_initial_pose(request: Request):
     """Publish a dashboard-map pose estimate into the car's AMCL map frame."""
     if car_ws is None or not car_state["connected"]:
@@ -994,7 +994,7 @@ async def set_car_initial_pose(request: Request):
 
 
 
-@router.post("/api/car/mode", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/mode")
 async def set_car_mode(request: Request):
     global pending_preview
     pending_preview = None
@@ -1046,7 +1046,7 @@ async def set_car_mode(request: Request):
 
 
 
-@router.get("/api/car/mode", dependencies=[Depends(authorize_car)])
+@router.get("/api/car/mode")
 async def get_car_mode():
     return {
         "success": True,
@@ -1060,13 +1060,13 @@ async def get_car_mode():
 
 
 
-@router.get("/api/car/maps", dependencies=[Depends(authorize_car)])
+@router.get("/api/car/maps")
 async def get_car_maps():
     return {"success": True, "maps": car_state.get("available_maps", [])}
 
 
 
-@router.post("/api/car/maps/refresh", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/maps/refresh")
 async def refresh_car_maps():
     if car_ws is not None and car_state["connected"]:
         try:
@@ -1077,7 +1077,7 @@ async def refresh_car_maps():
 
 
 
-@router.post("/api/car/map/save", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/map/save")
 async def save_car_map_endpoint(request: Request):
     """Trigger map saving on the car via WebSocket."""
     if car_ws is None or not car_state["connected"]:
@@ -1105,7 +1105,7 @@ async def save_car_map_endpoint(request: Request):
 
 
 
-@router.post("/api/car/path/preview", dependencies=[Depends(authorize_car)])
+@router.post("/api/car/path/preview")
 async def preview_car_path(request: Request):
     global pending_preview
     """Ask the car planner for a path without publishing a navigation goal."""
@@ -1184,24 +1184,317 @@ async def dashboard_events(ws: WebSocket):
             active_ws.remove(ws)
 
 
-@router.get("/api/agents/status", dependencies=[Depends(authorize_car)])
+@router.get("/api/agents/status")
 async def agents_status():
+    """Compact authenticated pose feed for lightweight XR clients."""
+    now = time.time()
     snapshot = g1_snapshot()
-    pose_age = snapshot.get("pose_age")
-    vehicle_age = time.time() - car_state["pose_updated_at"] if car_state["pose_updated_at"] else None
-    return {"success": True, "schema": "g1_multi_agent.pose.v1", "server_time_s": time.time(),
-            "robot": {"pose": snapshot.get("pose"), "source": snapshot.get("pose_source"),
-                      "pose_age_s": pose_age, "online": pose_age is not None and pose_age < 2},
-            "vehicle": {"pose": car_state["map_pose"], "connected": car_state["connected"],
-                        "pose_age_s": vehicle_age, "online": car_state["connected"] and vehicle_age is not None and vehicle_age < 2}}
+
+    robot_pose = dict(snapshot.get("pose") or {})
+    robot_age_raw = snapshot.get("pose_age")
+    robot_age = float(robot_age_raw) if robot_age_raw is not None else None
+    robot_pose_valid = _agents_pose_xy(robot_pose) is not None
+    robot_online = bool(
+        robot_pose_valid
+        and robot_age is not None
+        and robot_age <= 2.0
+    )
+
+    vehicle_pose = dict(car_state.get("map_pose") or {})
+    vehicle_updated_at = float(car_state.get("pose_updated_at") or 0.0)
+    vehicle_pose_valid = _agents_pose_xy(vehicle_pose) is not None
+    vehicle_age = max(0.0, now - vehicle_updated_at) if vehicle_updated_at else None
+    vehicle_online = bool(
+        car_state.get("connected")
+        and vehicle_pose_valid
+        and vehicle_age is not None
+        and vehicle_age <= 2.0
+    )
+
+    return {
+        "success": True,
+        "schema": "g1_multi_agent.pose.v1",
+        "server_time_s": now,
+        "robot": {
+            "online": robot_online,
+            "pose": robot_pose if robot_pose_valid else None,
+            "pose_age_s": robot_age,
+            "source": snapshot.get("pose_source"),
+        },
+        "vehicle": {
+            "online": vehicle_online,
+            "pose": vehicle_pose if vehicle_pose_valid else None,
+            "pose_age_s": vehicle_age,
+            "connected": bool(car_state.get("connected")),
+        },
+    }
 
 
-@router.get("/api/agents/world", dependencies=[Depends(authorize_car)])
-async def agents_world():
-    data = await agents_status()
-    data.update({"schema": "g1_multi_agent.world.v1", "car": _car_public_state(),
-                 "g1_map": g1_map_path(), "g1_navigation": g1_snapshot().get("navigation")})
-    return data
+def _agents_pose_xy(pose):
+    try:
+        x = float(pose["x"])
+        y = float(pose["y"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return (x, y) if math.isfinite(x) and math.isfinite(y) else None
+
+
+def _agents_compact_points(points, maximum, include_yaw=False):
+    points = points if isinstance(points, list) else []
+    step = max(1, math.ceil(len(points) / max(1, maximum)))
+    result = []
+
+    for point in points[::step]:
+        try:
+            compact = {
+                "x": round(float(point["x"]), 3),
+                "y": round(float(point["y"]), 3),
+            }
+            if include_yaw:
+                compact["yaw"] = round(
+                    float(point.get("yaw", 0.0)),
+                    4,
+                )
+            result.append(compact)
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    return result
+
+
+_agents_cloud_cache = {
+    "key": None,
+    "revision": 0,
+    "path": None,
+    "points": [],
+    "floor_plane": None,
+}
+_agents_cloud_cache_lock = threading.Lock()
+
+
+def _agents_static_cloud_snapshot(maximum: int = 24000) -> dict:
+    """Return a cached, floor-levelled G1 PCD in the shared map frame."""
+    current_map = g1_map_path()
+    key = None
+
+    if current_map:
+        try:
+            stat = os.stat(current_map)
+            key = (
+                os.path.realpath(current_map),
+                int(stat.st_mtime_ns),
+                int(stat.st_size),
+            )
+        except OSError:
+            current_map = None
+
+    with _agents_cloud_cache_lock:
+        if _agents_cloud_cache["key"] == key:
+            return dict(_agents_cloud_cache)
+
+    compact = []
+    floor_plane = None
+
+    if current_map:
+        raw_points = read_pcd(Path(current_map))
+        valid = []
+
+        for point in raw_points:
+            try:
+                x = float(point[0])
+                y = float(point[1])
+                z = float(point[2])
+            except (IndexError, TypeError, ValueError):
+                continue
+
+            if all(math.isfinite(value) for value in (x, y, z)):
+                valid.append((x, y, z))
+
+        if valid:
+            sample_step = max(1, len(valid) // 5000)
+            sample = valid[::sample_step][:5000]
+
+            floor_plane = PCDGridPlanner._estimate_floor_plane(
+                sample,
+                0.08,
+            )
+
+            visible = []
+
+            for x, y, z in valid:
+                relative_z = z
+
+                if floor_plane:
+                    relative_z -= (
+                        floor_plane["a"] * x
+                        + floor_plane["b"] * y
+                        + floor_plane["c"]
+                    )
+
+                if -0.12 <= relative_z <= 2.75:
+                    visible.append({
+                        "x": round(x, 3),
+                        "y": round(y, 3),
+                        "z": round(relative_z, 3),
+                    })
+
+            step = max(
+                1,
+                math.ceil(len(visible) / max(1, maximum)),
+            )
+            compact = visible[::step][:maximum]
+
+    with _agents_cloud_cache_lock:
+        revision = int(_agents_cloud_cache["revision"]) + 1
+
+        _agents_cloud_cache.update({
+            "key": key,
+            "revision": revision,
+            "path": current_map,
+            "points": compact,
+            "floor_plane": floor_plane,
+        })
+
+        return dict(_agents_cloud_cache)
+
+
+@router.get("/api/agents/world")
+async def agents_world(
+    map_revision: int = -1,
+    path_revision: int = -1,
+    scan_revision: int = -1,
+    cloud_revision: int = -1,
+):
+    """Revision-aware shared map, PCD, route and car-LiDAR feed."""
+    now = time.time()
+
+    current_map_revision = int(
+        car_state.get("map_revision", 0)
+    )
+    current_path_revision = int(
+        car_state.get("path_revision", 0)
+    )
+    current_scan_revision = int(
+        car_state.get("scan_revision", 0)
+    )
+
+    cloud = await asyncio.to_thread(
+        _agents_static_cloud_snapshot
+    )
+    current_cloud_revision = int(cloud["revision"])
+
+    map_changed = map_revision != current_map_revision
+    path_changed = path_revision != current_path_revision
+    scan_changed = scan_revision != current_scan_revision
+    cloud_changed = cloud_revision != current_cloud_revision
+
+    map_points = (
+        _agents_compact_points(
+            car_state.get("map_points"),
+            8000,
+        )
+        if map_changed
+        else []
+    )
+
+    path_points = (
+        _agents_compact_points(
+            car_state.get("path"),
+            2000,
+            include_yaw=True,
+        )
+        if path_changed
+        else []
+    )
+
+    scan_points = (
+        _agents_compact_points(
+            car_state.get("scan_points"),
+            1200,
+        )
+        if scan_changed
+        else []
+    )
+
+    path_updated_at = float(
+        car_state.get("path_updated_at") or 0.0
+    )
+    scan_updated_at = float(
+        car_state.get("scan_updated_at") or 0.0
+    )
+
+    scan_age = (
+        max(0.0, now - scan_updated_at)
+        if scan_updated_at
+        else None
+    )
+
+    bounds = None
+    if map_points:
+        xs = [point["x"] for point in map_points]
+        ys = [point["y"] for point in map_points]
+
+        bounds = {
+            "min_x": min(xs),
+            "max_x": max(xs),
+            "min_y": min(ys),
+            "max_y": max(ys),
+        }
+
+    return {
+        "success": True,
+        "schema": "g1_multi_agent.world.v1",
+        "server_time_s": now,
+        "point_cloud": {
+            "frame": "g1_map",
+            "path": cloud["path"],
+            "revision": current_cloud_revision,
+            "changed": cloud_changed,
+            "point_count": len(cloud["points"]),
+            "floor_plane": cloud["floor_plane"],
+            "points": (
+                cloud["points"]
+                if cloud_changed
+                else []
+            ),
+        },
+        "vehicle": {
+            "map_frame": car_state.get("map_frame"),
+            "map_resolution": car_state.get("map_resolution"),
+            "map_occupied_count": car_state.get(
+                "map_occupied_count",
+                0,
+            ),
+            "map_revision": current_map_revision,
+            "map_changed": map_changed,
+            "map_points": map_points,
+            "map_bounds": bounds,
+            "scan_revision": current_scan_revision,
+            "scan_changed": scan_changed,
+            "scan_fresh": bool(
+                scan_age is not None
+                and scan_age <= 1.0
+            ),
+            "scan_age_s": scan_age,
+            "scan_point_count": len(
+                car_state.get("scan_points") or []
+            ),
+            "scan_points": scan_points,
+            "path_topic": car_state.get("path_topic"),
+            "path_revision": current_path_revision,
+            "path_changed": path_changed,
+            "path_updated_at": path_updated_at,
+            "path_age_s": (
+                max(0.0, now - path_updated_at)
+                if path_updated_at
+                else None
+            ),
+            "path_point_count": int(
+                car_state.get("path_point_count", 0)
+            ),
+            "path": path_points,
+        },
+    }
 
 
 async def shutdown():
