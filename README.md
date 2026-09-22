@@ -12,7 +12,7 @@ dashboard de navigație Nav2 care merge, plus cum folosești efectiv aplicația
 ---
 
 <details>
-<summary><h2>0. Versiuni necesare</h2></summary>
+<summary><h3>0. Versiuni necesare</h3></summary>
 
 | Componentă | Versiune |
 |---|---|
@@ -29,7 +29,7 @@ dashboard de navigație Nav2 care merge, plus cum folosești efectiv aplicația
 </details>
 
 <details>
-<summary><h1>PARTEA A — Instalare pe robot</h1></summary>
+<summary><h3>PARTEA A — Instalare pe robot</h3></summary>
 
 <details>
 <summary><h3>1. Pachete de sistem</h3></summary>
@@ -235,7 +235,7 @@ Pornește automat și stack-ul Nav2 și camera. În terminal apare linkul cu tok
 </details>
 
 <details>
-<summary><h1>PARTEA B — Pornire din laptop</h1></summary>
+<summary><h3>PARTEA B — Pornire din laptop</h3></summary>
 
 Nu instalezi nimic pe laptop; te conectezi la robot și pornești acolo:
 
@@ -251,7 +251,7 @@ Apoi deschizi în browserul de pe laptop linkul afișat în terminal:
 </details>
 
 <details>
-<summary><h1>PARTEA C — Cum folosești aplicația (pas cu pas)</h1></summary>
+<summary><h3>PARTEA C — Cum folosești aplicația (pas cu pas)</h3></summary>
 
 Ordinea: **pregătești robotul -> localizezi robotul pe hartă -> localizezi mașinuța
 -> confirmi mișcarea din taste -> pornești navigația autonomă.**
@@ -342,7 +342,7 @@ Mod robot: Run  ->  Încarcă+localizează robotul (poziție + orientare)
 </details>
 
 <details>
-<summary><h1>Depanare rapidă</h1></summary>
+<summary><h3>Depanare rapidă</h3></summary>
 
 | Problemă | Ce faci |
 |---|---|
@@ -358,7 +358,7 @@ Mod robot: Run  ->  Încarcă+localizează robotul (poziție + orientare)
 </details>
 
 <details>
-<summary><h1>Rezumat </h1></summary>
+<summary><h3>Rezumat </h3></summary>
 
 1. ROS 2 Humble + Nav2 (secțiunile 2–3)
 2. `unitree_ros2/cyclonedds_ws` + `cyclonedds.xml` (secțiunea 4)
