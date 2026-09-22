@@ -358,7 +358,7 @@ Mod robot: Run  ->  Încarcă+localizează robotul (poziție + orientare)
 </details>
 
 <details>
-<summary><h1>Rezumat minim „ca să meargă"</h1></summary>
+<summary><h1>Rezumat </h1></summary>
 
 1. ROS 2 Humble + Nav2 (secțiunile 2–3)
 2. `unitree_ros2/cyclonedds_ws` + `cyclonedds.xml` (secțiunea 4)
