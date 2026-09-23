@@ -1286,7 +1286,15 @@ async def lifespan(_app: FastAPI):
     velocity_task = asyncio.create_task(velocity_forward_loop())
     car_integration.configure(
         lambda: ros().state(),
-        lambda: str(MAPS / f"{bridge.selected_map}.pcd") if bridge and bridge.selected_map else None,
+        lambda name=None: (
+            str(MAPS / f"{safe_name(name)}.pcd")
+            if name and (MAPS / f"{safe_name(name)}.pcd").is_file()
+            else str(MAPS / f"{bridge.selected_map}.pcd")
+            if bridge and bridge.selected_map
+            and (MAPS / f"{bridge.selected_map}.pcd").is_file()
+            else None
+        ),
+        lambda: ros().scan2d_points(70000),
     )
     camera.start()
     semantic_task = asyncio.create_task(semantic_chair_loop())

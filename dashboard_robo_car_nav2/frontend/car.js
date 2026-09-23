@@ -92,7 +92,7 @@
   }
 
   bind('car-refine-icp', async () => {
-    const res = await post('/api/car/refine_icp', pose('car-tf'));
+    const res = await post('/api/car/refine_icp', {...pose('car-tf'), g1_map:$('maps').value, car_map:$('car-map-file').value});
     if (res && res.transform) {
       $('car-tf-x').value = res.transform.x.toFixed(2);
       $('car-tf-y').value = res.transform.y.toFixed(2);
@@ -109,7 +109,7 @@
     toast(`TF Yaw inversat cu 180° ➔ ${flipped.toFixed(1)}°`);
     requestDraw();
   });
-  bind('car-align', () => post('/api/car/auto_align'));
+  bind('car-align', () => post('/api/car/auto_align', {g1_map:$('maps').value, car_map:$('car-map-file').value}));
   bind('car-initial-pose', () => post('/api/car/initial_pose', pose('car-pose')));
   bind('car-refresh-maps', () => post('/api/car/maps/refresh'));
   bind('car-save-map', () => post('/api/car/map/save', {map_name:$('car-map-name').value}));

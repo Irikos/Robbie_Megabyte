@@ -295,6 +295,144 @@ class CarMapManager:
             daemon=True
         ).start()
 
+    def load_map_async(self, map_file: str):
+        # Load a saved occupancy map for stitching without starting AMCL.
+        threading.Thread(
+            target=self._run_load_map,
+            args=(map_file,),
+            daemon=True,
+        ).start()
+
+    @staticmethod
+    def _read_pgm(path: str):
+        with open(path, "rb") as stream:
+            raw = stream.read()
+        position = 0
+
+        def token():
+            nonlocal position
+            while position < len(raw):
+                if raw[position] == 35:
+                    while position < len(raw) and raw[position] not in (10, 13):
+                        position += 1
+                elif chr(raw[position]).isspace():
+                    position += 1
+                else:
+                    break
+            start = position
+            while (
+                position < len(raw)
+                and not chr(raw[position]).isspace()
+                and raw[position] != 35
+            ):
+                position += 1
+            return raw[start:position]
+
+        magic = token()
+        width, height, maximum = int(token()), int(token()), int(token())
+        if magic not in (b"P2", b"P5") or width <= 0 or height <= 0 or maximum <= 0:
+            raise ValueError("Format PGM invalid")
+        if magic == b"P2":
+            pixels = [int(token()) for _ in range(width * height)]
+        else:
+            if position >= len(raw) or not chr(raw[position]).isspace():
+                raise ValueError("Separator PGM invalid")
+            first_separator = raw[position]
+            position += 1
+            if (
+                first_separator == 13
+                and position < len(raw)
+                and raw[position] == 10
+            ):
+                position += 1
+            bytes_per_pixel = 1 if maximum < 256 else 2
+            image = raw[position:position + width * height * bytes_per_pixel]
+            if len(image) != width * height * bytes_per_pixel:
+                raise ValueError("Date PGM incomplete")
+            pixels = list(image) if bytes_per_pixel == 1 else [
+                (image[index] << 8) | image[index + 1]
+                for index in range(0, len(image), 2)
+            ]
+        return width, height, maximum, pixels
+
+    def _run_load_map(self, map_file: str):
+        try:
+            import yaml
+
+            resolved = os.path.realpath(os.path.expanduser(str(map_file or "")))
+            if (
+                not resolved.endswith((".yaml", ".yml"))
+                or not os.path.isfile(resolved)
+            ):
+                raise ValueError("Fișierul YAML al hărții nu există")
+            with open(resolved, "r", encoding="utf-8") as stream:
+                metadata = yaml.safe_load(stream) or {}
+            image_name = str(metadata.get("image") or "").strip()
+            if not image_name:
+                raise ValueError("Câmpul image lipsește din YAML")
+            image_path = os.path.realpath(
+                os.path.join(os.path.dirname(resolved), image_name)
+            )
+            if not image_path.lower().endswith(".pgm"):
+                raise ValueError(
+                    "Încărcarea fără localizare acceptă momentan hărți PGM"
+                )
+            width, height, maximum, pixels = self._read_pgm(image_path)
+            resolution = float(metadata["resolution"])
+            origin = list(metadata.get("origin") or [0.0, 0.0, 0.0])
+            occupied_threshold = float(metadata.get("occupied_thresh", 0.65))
+            negate = bool(int(metadata.get("negate", 0)))
+            occupied_indices = []
+            for image_index, pixel in enumerate(pixels):
+                occupancy = (
+                    pixel / maximum if negate else 1.0 - pixel / maximum
+                )
+                if occupancy > occupied_threshold:
+                    image_row, column = divmod(image_index, width)
+                    grid_row = height - image_row - 1
+                    occupied_indices.append(grid_row * width + column)
+            yaw = float(origin[2]) if len(origin) > 2 else 0.0
+            map_data = {
+                "frame_id": MAP_FRAME,
+                "width": width,
+                "height": height,
+                "resolution": resolution,
+                "origin": {
+                    "position": {
+                        "x": float(origin[0]),
+                        "y": float(origin[1]),
+                        "z": 0.0,
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": math.sin(yaw / 2.0),
+                        "w": math.cos(yaw / 2.0),
+                    },
+                },
+                "occupied_indices": occupied_indices,
+                "map_file": resolved,
+                "map_source": "saved_file",
+            }
+            self._enqueue("/map", map_data)
+            self._enqueue("/map_load_status", {
+                "status": "success",
+                "map_file": resolved,
+                "occupied_count": len(occupied_indices),
+            })
+            self._logger.info(
+                f"Loaded saved map for stitching: {resolved}"
+            )
+        except Exception as exc:
+            self._logger.error(
+                f"Failed to load map for stitching: {exc}"
+            )
+            self._enqueue("/map_load_status", {
+                "status": "error",
+                "map_file": str(map_file or ""),
+                "error": str(exc),
+            })
+
     def _run_save_map(self, map_name: str, map_dir: str):
         try:
             if not map_name:
@@ -676,6 +814,8 @@ class WsBridgeNode(Node):
                 )
             elif command_type == 'list_maps':
                 self._map_manager.broadcast_maps_list()
+            elif command_type == 'load_map_for_stitching':
+                self._map_manager.load_map_async(data.get('map_file', ''))
 
     def _handle_goal_pose(self, data: dict):
         """

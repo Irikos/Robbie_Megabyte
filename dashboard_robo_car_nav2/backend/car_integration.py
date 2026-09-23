@@ -30,7 +30,8 @@ def authorize_car(x_dashboard_token: str = Header(default=""), x_g1_token: str =
 
 router = APIRouter()
 g1_snapshot = lambda: {}
-g1_map_path = lambda: None
+g1_map_path = lambda _name=None: None
+g1_map_points = lambda: []
 pending_preview = None
 g1_map_name = None
 
@@ -48,9 +49,10 @@ def alignment_ready():
     return car_alignment.get("status") in {"manual", "aligned", "standalone", "direct"}
 
 
-def configure(snapshot, map_path):
-    global g1_snapshot, g1_map_path
+def configure(snapshot, map_path, map_points=None):
+    global g1_snapshot, g1_map_path, g1_map_points
     g1_snapshot, g1_map_path = snapshot, map_path
+    g1_map_points = map_points or (lambda: [])
 
 
 def _project_g1_pcd_for_car_alignment(map_path: str) -> List[tuple]:
@@ -106,6 +108,42 @@ def _project_g1_pcd_for_car_alignment(map_path: str) -> List[tuple]:
             "points": points,
         })
     return list(points)
+
+
+def _g1_alignment_target(
+    map_name: Optional[str] = None,
+) -> tuple[List[tuple], Optional[str], str]:
+    """Alege geometria G1 fără să depindă de localizarea robotului."""
+    robot_mapping = (g1_snapshot() or {}).get("mode") == "mapping"
+    try:
+        map_path = None if robot_mapping else g1_map_path(map_name)
+    except TypeError:
+        # Compatibilitate cu providerii vechi folosiți în teste/deploy-uri.
+        map_path = None if robot_mapping else g1_map_path()
+    if map_path:
+        return (
+            _project_g1_pcd_for_car_alignment(map_path),
+            str(map_path),
+            "saved_map",
+        )
+
+    points = []
+    for point in g1_map_points() or []:
+        try:
+            if isinstance(point, dict):
+                x, y = float(point["x"]), float(point["y"])
+            else:
+                x, y = float(point[0]), float(point[1])
+        except (IndexError, KeyError, TypeError, ValueError):
+            continue
+        if math.isfinite(x) and math.isfinite(y):
+            points.append((x, y))
+    if len(points) < 20:
+        raise ValueError(
+            "Selectează un PCD G1 sau pornește mappingul până există "
+            "suficiente puncte în ambele hărți."
+        )
+    return points, None, "live_mapping"
 
 
 active_ws: List[WebSocket] = []
@@ -170,6 +208,8 @@ car_state = {
     "map_frame": None,
     "map_updated_at": 0.0,
     "map_revision": 0,
+    "map_source": None,
+    "map_load_error": None,
     "current_mode": "none",
     "mode_status": "stopped",
     "mode_details": "",
@@ -269,6 +309,7 @@ def _car_public_state(
         "mode_status": car_state.get("mode_status", "stopped"),
         "mode_details": car_state.get("mode_details", ""),
         "map_file": car_state.get("map_file", "/root/humble_ws/harta_masina_1.yaml"),
+        "map_source": car_state.get("map_source"),
         "slam_params_file": car_state.get("slam_params_file", "/root/humble_ws/custom_params.yaml"),
         "available_maps": car_state.get("available_maps", [{"name": "harta_masina_1.yaml", "path": "/root/humble_ws/harta_masina_1.yaml"}]),
     }
@@ -470,6 +511,10 @@ def _car_update_map(data: dict) -> None:
     car_state["map_native_resolution"] = resolution
     car_state["map_occupied_count"] = len(occupied_indices)
     car_state["map_frame"] = str(data.get("frame_id") or "map")
+    car_state["map_source"] = str(data.get("map_source") or "ros_topic")
+    if data.get("map_file"):
+        car_state["map_file"] = str(data["map_file"])
+    car_state["map_load_error"] = None
     car_state["map_updated_at"] = time.time()
     car_state["map_revision"] = int(
         car_state.get("map_revision", 0)
@@ -478,9 +523,8 @@ def _car_update_map(data: dict) -> None:
 
 
 def _compute_car_map_alignment(
-    map_path: str, source_points: List[dict], resolution: float
+    target_points: List[tuple], source_points: List[dict], resolution: float
 ) -> dict:
-    target_points = _project_g1_pcd_for_car_alignment(map_path)
     return align_point_maps(
         target_points,
         source_points,
@@ -567,19 +611,73 @@ def refine_alignment_icp(
 
 
 
-async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
-    """Estimate and, only if validated, apply car_map -> G1 map."""
-    map_path = g1_map_path()
+async def _ensure_car_stitch_map(map_file: Optional[str]) -> None:
+    # During mapping, the current /map is already the desired live map.
+    requested = str(map_file or "").strip()
+    if not requested or car_state.get("current_mode") == "mapping":
+        return
+    if (
+        car_state.get("map_source") == "saved_file"
+        and car_state.get("map_file") == requested
+        and len(car_state.get("map_source_points") or []) >= 20
+    ):
+        return
+    if car_ws is None or not car_state.get("connected"):
+        raise ValueError(
+            "Mașina nu este conectată pentru încărcarea hărții selectate."
+        )
+    previous_revision = int(car_state.get("map_revision", 0))
+    car_state["map_load_error"] = None
+    await car_ws.send_text(json.dumps({
+        "type": "load_map_for_stitching",
+        "map_file": requested,
+    }))
+    deadline = time.monotonic() + 8.0
+    while time.monotonic() < deadline:
+        if car_state.get("map_load_error"):
+            raise ValueError(str(car_state["map_load_error"]))
+        if (
+            int(car_state.get("map_revision", 0)) > previous_revision
+            and car_state.get("map_file") == requested
+        ):
+            return
+        await asyncio.sleep(0.05)
+    raise ValueError(
+        "Mașinuța nu a confirmat încărcarea hărții în 8 secunde."
+    )
+
+
+async def _run_car_auto_alignment(
+    trigger: str = "manual",
+    map_name: Optional[str] = None,
+    car_map_file: Optional[str] = None,
+) -> dict:
+    """Potrivește două geometrii de hartă, independent de localizare."""
+    try:
+        await _ensure_car_stitch_map(car_map_file)
+    except Exception as exc:
+        error = str(exc)
+        car_alignment.update({
+            "status": "waiting",
+            "message": error,
+            "trigger": trigger,
+            "updated_at": time.time(),
+        })
+        return {"success": False, "error": error, **_car_public_state()}
     source_points = list(car_state.get("map_source_points") or [])
-    if not map_path:
-        error = "Încarcă mai întâi harta PCD a robotului G1."
+    if len(source_points) < 20:
+        error = "Aștept o hartă /map cu suficiente celule ocupate de la mașină."
         car_alignment.update({
             "status": "waiting", "message": error,
             "trigger": trigger, "updated_at": time.time(),
         })
         return {"success": False, "error": error, **_car_public_state()}
-    if len(source_points) < 20:
-        error = "Aștept o hartă /map cu suficiente celule ocupate de la mașină."
+    try:
+        target_points, map_path, target_source = await asyncio.to_thread(
+            _g1_alignment_target, map_name
+        )
+    except Exception as exc:
+        error = str(exc)
         car_alignment.update({
             "status": "waiting", "message": error,
             "trigger": trigger, "updated_at": time.time(),
@@ -589,15 +687,17 @@ async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
     car_alignment.clear()
     car_alignment.update({
         "status": "running",
-        "message": "Proiectez PCD-ul și caut trăsături comune…",
+        "message": "Compar geometriile celor două hărți…",
         "trigger": trigger,
+        "robot_map": map_path,
+        "robot_map_source": target_source,
         "updated_at": time.time(),
     })
     await broadcast(_car_public_state(False, False, False))
     try:
         result = await asyncio.to_thread(
             _compute_car_map_alignment,
-            map_path,
+            target_points,
             source_points,
             car_state.get("map_native_resolution") or 0.08,
         )
@@ -615,11 +715,21 @@ async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
         })
         _refresh_car_spatial_layers()
         car_alignment.clear()
-        method_str = "geometrică 2D" if result.get("method") == "geometric_2d" else "trăsături vizuale"
+        method_str = (
+            "geometrică 2D"
+            if result.get("method") == "geometric_2d"
+            else "trăsături vizuale"
+        )
         car_alignment.update({
             "status": "aligned",
-            "message": f"Hărțile au fost potrivite ({method_str}, RMSE={result.get('rmse_m', 0.0):.2f} m, overlap={100.0 * result.get('overlap', 0.0):.1f}%).",
+            "message": (
+                f"Hărțile au fost suprapuse ({method_str}, "
+                f"RMSE={result.get('rmse_m', 0.0):.2f} m, "
+                f"overlap={100.0 * result.get('overlap', 0.0):.1f}%)."
+            ),
             "trigger": trigger,
+            "robot_map": map_path,
+            "robot_map_source": target_source,
             "updated_at": time.time(),
             **result,
         })
@@ -633,13 +743,14 @@ async def _run_car_auto_alignment(trigger: str = "manual") -> dict:
             "status": "failed",
             "message": str(exc),
             "trigger": trigger,
+            "robot_map": map_path,
+            "robot_map_source": target_source,
             "updated_at": time.time(),
             **diagnostics,
         })
         public_state = _car_public_state(False, False, False)
         await broadcast(public_state)
         return {"success": False, "error": str(exc), **public_state}
-
 
 
 @router.websocket("/ws/car")
@@ -707,6 +818,16 @@ async def car_websocket_endpoint(ws: WebSocket):
                         "type": "car_save_map_status",
                         **data,
                     }
+                elif topic == "/map_load_status":
+                    car_state["map_load_error"] = (
+                        data.get("error")
+                        if data.get("status") == "error"
+                        else None
+                    )
+                    public_state = {
+                        "type": "car_map_load_status",
+                        **data,
+                    }
                 else:
                     continue
                 car_state["last_seen"] = time.time()
@@ -769,27 +890,34 @@ async def set_car_transform(request: Request):
 
 @router.post("/api/car/refine_icp")
 async def refine_car_alignment_icp(request: Request):
-    """Rafinează alinierea car_map -> G1 map pornind de la o poziție inițială / click folosind ICP."""
+    """Rafinează suprapunerea hărților fără a cere localizarea vehiculelor."""
     global pending_preview
-    map_path = g1_map_path()
-    source_points = list(car_state.get("map_source_points") or [])
-    if not map_path:
-        return JSONResponse({"success": False, "error": "Încarcă mai întâi harta PCD a robotului G1."}, status_code=400)
-    if len(source_points) < 20:
-        return JSONResponse({"success": False, "error": "Aștept o hartă /map cu suficiente celule de la mașină."}, status_code=400)
-
+    map_name = None
+    car_map_file = None
     try:
         body = await request.json()
+        map_name = str(body.get("g1_map") or "").strip() or None
+        car_map_file = str(body.get("car_map") or "").strip() or None
         init_x = float(body.get("x", car_transform["x"]))
         init_y = float(body.get("y", car_transform["y"]))
-        init_yaw = math.radians(float(body.get("yaw_deg", math.degrees(car_transform["yaw"]))))
+        init_yaw = math.radians(float(
+            body.get("yaw_deg", math.degrees(car_transform["yaw"]))
+        ))
     except Exception:
         init_x = float(car_transform["x"])
         init_y = float(car_transform["y"])
         init_yaw = float(car_transform["yaw"])
 
     try:
-        target_points = await asyncio.to_thread(_project_g1_pcd_for_car_alignment, map_path)
+        await _ensure_car_stitch_map(car_map_file)
+        source_points = list(car_state.get("map_source_points") or [])
+        if len(source_points) < 20:
+            raise ValueError(
+                "Aștept o hartă cu suficiente celule de la mașină."
+            )
+        target_points, map_path, target_source = await asyncio.to_thread(
+            _g1_alignment_target, map_name
+        )
         refined = await asyncio.to_thread(
             refine_alignment_icp,
             target_points,
@@ -808,8 +936,14 @@ async def refine_car_alignment_icp(request: Request):
         car_alignment.clear()
         car_alignment.update({
             "status": "aligned",
-            "message": f"Pereți aliniați precis prin ICP (RMSE={refined['rmse_m']:.2f} m, overlap={100.0 * refined['overlap']:.1f}%).",
+            "message": (
+                f"Pereți aliniați precis prin ICP "
+                f"(RMSE={refined['rmse_m']:.2f} m, "
+                f"overlap={100.0 * refined['overlap']:.1f}%)."
+            ),
             "trigger": "icp_refine",
+            "robot_map": map_path,
+            "robot_map_source": target_source,
             "updated_at": time.time(),
             **refined,
         })
@@ -817,8 +951,10 @@ async def refine_car_alignment_icp(request: Request):
         await broadcast(public_state)
         return {"success": True, **public_state}
     except Exception as exc:
-        return JSONResponse({"success": False, "error": f"Rafinarea ICP a eșuat: {exc}"}, status_code=422)
-
+        return JSONResponse(
+            {"success": False, "error": f"Rafinarea ICP a eșuat: {exc}"},
+            status_code=422,
+        )
 
 
 @router.post("/api/car/standalone")
@@ -842,9 +978,15 @@ async def set_car_standalone_mode():
 
 
 @router.post("/api/car/auto_align")
-async def auto_align_car_maps():
+async def auto_align_car_maps(request: Request):
     global car_auto_align_task, pending_preview
     pending_preview = None
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    map_name = str(body.get("g1_map") or "").strip() or None
+    car_map_file = str(body.get("car_map") or "").strip() or None
     if car_auto_align_task is not None and not car_auto_align_task.done():
         return JSONResponse(
             {
@@ -855,7 +997,9 @@ async def auto_align_car_maps():
             status_code=409,
         )
     car_auto_align_task = asyncio.create_task(
-        _run_car_auto_alignment("operator_retry")
+        _run_car_auto_alignment(
+            "operator_retry", map_name, car_map_file
+        )
     )
     result = await car_auto_align_task
     if not result.get("success"):
@@ -1018,6 +1162,15 @@ async def set_car_mode(request: Request):
     car_state["map_file"] = map_file
     car_state["slam_params_file"] = slam_params_file
     car_state["current_mode"] = "none" if mode in ("stop", "none", "off") else mode
+    if mode == "mapping":
+        # Nu permite hărții salvate anterior să fie confundată cu /map live.
+        car_state["map_source_points"] = []
+        car_state["map_points"] = []
+        car_state["map_source"] = None
+        car_state["map_occupied_count"] = 0
+        car_state["map_revision"] = int(
+            car_state.get("map_revision", 0)
+        ) + 1
     car_state["mode_status"] = "switching"
     car_state["mode_details"] = f"Comandă trimisă: {mode}"
 
