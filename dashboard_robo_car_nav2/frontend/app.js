@@ -283,6 +283,11 @@ async function refreshState() {
     setText("rmw", next.rmw === "rmw_cyclonedds_cpp" ? "CycloneDDS" : (next.rmw || "RMW necunoscut"));
     const locomotion = next.locomotion_bridge || {};
     const navigation = next.navigation || {};
+    const reportedNavigationSpeed = Number(next.navigation_speed);
+    if (Number.isFinite(reportedNavigationSpeed) && document.activeElement !== $("speed")) {
+      $("speed").value = reportedNavigationSpeed.toFixed(2);
+      setText("speed-value", `${reportedNavigationSpeed.toFixed(2)} m/s`);
+    }
     updateLiveNavigationPath(navigation);
     setText("diag-nav2", velocityLabel(navigation.nav2_velocity, navigation.nav2_cmd_age));
     setText("diag-raw", velocityLabel(navigation.raw_velocity, navigation.raw_cmd_age));
@@ -907,6 +912,19 @@ $("resume").addEventListener("click", (event) => action(event.currentTarget, "Po
 $("speed").addEventListener("input", () => {
   setText("speed-value", `${Number($("speed").value).toFixed(2)} m/s`);
   invalidateRoute("Viteza s-a schimbat; recalculează ruta");
+});
+
+$("speed").addEventListener("change", async () => {
+  try {
+    await api("/api/navigation/speed", {
+      method: "POST",
+      body: JSON.stringify({ speed: Number($("speed").value) }),
+    });
+    await refreshState();
+  } catch (error) {
+    toast(error.message, true);
+    await refreshState();
+  }
 });
 
 $("teleop-speed").addEventListener("input", () => {

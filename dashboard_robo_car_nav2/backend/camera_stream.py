@@ -18,7 +18,7 @@ except ImportError:
 MAX_PACKET = 8 * 1024 * 1024
 YOLO_MODEL_SIZE = "yolov8s"
 YOLO_CONFIDENCE = 0.20
-YOLO_MODEL_PATH = Path(os.environ.get("G1_YOLO_MODEL", str(Path(__file__).with_name("yolov8s.pt")))).expanduser()
+YOLO_MODEL_PATH = Path(os.environ.get("G1_YOLO_MODEL", "/home/unitree/yolov8s.pt")).expanduser()
 _YOLO_PALETTE = [
     (0, 220, 255), (255, 80, 0), (0, 255, 100), (200, 0, 255),
     (255, 200, 0), (0, 150, 255), (255, 0, 150), (0, 255, 220),

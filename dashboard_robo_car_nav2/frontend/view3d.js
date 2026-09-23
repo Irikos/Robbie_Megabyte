@@ -328,7 +328,9 @@
         : await api(`/api/maps/${encodeURIComponent(name)}/points?limit=100000`);
       const points = data.points || [];
       floorOffset = estimateFloorOffset(points);
-      fillGeometry(pointsMesh, points, heightColor, floorOffset);
+      const FLOOR_CUTOFF = 0.22; // metri deasupra podelei; mărește ca să ascunzi mai mult
+      const faraPodea = points.filter(p => ((Number(p[2]) || 0) + floorOffset) >= FLOOR_CUTOFF);
+      fillGeometry(pointsMesh, faraPodea, heightColor, floorOffset);
       lastLoadedMapName = name;
     } catch (_error) {
       // Doar vizualizare — o eroare aici nu trebuie să afecteze controlul 2D.

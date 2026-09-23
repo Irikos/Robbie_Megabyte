@@ -545,6 +545,7 @@ class RosBridge(Node):
         self.run_profile_accepted = False
         self.motion_active = False
         self.motion_armed_at = 0.0
+        self.navigation_speed = NAV_SPEED_DEFAULT
         self.motion_speed_limit = NAV_SPEED_DEFAULT
         self.teleop_speed = TELEOP_LINEAR_DEFAULT
         self.teleop_turn_speed = TELEOP_ANGULAR_DEFAULT
@@ -999,6 +1000,7 @@ class RosBridge(Node):
                 "slam_info": info,
                 "last_api_response": self.last_api_response,
                 "navigation": navigation,
+                "navigation_speed": self.navigation_speed,
                 "yaw_diagnostics": {
                     "goal": goal_yaw,
                     "map_to_base_link": pose["yaw"],
@@ -2527,6 +2529,27 @@ async def start_localization(body: dict = Body(...), x_dashboard_token: str = He
     }
 
 
+@app.post("/api/navigation/speed")
+async def set_navigation_speed(
+    body: dict = Body(...), x_dashboard_token: str = Header(default="")
+):
+    authorize(x_dashboard_token)
+    try:
+        speed = navigation_target({
+            "x": 0.0, "y": 0.0, "yaw": 0.0, "speed": body["speed"],
+        })[3]
+    except (KeyError, TypeError, ValueError) as exc:
+        return {"success": False, "error": f"Viteză invalidă: {exc}"}
+    node = ros()
+    with node.lock:
+        node.navigation_speed = speed
+    return {
+        "success": True,
+        "speed": speed,
+        "message": f"Viteză Nav2: {speed:.2f} m/s",
+    }
+
+
 @app.post("/api/navigation/preview")
 async def navigation_preview(
     body: dict = Body(...), x_dashboard_token: str = Header(default="")
@@ -2541,6 +2564,7 @@ async def navigation_preview(
         return {"success": False, "error": f"Țintă invalidă: {exc}"}
     map_name = str(body.get("map") or "").strip()
     with node.lock:
+        node.navigation_speed = speed
         start = (float(node.pose["x"]), float(node.pose["y"]))
         selected_map = node.selected_map
     if map_name != selected_map:
@@ -2926,6 +2950,114 @@ async def set_robot_mode(
             f"FSM {result.get('fsm_id')} citit; cererea {mode.upper()} acceptată"
             if result.get("success") else result.get("error")
         ),
+    }
+
+
+def _robot_navigation_public_state() -> dict[str, Any]:
+    state = ros().state()
+    navigation = dict(state.get("navigation") or {})
+    pose_age = state.get("pose_age")
+    path = navigation.get("path") or []
+    path_age = navigation.get("path_updated_age")
+    return {
+        "type": "robot_state",
+        "connected": bool(rclpy.ok()),
+        "last_seen": (
+            time.time() - float(pose_age)
+            if pose_age is not None
+            else 0.0
+        ),
+        "pose_age": pose_age,
+        "pose": state.get("pose"),
+        "path": path,
+        "path_topic": "/plan",
+        "path_updated_at": (
+            time.time() - float(path_age)
+            if path_age is not None
+            else 0.0
+        ),
+        "path_point_count": len(path),
+        "path_revision": navigation.get("path_revision", 0),
+        "navigation": navigation,
+    }
+
+
+def _robot_navigation_goal(body: dict[str, Any]) -> dict[str, Any]:
+    node = ros()
+    with node.lock:
+        dashboard_speed = float(node.navigation_speed)
+    goal = {
+        "x": float(body["x"]),
+        "y": float(body["y"]),
+        "yaw": math.radians(float(body.get("yaw_deg", 0.0))),
+        # Casca VR nu configurează viteza. Ignorăm orice valoare implicită
+        # trimisă de client și folosim profilul de bază al dashboard-ului.
+        "speed": dashboard_speed,
+    }
+    if not all(math.isfinite(value) for value in goal.values()):
+        raise ValueError("Ținta trebuie să fie finită")
+    return goal
+
+
+@app.get("/api/robot/status")
+async def robot_navigation_status():
+    return {"success": True, **_robot_navigation_public_state()}
+
+
+@app.post("/api/robot/path/preview")
+async def preview_robot_path(body: dict = Body(...)):
+    try:
+        goal = _robot_navigation_goal(body)
+    except (KeyError, TypeError, ValueError) as exc:
+        return {"success": False, "error": f"Țintă invalidă: {exc}"}
+    node = ros()
+    with node.lock:
+        map_name = str(node.selected_map or "")
+    result = await navigation_preview({**goal, "map": map_name}, TOKEN)
+    if not result.get("success"):
+        return result
+    map_goal = {"x": goal["x"], "y": goal["y"], "yaw": goal["yaw"]}
+    return {
+        **result,
+        "request_id": result["preview_id"],
+        "map_goal": map_goal,
+        "robot_map_goal": map_goal,
+    }
+
+
+@app.post("/api/robot/goal")
+async def send_robot_goal(body: dict = Body(...)):
+    try:
+        goal = _robot_navigation_goal(body)
+    except (KeyError, TypeError, ValueError) as exc:
+        return {"success": False, "error": f"Țintă invalidă: {exc}"}
+    node = ros()
+    with node.lock:
+        map_name = str(node.selected_map or "")
+    preview_id = str(body.get("preview_id") or body.get("request_id") or "")
+    if not preview_id:
+        preview = await navigation_preview({**goal, "map": map_name}, TOKEN)
+        if not preview.get("success"):
+            return preview
+        preview_id = str(preview["preview_id"])
+    result = await navigation_goal(
+        {
+            **goal,
+            "map": map_name,
+            "preview_id": preview_id,
+            "exclusive_control": True,
+        },
+        TOKEN,
+    )
+    if not result.get("success"):
+        return result
+    map_goal = {"x": goal["x"], "y": goal["y"], "yaw": goal["yaw"]}
+    return {
+        **result,
+        "type": "goal_pose",
+        "request_id": preview_id,
+        "map_goal": map_goal,
+        "robot_map_goal": map_goal,
     }
 
 
