@@ -1,0 +1,25 @@
+[Unit]
+Description=Robot Car Docker Autostart Service (jammy2)
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=simple
+User=root
+# Execută scriptul de pornire de pe host
+ExecStart=/usr/local/bin/start_car_autostart.sh
+
+# Oprire curată a proceselor la shutdown sau 'systemctl stop'
+ExecStop=/usr/bin/docker exec jammy2 pkill -f start_car_common.sh
+TimeoutStopSec=15
+
+# Repornește automat dacă moare un proces (ex: USB deconectat temporar)
+Restart=always
+RestartSec=5
+
+# Trimitere loguri către systemd journal (journalctl)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
